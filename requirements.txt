@@ -1,0 +1,5 @@
+streamlit
+opencv-python-headless
+yt-dlp
+groq
+google-genai
