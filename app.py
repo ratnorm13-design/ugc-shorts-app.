@@ -2,15 +2,13 @@ import streamlit as st
 import yt_dlp
 import os
 import google.generativeai as genai
-from groq import Groq
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
 st.title("⚡ UGC Shorts Studio AI")
-st.caption("Auto-Adaptif Shorts Engine: Prompt Flow AI + VO CapCut Script + SEO Pack Presisi!")
+st.caption("Auto-Adaptif Shorts Engine: Upload Video / Link / Topik -> Prompt Unik Modifikasi!")
 
 # --- API KEYS SETUP ---
-groq_key = st.sidebar.text_input("Groq API Key (Untuk Transkrip Audio)", type="password")
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib)", type="password")
 
 if gemini_key:
@@ -19,19 +17,30 @@ if gemini_key:
 # --- INPUT METHOD ---
 input_mode = st.radio(
     "Metode Input:",
-    ("Paste Link Shorts / TikTok / Reels", "Input Topik / Ide Barumu")
+    ("📁 Upload File Video (.mp4)", "✍️ Input Topik / Ide Barumu", "🔗 Paste Link Shorts/TikTok/IG")
 )
 
 video_path = "temp_video.mp4"
-audio_path = "temp_audio.m4a"
 video_ready = False
 user_topic = ""
-transcript_text = ""
 
-if input_mode == "Paste Link Shorts / TikTok / Reels":
-    url_input = st.text_input("Paste Link Video Viral (YouTube Shorts/TikTok/IG Reels):")
-    if url_input and st.button("📥 Download & Bedah Video"):
-        with st.spinner("Downloading & menganalisis video..."):
+if input_mode == "📁 Upload File Video (.mp4)":
+    uploaded_video = st.file_uploader("Upload Video Viral dari HP/Laptopmu:", type=["mp4", "mov", "avi"])
+    if uploaded_video is not None:
+        with open(video_path, "wb") as f:
+            f.write(uploaded_video.read())
+        video_ready = True
+        st.success("Video berhasil di-upload! Siap dibedah & dimodifikasi.")
+
+elif input_mode == "✍️ Input Topik / Ide Barumu":
+    user_topic = st.text_area("Tuliskan Topik / Judul / Deskripsi Singkat Ide Videomu:")
+    if user_topic:
+        video_ready = True
+
+else:
+    url_input = st.text_input("Paste Link Video Viral:")
+    if url_input and st.button("📥 Download Video"):
+        with st.spinner("Mengunduh video..."):
             try:
                 ydl_opts = {
                     'format': 'best[ext=mp4]/best',
@@ -39,44 +48,14 @@ if input_mode == "Paste Link Shorts / TikTok / Reels":
                     'overwrites': True,
                     'quiet': True,
                     'no_warnings': True,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'nocheckcertificate': True,
+                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url_input])
-                
-                # Ekstrak Audio untuk Groq (Jika Key Ada)
-                if groq_key:
-                    st.info("Mengakses Groq Whisper untuk ekstraksi percakapan audio...")
-                    audio_opts = {
-                        'format': 'm4a/bestaudio/best',
-                        'outtmpl': audio_path,
-                        'overwrites': True,
-                        'quiet': True,
-                    }
-                    with yt_dlp.YoutubeDL(audio_opts) as ydl_audio:
-                        ydl_audio.download([url_input])
-                    
-                    client_groq = Groq(api_key=groq_key)
-                    with open(audio_path, "rb") as file:
-                        transcription = client_groq.audio.transcriptions.create(
-                            file=(audio_path, file.read()),
-                            model="whisper-large-v3",
-                            response_format="text",
-                            language="id"
-                        )
-                    transcript_text = str(transcription)
-                    st.success("Audio berhasil ditranskrip oleh Groq!")
-
                 video_ready = True
-                st.success("Video berhasil diunduh & siap diracik!")
+                st.success("Video berhasil diunduh!")
             except Exception as e:
-                st.error(f"Gagal memproses video: {e}")
-
-else:
-    user_topic = st.text_area("Tuliskan Topik / Judul / Deskripsi Singkat Ide Videomu:")
-    if user_topic:
-        video_ready = True
+                st.error("Gagal download via link karena terblokir. Disarankan pakai metode 'Upload File Video'!")
 
 # --- SELECTBOX DURASI & STYLE VISUAL ---
 durasi_pilihan = st.selectbox(
@@ -90,33 +69,38 @@ style_pilihan = st.selectbox(
         "Realistis / Photorealistic (8K Cinematic)",
         "3D Animation (Pixar / Dreamworks Style)",
         "2D Anime (Studio Ghibli Aesthetic)",
+        "Comic Book / Pop Art (Bold Lines & Halftone)",
         "Claymation (Stop Motion Style)"
     ]
 )
 
+modifikasi_mode = st.checkbox("🔥 Modifikasi Otomatis (Ubah Alur & Twist Biar Gak Plagiat)", value=True)
+
 # --- GENERATE PROMPT ENGINE ---
-if st.button("🚀 RACIK PROMPT SHORTS VIRAL"):
+if st.button("🚀 RACIK PROMPT SHORTS UNIK"):
     if not gemini_key:
         st.error("⚠️ Masukkan Gemini API Key terlebih dahulu di sidebar!")
     elif not video_ready and not user_topic:
-        st.error("⚠️ Silakan download video dari link atau isi ide topik terlebih dahulu!")
+        st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
     else:
-        with st.spinner("Gemini 3.6 Flash sedang meracik prompt, VO Script, dan SEO Pack..."):
+        with st.spinner("Gemini sedang membedah video & meracik versi uniknya..."):
             try:
                 system_instruction = f"""
-                Kamu adalah AI Prompt Generator dan Content Creator profesional khusus Shorts/TikTok.
+                Kamu adalah AI Content Strategist & Prompt Generator handal khusus Google Flow AI dan YouTube Shorts/TikTok.
                 Target durasi video: {durasi_pilihan}.
                 Gaya Visual Pilihan: {style_pilihan}.
                 
-                ATURAN KONSISTENSI & OUTCOME:
-                1. Tentukan 1 'CHARACTER ANCHOR' (deskripsi fisik rinci seperti warna baju, gaya rambut, rentang umur, dan atribut wajib).
-                2. Tempelkan Gaya Visual '{style_pilihan}' dan 'CHARACTER ANCHOR' tersebut persis sama di awal SETIAP prompt scene.
-                3. Setiap SCENE wajib berdurasi 8 DETIK per prompt dengan instruksi gerakan bertahap, slow-motion, dan continuous movement.
-                4. Untuk Scene 2 dan seterusnya, beri instruksi agar pengguna meng-upload screenshot detik ke-8 dari scene sebelumnya sebagai referensi Image-to-Video.
-                5. Buatkan Voiceover (VO) Script Bahasa Indonesia yang pas timing-nya per scene untuk CapCut.
-                6. Buatkan SEO Pack berisi Judul Hook Viral, Deskripsi, dan Hashtag.
+                ATURAN UTAMA MODIFIKASI (ANTI-PLAGIAT):
+                1. Jika input berupa video/topik tiruan, JANGAN CUMA MENIRU 100%. Modifikasi alur ceritanya minimal 30%, berikan 'Twist Ending' baru atau komedi yang lebih segar agar tidak plagiat.
+                2. Tentukan 1 'CHARACTER ANCHOR' (deskripsi fisik rinci seperti warna baju, gaya rambut, rentang umur, dan atribut wajib).
+                3. Tempelkan Gaya Visual '{style_pilihan}' dan 'CHARACTER ANCHOR' tersebut persis sama di awal SETIAP prompt scene.
+                4. Setiap SCENE wajib berdurasi 8 DETIK per prompt dengan instruksi gerakan bertahap, slow-motion, dan continuous movement.
+                5. Untuk Scene 2 dan seterusnya, sertakan catatan agar pengguna meng-upload screenshot detik ke-8 dari scene sebelumnya sebagai referensi Image-to-Video.
+                6. Buatkan Voiceover (VO) Script Bahasa Indonesia yang lucu/menarik untuk CapCut.
+                7. Buatkan SEO Pack (Judul Hook, Deskripsi, Hashtag).
+                8. Buatkan Kata Kunci / Keywords YouTube (Tags) dipisahkan dengan koma (minimal 15 keywords relevan dengan pencarian tinggi).
 
-                PISAHKAN JAWABANMU DENGAN FORMAT TAG BERIKUT:
+                FORMAT OUTPUT MESTI TERPISAH:
                 [PROMPT_SECTION]
                 (Isi Character Anchor dan Prompt Scene Flow AI 8s per scene di sini)
                 [/PROMPT_SECTION]
@@ -128,17 +112,21 @@ if st.button("🚀 RACIK PROMPT SHORTS VIRAL"):
                 [SEO_SECTION]
                 (Isi Judul Hook, Deskripsi, dan Hashtag di sini)
                 [/SEO_SECTION]
+
+                [TAGS_SECTION]
+                (Isi kata kunci/tags dipisahkan koma di sini, contoh: kata kunci 1, kata kunci 2, kata kunci 3)
+                [/TAGS_SECTION]
                 """
 
                 model = genai.GenerativeModel('gemini-3.6-flash')
                 
                 input_payload = []
-                if input_mode == "Input Topik / Ide Barumu":
+                if input_mode == "✍️ Input Topik / Ide Barumu":
                     prompt_input = f"{system_instruction}\n\nIde User:\n{user_topic}"
                     input_payload.append(prompt_input)
                 else:
                     uploaded_file = genai.upload_file(video_path)
-                    prompt_input = f"{system_instruction}\n\nHasil Transkrip Audio Groq:\n{transcript_text}"
+                    prompt_input = f"{system_instruction}\n\nAnalisis video terlampir, lalu racikkan versi MODIFIKASI UNIK (bebas plagiat) berdasarkan video tersebut."
                     input_payload = [uploaded_file, prompt_input]
 
                 response = model.generate_content(input_payload)
@@ -148,11 +136,12 @@ if st.button("🚀 RACIK PROMPT SHORTS VIRAL"):
                 prompt_content = raw_text.split("[PROMPT_SECTION]")[1].split("[/PROMPT_SECTION]")[0].strip() if "[PROMPT_SECTION]" in raw_text else raw_text
                 vo_content = raw_text.split("[VO_SECTION]")[1].split("[/VO_SECTION]")[0].strip() if "[VO_SECTION]" in raw_text else "Gagal memisahkan VO Script."
                 seo_content = raw_text.split("[SEO_SECTION]")[1].split("[/SEO_SECTION]")[0].strip() if "[SEO_SECTION]" in raw_text else "Gagal memisahkan SEO Pack."
+                tags_content = raw_text.split("[TAGS_SECTION]")[1].split("[/TAGS_SECTION]")[0].strip() if "[TAGS_SECTION]" in raw_text else "Gagal memisahkan Tags."
 
-                st.success("Racikan Berhasil Dibuat!")
+                st.success("Racikan Modifikasi Unik Berhasil Dibuat!")
                 
-                # TAMPILAN BERDASARKAN TAB (LEBIH RAPI & MENGHINDARI SALAH COPY)
-                tab1, tab2, tab3 = st.tabs(["🎬 Prompt Flow AI", "🎙️ VO Script CapCut", "🚀 SEO Pack"])
+                # TAMPILAN TAB
+                tab1, tab2, tab3, tab4 = st.tabs(["🎬 Prompt Flow AI", "🎙️ VO Script CapCut", "🚀 SEO Pack", "🏷️ YouTube Tags"])
                 
                 with tab1:
                     st.subheader("Prompt Scene Flow AI (8s/Scene)")
@@ -165,6 +154,10 @@ if st.button("🚀 RACIK PROMPT SHORTS VIRAL"):
                 with tab3:
                     st.subheader("SEO Judul & Hashtag")
                     st.text_area("Copy SEO Pack:", value=seo_content, height=300)
+
+                with tab4:
+                    st.subheader("Keywords / Tags YouTube (Tinggal Paste)")
+                    st.text_area("Copy Tags YouTube:", value=tags_content, height=200)
 
             except Exception as e:
                 st.error(f"Gagal meracik prompt: {e}")
