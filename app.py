@@ -64,7 +64,7 @@ if st.button("🚀 RACIK PROMPT SHORTS VIRAL"):
     elif not video_ready and not user_topic:
         st.error("⚠️ Silakan download video dari link atau isi ide topik terlebih dahulu!")
     else:
-        with st.spinner("Gemini 2.0 Flash sedang meracik prompt 8 detik per scene..."):
+        with st.spinner("Gemini 3.6 Flash sedang meracik prompt 8 detik per scene..."):
             try:
                 system_instruction = f"""
                 Kamu adalah AI Prompt Generator ahli untuk Google Flow AI.
@@ -82,8 +82,8 @@ if st.button("🚀 RACIK PROMPT SHORTS VIRAL"):
                 [ENDING FRAME STATE]: Deskripsi posisi akhir adegan.
                 """
 
-                # MENGGUNAKAN MODEL RESMI GEMINI 2.0 FLASH
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                # MODEL RESMI GEMINI 3.6 FLASH
+                model = genai.GenerativeModel('gemini-3.6-flash')
                 
                 if input_mode == "Input Topik / Ide Barumu":
                     prompt_input = f"{system_instruction}\n\nBuatkan berdasarkan ide berikut:\n{user_topic}"
