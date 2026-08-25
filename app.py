@@ -6,7 +6,7 @@ import google.generativeai as genai
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
 st.title("⚡ UGC Shorts Studio AI")
-st.caption("Auto-Adaptif Shorts Engine: Upload Video / Link / Topik -> Prompt Unik Modifikasi!")
+st.caption("Self-Refining AI Engine: Bedah Video -> Diskusi Internal -> Prompt Presisi & Unik!")
 
 # --- API KEYS SETUP ---
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib)", type="password")
@@ -74,31 +74,32 @@ style_pilihan = st.selectbox(
     ]
 )
 
-modifikasi_mode = st.checkbox("🔥 Modifikasi Otomatis (Ubah Alur & Twist Biar Gak Plagiat)", value=True)
-
 # --- GENERATE PROMPT ENGINE ---
-if st.button("🚀 RACIK PROMPT SHORTS UNIK"):
+if st.button("🚀 RACIK PROMPT UNIK & PRESISI"):
     if not gemini_key:
         st.error("⚠️ Masukkan Gemini API Key terlebih dahulu di sidebar!")
     elif not video_ready and not user_topic:
         st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
     else:
-        with st.spinner("Gemini sedang membedah video & meracik versi uniknya..."):
+        with st.spinner("Gemini sedang membedah video, melakukan revisi internal, & meracik versi uniknya..."):
             try:
                 system_instruction = f"""
-                Kamu adalah AI Content Strategist & Prompt Generator handal khusus Google Flow AI dan YouTube Shorts/TikTok.
-                Target durasi video: {durasi_pilihan}.
-                Gaya Visual Pilihan: {style_pilihan}.
+                Kamu bertindak sebagai DUA PERAN SEKALIGUS:
+                1. [ANALIS VISUAL]: Bedah isi video/topik ini dan buat draf awal.
+                2. [SENIOR AI DIRECTOR & PROMPT EDITOR]: Review draf tersebut, modifikasi alur ceritanya minimal 30% agar BEBAS PLAGIAT (tambahkan twist/komedi segar), pertajam instruksi gerakan 8 detik per scene agar tidak patah, dan KUNCI 'Character Anchor' agar tidak berubah wajah/baju.
+
+                DETAIL SPESIFIKASI:
+                - Target durasi video: {durasi_pilihan}.
+                - Gaya Visual Pilihan: {style_pilihan}.
                 
-                ATURAN UTAMA MODIFIKASI (ANTI-PLAGIAT):
-                1. Jika input berupa video/topik tiruan, JANGAN CUMA MENIRU 100%. Modifikasi alur ceritanya minimal 30%, berikan 'Twist Ending' baru atau komedi yang lebih segar agar tidak plagiat.
-                2. Tentukan 1 'CHARACTER ANCHOR' (deskripsi fisik rinci seperti warna baju, gaya rambut, rentang umur, dan atribut wajib).
-                3. Tempelkan Gaya Visual '{style_pilihan}' dan 'CHARACTER ANCHOR' tersebut persis sama di awal SETIAP prompt scene.
-                4. Setiap SCENE wajib berdurasi 8 DETIK per prompt dengan instruksi gerakan bertahap, slow-motion, dan continuous movement.
-                5. Untuk Scene 2 dan seterusnya, sertakan catatan agar pengguna meng-upload screenshot detik ke-8 dari scene sebelumnya sebagai referensi Image-to-Video.
-                6. Buatkan Voiceover (VO) Script Bahasa Indonesia yang lucu/menarik untuk CapCut.
-                7. Buatkan SEO Pack (Judul Hook, Deskripsi, Hashtag).
-                8. Buatkan Kata Kunci / Keywords YouTube (Tags) dipisahkan dengan koma (minimal 15 keywords relevan dengan pencarian tinggi).
+                ATURAN OUTPUT:
+                1. Tentukan 1 'CHARACTER ANCHOR' (deskripsi fisik rinci seperti warna baju, gaya rambut, rentang umur, dan atribut wajib).
+                2. Tempelkan Gaya Visual '{style_pilihan}' dan 'CHARACTER ANCHOR' tersebut persis sama di awal SETIAP prompt scene.
+                3. Setiap SCENE wajib berdurasi 8 DETIK per prompt dengan instruksi gerakan bertahap, slow-motion, dan continuous movement.
+                4. Untuk Scene 2 dan seterusnya, sertakan catatan agar pengguna meng-upload screenshot detik ke-8 dari scene sebelumnya sebagai referensi Image-to-Video.
+                5. Buatkan Voiceover (VO) Script Bahasa Indonesia yang pas timing-nya per scene untuk CapCut.
+                6. Buatkan SEO Pack (Judul Hook, Deskripsi, Hashtag).
+                7. Buatkan Kata Kunci / Keywords YouTube (Tags) dipisahkan dengan koma.
 
                 FORMAT OUTPUT MESTI TERPISAH:
                 [PROMPT_SECTION]
@@ -114,7 +115,7 @@ if st.button("🚀 RACIK PROMPT SHORTS UNIK"):
                 [/SEO_SECTION]
 
                 [TAGS_SECTION]
-                (Isi kata kunci/tags dipisahkan koma di sini, contoh: kata kunci 1, kata kunci 2, kata kunci 3)
+                (Isi kata kunci/tags dipisahkan koma di sini)
                 [/TAGS_SECTION]
                 """
 
@@ -126,7 +127,7 @@ if st.button("🚀 RACIK PROMPT SHORTS UNIK"):
                     input_payload.append(prompt_input)
                 else:
                     uploaded_file = genai.upload_file(video_path)
-                    prompt_input = f"{system_instruction}\n\nAnalisis video terlampir, lalu racikkan versi MODIFIKASI UNIK (bebas plagiat) berdasarkan video tersebut."
+                    prompt_input = f"{system_instruction}\n\nAnalisis video terlampir. Lakukan bedah visual + revisi director internal untuk menghasilkan versi MODIFIKASI UNIK yang presisi dan bebas plagiat."
                     input_payload = [uploaded_file, prompt_input]
 
                 response = model.generate_content(input_payload)
@@ -138,7 +139,7 @@ if st.button("🚀 RACIK PROMPT SHORTS UNIK"):
                 seo_content = raw_text.split("[SEO_SECTION]")[1].split("[/SEO_SECTION]")[0].strip() if "[SEO_SECTION]" in raw_text else "Gagal memisahkan SEO Pack."
                 tags_content = raw_text.split("[TAGS_SECTION]")[1].split("[/TAGS_SECTION]")[0].strip() if "[TAGS_SECTION]" in raw_text else "Gagal memisahkan Tags."
 
-                st.success("Racikan Modifikasi Unik Berhasil Dibuat!")
+                st.success("Racikan Modifikasi Unik & Presisi Berhasil Dibuat!")
                 
                 # TAMPILAN TAB
                 tab1, tab2, tab3, tab4 = st.tabs(["🎬 Prompt Flow AI", "🎙️ VO Script CapCut", "🚀 SEO Pack", "🏷️ YouTube Tags"])
@@ -156,7 +157,7 @@ if st.button("🚀 RACIK PROMPT SHORTS UNIK"):
                     st.text_area("Copy SEO Pack:", value=seo_content, height=300)
 
                 with tab4:
-                    st.subheader("Keywords / Tags YouTube (Tinggal Paste)")
+                    st.subheader("Keywords / Tags YouTube")
                     st.text_area("Copy Tags YouTube:", value=tags_content, height=200)
 
             except Exception as e:
