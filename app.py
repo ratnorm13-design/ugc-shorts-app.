@@ -4,133 +4,24 @@ import os
 from google import genai
 
 # --- PAGE CONFIG ---
-st.set_page_config(
-    page_title="STUDIO AI - UGC Shorts Engine Bang Vtoyz", 
-    page_icon="⚡", 
-    layout="centered"
-)
+st.set_page_config(page_title="Studio AI - Pro Continuity UGC Engine", page_icon="⚡", layout="centered")
+st.title("⚡ UGC Shorts Studio AI (Kelipatan 8s Engine)")
+st.caption("AI Video Continuity: Step-by-Step Chain + Sizing Pas 8s per Scene (No Cut CapCut!)")
 
-# --- ADVANCED MODERN CUSTOM CSS ---
-st.markdown("""
-<style>
-    /* Dark Futuristic Background */
-    .stApp {
-        background: radial-gradient(circle at 50% -20%, #1e1b4b, #0f172a, #020617);
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        color: #f8fafc;
-    }
-
-    /* Header Styling */
-    .main-header {
-        text-align: center;
-        padding: 2.5rem 1rem 1.5rem 1rem;
-        background: rgba(30, 41, 59, 0.4);
-        backdrop-filter: blur(12px);
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        margin-bottom: 2rem;
-    }
-    
-    .main-title {
-        font-size: 2.4rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #3b82f6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.5px;
-    }
-
-    .sub-title {
-        color: #94a3b8;
-        font-size: 0.95rem;
-        font-weight: 400;
-    }
-
-    /* Sidebar Customization */
-    section[data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.75) !important;
-        backdrop-filter: blur(16px);
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    /* Glassmorphism Cards for Containers */
-    div[data-testid="stVerticalBlock"] > div {
-        border-radius: 16px;
-    }
-
-    /* Custom Modern Buttons */
-    div.stButton > button {
-        width: 100%;
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        color: #ffffff;
-        font-weight: 700;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(168, 85, 247, 0.6);
-        background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
-        color: #ffffff;
-    }
-
-    /* Custom Input Fields */
-    .stTextInput input, .stTextArea textarea, .stSelectbox select {
-        background-color: rgba(15, 23, 42, 0.6) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 12px !important;
-        color: #f8fafc !important;
-    }
-
-    .stTextInput input:focus, .stTextArea textarea:focus {
-        border-color: #a855f7 !important;
-        box-shadow: 0 0 10px rgba(168, 85, 247, 0.5) !important;
-    }
-
-    /* Radio Buttons & Status Badges */
-    .stAlert {
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
-        background: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-</style>
-""", unsafe_allow_allow_html=True)
-
-# --- MODERN HEADER SECTION ---
-st.markdown("""
-<div class="main-header">
-    <div class="main-title">⚡ STUDIO AI UGC SHORTS</div>
-    <div class="sub-title">Next-Gen Multi-Brain Continuity Engine • Precision 8s Frame Lock</div>
-</div>
-""", unsafe_allow_html=True)
-
-# --- SIDEBAR CONFIGURATION ---
-st.sidebar.markdown("### ⚙️ **SETTINGS & API**")
-gemini_key = st.sidebar.text_input("Gemini API Key", type="password", placeholder="Paste AQ Key di sini...")
+# --- API KEYS SETUP ---
+gemini_key = st.sidebar.text_input("Gemini API Key (Wajib - Format AQ...)", type="password")
 
 client = None
 if gemini_key:
     clean_key = gemini_key.strip().replace(" ", "_").replace("\n", "").replace("\r", "")
     try:
         client = genai.Client(api_key=clean_key)
-        st.sidebar.success("✓ API Key Connected")
     except Exception as e:
         st.sidebar.error(f"Format Key Error: {e}")
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎨 **VISUAL ENGINE**")
-
+# --- PILIH STYLE VISUAL & TARGET DURASI DI SIDEBAR ---
 style_pilihan = st.sidebar.selectbox(
-    "Gaya Visual Studio:",
+    "🎨 Pilih Gaya Visual Video:",
     options=[
         "2D Anime (Studio Ghibli 100% Traditional Hand-Drawn Cel-Shaded Style)",
         "Realistis / Photorealistic (8K Cinematic)",
@@ -141,7 +32,7 @@ style_pilihan = st.sidebar.selectbox(
 )
 
 target_durasi_label = st.sidebar.selectbox(
-    "Target Total Durasi Video:",
+    "⏱️ Target Total Durasi Video (Kelipatan 8s):",
     options=[
         "16 Detik (2 Scene)",
         "24 Detik (3 Scene)",
@@ -152,21 +43,23 @@ target_durasi_label = st.sidebar.selectbox(
     ]
 )
 
+# Konversi pilihan durasi jadi angka maksimal scene
 max_scenes = int(target_durasi_label.split("(")[1].split(" ")[0])
 
-# --- SESSION STATE ---
+# --- WORKFLOW SESSION STATE ---
 if "step" not in st.session_state:
     st.session_state.step = 1
     st.session_state.scene_history = []
     st.session_state.current_story_context = ""
 
-# --- DASHBOARD CONTENT ---
+# --- TAHAP 1: MEMBUAT SCENE 1 ---
 if st.session_state.step == 1:
-    st.info(f"🎯 **Target Mode Active:** {target_durasi_label} • Tepat 8 Detik / Scene")
+    st.subheader(f"🎬 Tahap 1 dari {max_scenes}: Buat Adegan Pertama (Scene 1)")
+    st.info(f"💡 Target total video lu: **{target_durasi_label}** (Setiap scene berdurasi tepat 8 detik).")
     
     input_mode = st.radio(
-        "Pilih Sumber Input Awal:",
-        ("✍️ Input Topik / Ide Cerita Baru", "📁 Upload File Video Referensi")
+        "Metode Input Awal:",
+        ("📁 Upload File Video Referensi", "✍️ Input Topik / Ide Cerita Baru")
     )
 
     video_path = "temp_video.mp4"
@@ -174,39 +67,39 @@ if st.session_state.step == 1:
     user_topic = ""
 
     if input_mode == "📁 Upload File Video Referensi":
-        uploaded_video = st.file_uploader("Upload Video Referensi (.mp4):", type=["mp4", "mov", "avi"])
+        uploaded_video = st.file_uploader("Upload Video Referensi:", type=["mp4", "mov", "avi"])
         if uploaded_video is not None:
             with open(video_path, "wb") as f:
                 f.write(uploaded_video.read())
             video_ready = True
-            st.success("✓ Video Referensi Terisi!")
+            st.success("Video referensi siap!")
     else:
-        user_topic = st.text_area("Deskripsikan Konsep / Ide Cerita Utama:", placeholder="Contoh: Kucing oren koki masak ramen bareng buaya kecil di dapur kayu...")
+        user_topic = st.text_area("Tuliskan Ide / Topik Cerita Keseluruhan:")
         if user_topic:
             video_ready = True
 
-    if st.button("🚀 RACIK SCENE 1 (PROMPT FONDASI)"):
+    if st.button("🚀 Racik Prompt Scene 1"):
         if not gemini_key or not client:
-            st.error("⚠️ Masukkan Gemini API Key di sidebar terlebih dahulu!")
+            st.error("⚠️ Masukkan Gemini API Key di sidebar!")
         elif not video_ready:
-            st.error("⚠️ Masukkan ide cerita atau upload video terlebih dahulu!")
+            st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
         else:
-            with st.spinner("⚡ AI sedang mengunci karakter & merancang Scene 1..."):
+            with st.spinner("AI sedang merancang fondasi karakter dan Scene 1 (8 detik)..."):
                 try:
                     system_instruction = f"""
-                    Kamu adalah Sutradara & Master Prompt Engineer AI profesional.
-                    Tugasmu membuat SCENE 1 (Durasi tepat 8 detik) dari total {max_scenes} scene.
+                    Kamu adalah Sutradara & Master Prompt Engineer spesialis AI Video Generation.
+                    Tugasmu membuat SCENE 1 (Durasi tepat 8 detik) dari total {max_scenes} scene yang direncanakan.
                     
                     GAYA VISUAL WAJIB: {style_pilihan}.
                     
-                    Instruksi Khusus:
-                    1. Buat 'CHARACTER ANCHOR' yang sangat mendalam (fisik, baju, warna, detail objek) di awal prompt scene.
+                    Tugas spesifik:
+                    1. Tetapkan 'CHARACTER ANCHOR' yang sangat detail (bentuk fisik, warna, pakaian, ekspresi) di awal prompt agar nanti bisa konsisten dipakai di {max_scenes} scene berikutnya.
                     2. Buat Prompt Scene 1 yang sinematik berdurasi 8 detik.
-                    3. Buat Naskah Dubbing Voiceover (VO) Bahasa Indonesia berdurasi pas 8 detik.
+                    3. Buat Naskah Voiceover (VO) Scene 1 dalam Bahasa Indonesia yang pas untuk durasi 8 detik.
 
-                    FORMAT OUTPUT KETAT:
+                    FORMAT OUTPUT MESTI TERPISAH:
                     [SCENE_DESC]
-                    (Detail Character Anchor & Prompt Scene 1 - 8 Detik)
+                    (Deskripsi detail karakter & prompt scene 1 - 8 detik)
                     [/SCENE_DESC]
                     [VO_SCRIPT]
                     (Naskah VO Scene 1)
@@ -214,7 +107,7 @@ if st.session_state.step == 1:
                     """
 
                     if input_mode == "✍️ Input Topik / Ide Cerita Baru":
-                        full_prompt = f"{system_instruction}\n\nIde Cerita:\n{user_topic}"
+                        full_prompt = f"{system_instruction}\n\nTopik Cerita:\n{user_topic}"
                         response = client.models.generate_content(
                             model='gemini-3.6-flash',
                             contents=full_prompt
@@ -234,47 +127,47 @@ if st.session_state.step == 1:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
+# --- TAHAP BERIKUTNYA (SCENE 2 SAMPAI BATAS MAX_SCENES) ---
 elif 2 <= st.session_state.step <= max_scenes:
-    st.subheader(f"🎬 Tahap {st.session_state.step} dari {max_scenes}: Continuity Chain")
-    
-    st.info(f"📸 **Lock Frame System:** Upload **screenshot detik terakhir Scene {st.session_state.step - 1}** agar wujud & posisi karakter 100% presisi!")
+    st.subheader(f"🎬 Tahap {st.session_state.step} dari {max_scenes}: Lanjutkan Scene Berikutnya")
+    st.info(f"💡 **Tips Kontinuitas:** Generate video Scene {st.session_state.step - 1} di AI generator-mu, lalu **Screenshot detik terakhirnya** dan upload di bawah agar karakter & posisinya nyambung!")
 
-    with st.expander("📜 Lihat Master Script & Prompt Sebelumnya"):
+    with st.expander("📂 Lihat Riwayat Script & Prompt Sebelumnya"):
         st.write(st.session_state.current_story_context)
 
     last_frame = st.file_uploader(
-        f"Upload Screenshot Detik Terakhir Scene {st.session_state.step - 1}:", 
+        f"📸 Upload Screenshot Detik Terakhir dari Scene {st.session_state.step - 1}:", 
         type=["png", "jpg", "jpeg"]
     )
     
-    next_action_note = st.text_input("Aksi / Kejadian Lanjutan (Opsional):", placeholder="Misal: Kucingnya kaget lalu buayanya keluar panci...")
+    next_action_note = st.text_input("Mau diarahkan ke kejadian apa di scene ini selanjutnya? (Opsional):", placeholder="Contoh: Kucing kaget lalu lari ke arah dapur...")
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button(f"🚀 GENERATE SCENE {st.session_state.step}"):
+        if st.button(f"🚀 Racik Prompt Scene {st.session_state.step}"):
             if not client:
-                st.error("API Key belum terpasang.")
+                st.error("API Key belum diset.")
             else:
                 start_time = (st.session_state.step - 1) * 8
                 end_time = st.session_state.step * 8
-                with st.spinner(f"⚡ Menganalisis frame visual & meracik Scene {st.session_state.step}..."):
+                with st.spinner(f"AI menganalisis gambar akhir & meracik Scene {st.session_state.step} ({start_time}s - {end_time}s)..."):
                     try:
                         continuity_instruction = f"""
-                        Kamu adalah Sutradara AI. Ini adalah kelanjutan Scene {st.session_state.step} dari {max_scenes} scene.
+                        Kamu adalah Sutradara AI profesional. Ini adalah kelanjutan Scene {st.session_state.step} dari total {max_scenes} scene.
                         GAYA VISUAL WAJIB: {style_pilihan}.
                         
-                        KONTINUITAS KETAT:
-                        1. Analisis GAMBAR SCREENSHOT TERAKHIR yang dilampirkan. Pertahankan bentuk visual, karakter, baju, latar belakang, dan warna 100% konsisten (tanpa style drift).
-                        2. Sambungkan adegan ke scene 8 detik berikutnya dengan pergerakan kamera yang mulus (bebas teleportasi).
+                        ATURAN UTAMA KONTINUITAS:
+                        1. Berdasarkan GAMBAR SCREENSHOT TERAKHIR yang di-upload user, pertahankan karakter, baju, gaya visual (Ghibli 2D hand-drawn), dan latar tempat yang sama persis (tidak boleh ada perubahan gaya / style drift!).
+                        2. Lanjutkan alur cerita ke scene berdurasi tepat 8 detik berikutnya secara mulus tanpa efek teleportasi.
                         
-                        Aksi Tambahan: {next_action_note}
+                        Catatan tambahan dari user untuk scene ini: {next_action_note}
 
-                        FORMAT OUTPUT:
+                        FORMAT OUTPUT MESTI TERPISAH:
                         [SCENE_DESC]
-                        (Prompt Scene {st.session_state.step} 8 detik konsisten gambar)
+                        (Prompt Scene {st.session_state.step} berdurasi 8 detik yang konsisten dengan gambar referensi)
                         [/SCENE_DESC]
                         [VO_SCRIPT]
-                        (Naskah VO Scene {st.session_state.step})
+                        (Naskah VO Scene {st.session_state.step} durasi 8 detik)
                         [/VO_SCRIPT]
                         """
 
@@ -302,7 +195,7 @@ elif 2 <= st.session_state.step <= max_scenes:
                         st.error(f"Error: {e}")
 
     with col2:
-        if st.button("🔄 RESET PROJECT"):
+        if st.button("🔄 Reset / Mulai dari Awal"):
             st.session_state.step = 1
             st.session_state.scene_history = []
             st.session_state.current_story_context = ""
@@ -310,17 +203,18 @@ elif 2 <= st.session_state.step <= max_scenes:
 
     if st.session_state.current_story_context:
         st.markdown("---")
-        st.subheader("📜 Current Master Script")
-        st.text_area("Live Script Feed:", value=st.session_state.current_story_context, height=300)
+        st.subheader("📜 Riwayat Script & Prompt Keseluruhan")
+        st.text_area("Salin Semua Script & Prompt:", value=st.session_state.current_story_context, height=350)
 
+# --- JIKA SUDAH SELESAI SELURUH SCENE ---
 elif st.session_state.step > max_scenes:
-    st.balloons()
-    st.success(f"🎉 **PROJECT COMPLETE!** Semua {max_scenes} Scene ({max_scenes * 8} Detik) Selesai!")
+    st.success(f"🎉 Selamat! Semua {max_scenes} scene ({max_scenes * 8} Detik) Selesai Dirancang dengan Sempurna!")
+    st.info("Semua klip video masing-masing berdurasi pas 8 detik tanpa perlu dipotong-potong lagi saat digabung di CapCut.")
     
-    st.subheader("📋 Final Master Package (Siap Ekspor ke CapCut & AI Generator)")
-    st.text_area("Copy Master Output:", value=st.session_state.current_story_context, height=450)
+    st.subheader("📋 Final Master Script & Prompt Package")
+    st.text_area("Salin Paket Final untuk CapCut & Generator AI:", value=st.session_state.current_story_context, height=450)
 
-    if st.button("🚀 MULAI PROYEK BARU"):
+    if st.button("🔄 Buat Proyek Baru / Reset"):
         st.session_state.step = 1
         st.session_state.scene_history = []
         st.session_state.current_story_context = ""
