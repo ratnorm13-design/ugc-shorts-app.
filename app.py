@@ -1,20 +1,24 @@
 import streamlit as st
 import yt_dlp
 import os
-import google.generativeai as genai
+from google import genai
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
 st.title("⚡ UGC Shorts Studio AI")
-st.caption("Multi-Brain AI Engine: Bedah Video -> Refinement Diskusi 2 Tahap -> Prompt Presisi & Unik!")
+st.caption("Multi-Brain AI Engine (AQ-Key Supported): Bedah Video -> Refinement Diskusi -> Prompt Presisi!")
 
 # --- API KEYS SETUP ---
-gemini_key = st.sidebar.text_input("Gemini API Key (Wajib)", type="password")
+gemini_key = st.sidebar.text_input("Gemini API Key (Wajib - Format AQ...)", type="password")
 
+client = None
 if gemini_key:
-    # AUTO-FIX: Ubah spasi tidak sengaja/auto-correct HP menjadi UNDERSCORE (_)
     clean_key = gemini_key.strip().replace(" ", "_").replace("\n", "").replace("\r", "")
-    genai.configure(api_key=clean_key)
+    try:
+        # Inisialisasi client baru yang support key AQ.
+        client = genai.Client(api_key=clean_key)
+    except Exception as e:
+        st.sidebar.error(f"Format Key Error: {e}")
 
 # --- INPUT METHOD ---
 input_mode = st.radio(
@@ -78,24 +82,20 @@ style_pilihan = st.selectbox(
 
 # --- GENERATE PROMPT ENGINE ---
 if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
-    if not gemini_key:
+    if not gemini_key or not client:
         st.error("⚠️ Masukkan Gemini API Key terlebih dahulu di sidebar!")
     elif not video_ready and not user_topic:
         st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
     else:
-        with st.spinner("AI sedang membedah video, menjalankan revisi logika 2 tahap, & meracik versi unik..."):
+        with st.spinner("AI sedang membedah video & meracik versi unik..."):
             try:
                 system_instruction = f"""
-                Kamu akan menjalankan SIMULASI DISKUSI DUA AI SEKALIGUS (Gemini Visual + DeepSeek Logic Engine):
-
-                [TAHAP 1: ANALISIS VISUAL & DRAFT]
-                - Bedah adegan, konteks visual, dan alur utama dari video/topik input.
-                - Buat draf kasar scene-by-scene.
-
-                [TAHAP 2: DEEPSEEK REFINEMENT & LOGIC CHECK]
-                - Ambil draf dari Tahap 1, lalu UBAH ALUR CERITANYA MINIMAL 30% (tambahkan twist/komedi baru agar 100% BEBAS PLAGIAT).
-                - Kunci 1 'CHARACTER ANCHOR' rinci (baju, rambut, umur, aksesoris) dan pasang di AWAL SETIAP PROMPT agar konsisten.
-                - Buat prompt Flow AI berdurasi 8 detik per scene dengan pergerakan sinematik bertahap.
+                Kamu adalah AI Director profesional untuk pembuatan prompt UGC Shorts.
+                Tugasmu:
+                1. Bedah isi input video atau topik.
+                2. Buat alur cerita baru yang dimodifikasi minimal 30% agar bebas plagiat, tambahkan twist/komedi segar.
+                3. Tetapkan 1 'CHARACTER ANCHOR' rinci (baju, rambut, umur, aksesoris) yang ditempel persis di awal setiap prompt scene.
+                4. Buat scene berdurasi 8 detik per scene.
 
                 SPESIFIKASI VIDEO:
                 - Target durasi: {durasi_pilihan}.
@@ -119,18 +119,22 @@ if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
                 [/TAGS_SECTION]
                 """
 
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                input_payload = []
                 if input_mode == "✍️ Input Topik / Ide Barumu":
-                    prompt_input = f"{system_instruction}\n\nIde User:\n{user_topic}"
-                    input_payload.append(prompt_input)
+                    full_prompt = f"{system_instruction}\n\nIde User:\n{user_topic}"
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=full_prompt
+                    )
                 else:
-                    uploaded_file = genai.upload_file(video_path)
-                    prompt_input = f"{system_instruction}\n\nAnalisis video terlampir dan jalankan alur diskusi 2 tahap untuk membuat hasil modifikasi yang presisi & bebas plagiat."
-                    input_payload = [uploaded_file, prompt_input]
+                    # Upload file video langsung ke Gemini Files API menggunakan client baru
+                    with st.spinner("Mengunggah video ke server Gemini..."):
+                        video_file = client.files.upload(file=video_path)
+                    
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[video_file, system_instruction]
+                    )
 
-                response = model.generate_content(input_payload)
                 raw_text = response.text
 
                 # Parse Response per Section
