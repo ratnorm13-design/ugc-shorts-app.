@@ -5,7 +5,7 @@ from google import genai
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
-st.title("⚡ UGC Shorts Studio AI")
+st.title("⚡ UGC Vtoyz Studio AI")
 st.caption("Multi-Brain AI Engine: Ghibli 2D Strict Continuity Mode Active!")
 
 # --- API KEYS SETUP ---
