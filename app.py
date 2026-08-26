@@ -12,7 +12,9 @@ st.caption("Multi-Brain AI Engine: Bedah Video -> Refinement Diskusi 2 Tahap -> 
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib)", type="password")
 
 if gemini_key:
-    genai.configure(api_key=gemini_key)
+    # Membersihkan spasi atau karakter tersembunyi secara otomatis
+    clean_key = gemini_key.strip().replace(" ", "").replace("\n", "").replace("\r", "")
+    genai.configure(api_key=clean_key)
 
 # --- INPUT METHOD ---
 input_mode = st.radio(
@@ -117,7 +119,7 @@ if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
                 [/TAGS_SECTION]
                 """
 
-                model = genai.GenerativeModel('gemini-3.6-flash')
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 input_payload = []
                 if input_mode == "✍️ Input Topik / Ide Barumu":
