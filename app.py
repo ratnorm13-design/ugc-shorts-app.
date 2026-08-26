@@ -15,7 +15,6 @@ client = None
 if gemini_key:
     clean_key = gemini_key.strip().replace(" ", "_").replace("\n", "").replace("\r", "")
     try:
-        # Inisialisasi client baru yang support key AQ.
         client = genai.Client(api_key=clean_key)
     except Exception as e:
         st.sidebar.error(f"Format Key Error: {e}")
@@ -122,16 +121,15 @@ if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
                 if input_mode == "✍️ Input Topik / Ide Barumu":
                     full_prompt = f"{system_instruction}\n\nIde User:\n{user_topic}"
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=full_prompt
                     )
                 else:
-                    # Upload file video langsung ke Gemini Files API menggunakan client baru
                     with st.spinner("Mengunggah video ke server Gemini..."):
                         video_file = client.files.upload(file=video_path)
                     
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=[video_file, system_instruction]
                     )
 
