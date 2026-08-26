@@ -76,7 +76,7 @@ st.markdown("""
         margin-bottom: 15px;
     }
 </style>
-""", unsafe_allow_allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- HEADER SECTION ---
 st.markdown("""
@@ -130,7 +130,7 @@ max_scenes = int(target_durasi_label.split("(")[1].split(" ")[0])
 # --- SESSION STATE / DATABASE MEMORY ---
 if "step" not in st.session_state:
     st.session_state.step = 1
-    st.session_state.master_storyboard = []  # Menyimpan seluruh alur adegan
+    st.session_state.master_storyboard = ""
     st.session_state.current_story_context = ""
 
 # --- TAHAP 1: BEDAH CERITA UTAMA & BUAT MASTER STORYBOARD ---
@@ -303,7 +303,7 @@ elif 2 <= st.session_state.step <= max_scenes:
     with col2:
         if st.button("🔄 RESET PROJECT"):
             st.session_state.step = 1
-            st.session_state.master_storyboard = []
+            st.session_state.master_storyboard = ""
             st.session_state.current_story_context = ""
             st.rerun()
 
@@ -321,6 +321,6 @@ elif st.session_state.step > max_scenes:
 
     if st.button("🚀 MULAI PROYEK BARU"):
         st.session_state.step = 1
-        st.session_state.master_storyboard = []
+        st.session_state.master_storyboard = ""
         st.session_state.current_story_context = ""
         st.rerun()
