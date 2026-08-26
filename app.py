@@ -11,81 +11,103 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- CLEAN & FIXED HIGH CONTRAST CSS ---
+# --- CLEAN BLACK & WHITE + RED ACCENT CSS ---
 st.markdown("""
 <style>
-    /* Background Utama */
+    /* Background Utama Hitam Pekat */
     .stApp {
-        background-color: #0f172a;
-        color: #f8fafc;
+        background-color: #000000 !important;
+        color: #ffffff !important;
     }
 
     /* Header Utama */
     .main-header {
         text-align: center;
         padding: 1.5rem 1rem;
-        background: #1e293b;
-        border-radius: 16px;
-        border: 1px solid #334155;
+        background: #121212;
+        border-radius: 12px;
+        border: 2px solid #333333;
         margin-bottom: 1.5rem;
     }
     .main-title {
         font-size: 1.8rem;
-        font-weight: 800;
-        color: #38bdf8;
+        font-weight: 900;
+        color: #ff3b30 !important;
         margin-bottom: 0.3rem;
     }
     .sub-title {
-        color: #94a3b8;
+        color: #e5e5e5 !important;
         font-size: 0.85rem;
+        font-weight: 600;
     }
 
-    /* Fix Sidebar Mobile Width */
+    /* SEMUA TEKS DAN LABEL DIJADIKAN PUTIH TERANG */
+    label, p, span, div, .stMarkdown, .stRadio label, .stTextInput label, .stSelectbox label, .stFileUploader label {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
+    /* Sidebar Hitam Pekat */
     section[data-testid="stSidebar"] {
-        background-color: #1e293b !important;
-        border-right: 1px solid #334155;
+        background-color: #0a0a0a !important;
+        border-right: 2px solid #333333;
         min-width: 85vw !important;
     }
 
-    /* Fix PERMANEN Dropdown List (Selectbox Items) */
+    /* Tombol Utama (Merah Menyala & Putih) */
+    div.stButton > button {
+        width: 100%;
+        background: #ff3b30 !important;
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        border: 2px solid #ffffff !important;
+        padding: 0.8rem 1.5rem;
+        border-radius: 10px;
+        text-transform: uppercase;
+        font-size: 1rem !important;
+        box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+    }
+    div.stButton > button:hover {
+        background: #d32f2f !important;
+        border-color: #ff3b30 !important;
+    }
+
+    /* Input & Textarea (Hitam dengan Border Putih) */
+    .stTextInput input, .stTextArea textarea, .stSelectbox select {
+        background-color: #121212 !important;
+        border: 2px solid #ffffff !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+    }
+
+    /* Dropdown / Selectbox Menu */
     div[data-baseweb="select"] ul, 
     ul[data-baseweb="menu"], 
     div[data-baseweb="popover"] {
-        background-color: #1e293b !important;
-        border: 1px solid #475569 !important;
+        background-color: #121212 !important;
+        border: 2px solid #ffffff !important;
     }
     
-    /* Fix Teks Pilihan dalam Dropdown */
     li[data-baseweb="option"], 
-    div[role="option"], 
-    ul[data-baseweb="menu"] li {
-        background-color: #1e293b !important;
+    div[role="option"] {
+        background-color: #121212 !important;
         color: #ffffff !important;
-        font-size: 0.9rem !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
     }
-
-    /* Highlight saat Pilihan Di-hover/Dipilih */
-    li[data-baseweb="option"]:hover, 
-    div[role="option"]:hover {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-    }
-
-    /* Fix Area Input & Textarea */
-    .stTextInput input, .stTextArea textarea {
-        background-color: #1e293b !important;
-        border: 1px solid #475569 !important;
+    li[data-baseweb="option"]:hover {
+        background-color: #ff3b30 !important;
         color: #ffffff !important;
     }
 
     /* Card Status Storyboard */
     .story-card {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 12px;
+        background: #121212;
+        border: 2px solid #ff3b30;
+        border-radius: 10px;
         padding: 12px;
         margin-bottom: 12px;
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -243,7 +265,7 @@ elif 2 <= st.session_state.step <= max_scenes:
     st.markdown(f"""
     <div class="story-card">
         <b>📋 Master Storyboard Alur Cerita:</b><br>
-        <pre style="white-space: pre-wrap; font-size: 0.85rem; color: #38bdf8;">{st.session_state.master_storyboard}</pre>
+        <pre style="white-space: pre-wrap; font-size: 0.85rem; color: #ff3b30;">{st.session_state.master_storyboard}</pre>
     </div>
     """, unsafe_allow_html=True)
 
