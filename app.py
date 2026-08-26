@@ -12,8 +12,8 @@ st.caption("Multi-Brain AI Engine: Bedah Video -> Refinement Diskusi 2 Tahap -> 
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib)", type="password")
 
 if gemini_key:
-    # Membersihkan spasi atau karakter tersembunyi secara otomatis
-    clean_key = gemini_key.strip().replace(" ", "").replace("\n", "").replace("\r", "")
+    # AUTO-FIX: Ubah spasi tidak sengaja/auto-correct HP menjadi UNDERSCORE (_)
+    clean_key = gemini_key.strip().replace(" ", "_").replace("\n", "").replace("\r", "")
     genai.configure(api_key=clean_key)
 
 # --- INPUT METHOD ---
