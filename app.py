@@ -11,66 +11,89 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- ADVANCED MODERN CUSTOM CSS ---
+# --- HIGH CONTRAST MODERN CUSTOM CSS ---
 st.markdown("""
 <style>
+    /* Background Utama */
     .stApp {
-        background: radial-gradient(circle at 50% -20%, #1e1b4b, #0f172a, #020617);
+        background: #0f172a;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         color: #f8fafc;
     }
+    
+    /* Header Utama */
     .main-header {
         text-align: center;
-        padding: 2.5rem 1rem 1.5rem 1rem;
-        background: rgba(30, 41, 59, 0.4);
-        backdrop-filter: blur(12px);
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        margin-bottom: 2rem;
+        padding: 2rem 1rem 1.5rem 1rem;
+        background: #1e293b;
+        border-radius: 16px;
+        border: 1px solid #334155;
+        margin-bottom: 1.5rem;
     }
     .main-title {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #3b82f6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #38bdf8;
         margin-bottom: 0.5rem;
     }
     .sub-title {
         color: #94a3b8;
         font-size: 0.9rem;
     }
-    section[data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.85) !important;
-        backdrop-filter: blur(16px);
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* Warna Teks & Label Form (Dipertegas) */
+    label, p, span, div {
+        color: #f8fafc !important;
+        font-weight: 500;
     }
+
+    /* Info Box & Card Container */
+    .stAlert {
+        background-color: #1e293b !important;
+        border: 1px solid #3b82f6 !important;
+        color: #f8fafc !important;
+    }
+
+    /* Input Field & Textarea Fix */
+    .stTextInput input, .stTextArea textarea, .stSelectbox select {
+        background-color: #1e293b !important;
+        border: 2px solid #475569 !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+        font-size: 0.95rem !important;
+    }
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border-color: #38bdf8 !important;
+    }
+
+    /* Tombol Utama */
     div.stButton > button {
         width: 100%;
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        color: #ffffff;
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        color: #ffffff !important;
         font-weight: 700;
         border: none;
-        padding: 0.75rem 1.5rem;
+        padding: 0.8rem 1.5rem;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        transition: all 0.2s ease;
         text-transform: uppercase;
     }
     div.stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(168, 85, 247, 0.6);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
     }
-    .stTextInput input, .stTextArea textarea, .stSelectbox select {
-        background-color: rgba(15, 23, 42, 0.6) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 12px !important;
-        color: #f8fafc !important;
+
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+        border-right: 1px solid #334155;
     }
+
+    /* Story Card Display */
     .story-card {
-        background: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(168, 85, 247, 0.3);
+        background: #1e293b;
+        border: 1px solid #475569;
         border-radius: 12px;
         padding: 15px;
         margin-bottom: 15px;
@@ -154,7 +177,10 @@ if st.session_state.step == 1:
             video_ready = True
             st.success("✓ Video Referensi Siap Dibedah!")
     else:
-        user_topic = st.text_area("Deskripsikan Alur Cerita Keseluruhan:", placeholder="Contoh: Babi naik motor antar paket sampai rumah kucing -> Babi santai di kursi dipukul wajan oleh kucing -> Babi dibakar/dipanggang -> Babi panggang disajikan di meja makan dimakan kucing...")
+        user_topic = st.text_area(
+            "Deskripsikan Alur Cerita Keseluruhan:", 
+            placeholder="Contoh: Babi naik motor antar paket sampai rumah kucing -> Babi santai di kursi dipukul wajan oleh kucing -> Babi dibakar/dipanggang -> Babi panggang disajikan di meja makan dimakan kucing..."
+        )
         if user_topic:
             video_ready = True
 
@@ -228,7 +254,7 @@ elif 2 <= st.session_state.step <= max_scenes:
     st.markdown(f"""
     <div class="story-card">
         <b>📋 Master Storyboard Alur Cerita:</b><br>
-        <pre style="white-space: pre-wrap; font-size: 0.85rem; color: #cbd5e1;">{st.session_state.master_storyboard}</pre>
+        <pre style="white-space: pre-wrap; font-size: 0.85rem; color: #38bdf8;">{st.session_state.master_storyboard}</pre>
     </div>
     """, unsafe_allow_html=True)
 
