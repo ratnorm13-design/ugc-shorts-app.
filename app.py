@@ -4,9 +4,9 @@ import os
 from google import genai
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
-st.title("⚡ UGC Vtoyz Studio AI")
-st.caption("Multi-Brain AI Engine: Ghibli 2D Strict Continuity Mode Active!")
+st.set_page_config(page_title="Studio AI - Pro Continuity UGC Engine", page_icon="⚡", layout="centered")
+st.title("⚡ UGC Shorts Studio AI (Kelipatan 8s Engine)")
+st.caption("AI Video Continuity: Step-by-Step Chain + Sizing Pas 8s per Scene (No Cut CapCut!)")
 
 # --- API KEYS SETUP ---
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib - Format AQ...)", type="password")
@@ -19,56 +19,8 @@ if gemini_key:
     except Exception as e:
         st.sidebar.error(f"Format Key Error: {e}")
 
-# --- INPUT METHOD ---
-input_mode = st.radio(
-    "Metode Input:",
-    ("📁 Upload File Video (.mp4)", "✍️ Input Topik / Ide Barumu", "🔗 Paste Link Shorts/TikTok/IG")
-)
-
-video_path = "temp_video.mp4"
-video_ready = False
-user_topic = ""
-
-if input_mode == "📁 Upload File Video (.mp4)":
-    uploaded_video = st.file_uploader("Upload Video Viral dari HP/Laptopmu:", type=["mp4", "mov", "avi"])
-    if uploaded_video is not None:
-        with open(video_path, "wb") as f:
-            f.write(uploaded_video.read())
-        video_ready = True
-        st.success("Video berhasil di-upload! Siap dibedah & dimodifikasi.")
-
-elif input_mode == "✍️ Input Topik / Ide Barumu":
-    user_topic = st.text_area("Tuliskan Topik / Judul / Deskripsi Singkat Ide Videomu:")
-    if user_topic:
-        video_ready = True
-
-else:
-    url_input = st.text_input("Paste Link Video Viral:")
-    if url_input and st.button("📥 Download Video"):
-        with st.spinner("Mengunduh video..."):
-            try:
-                ydl_opts = {
-                    'format': 'best[ext=mp4]/best',
-                    'outtmpl': video_path,
-                    'overwrites': True,
-                    'quiet': True,
-                    'no_warnings': True,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url_input])
-                video_ready = True
-                st.success("Video berhasil diunduh!")
-            except Exception as e:
-                st.error("Gagal download via link karena terblokir. Disarankan pakai metode 'Upload File Video'!")
-
-# --- SELECTBOX DURASI & STYLE VISUAL ---
-durasi_pilihan = st.selectbox(
-    "⏱️ Pilih Target Durasi Video:",
-    options=["15 Detik (2 Scene @8s)", "30 Detik (4 Scene @8s)", "60 Detik (8 Scene @8s)"]
-)
-
-style_pilihan = st.selectbox(
+# --- PILIH STYLE VISUAL & TARGET DURASI DI SIDEBAR ---
+style_pilihan = st.sidebar.selectbox(
     "🎨 Pilih Gaya Visual Video:",
     options=[
         "2D Anime (Studio Ghibli 100% Traditional Hand-Drawn Cel-Shaded Style)",
@@ -79,92 +31,191 @@ style_pilihan = st.selectbox(
     ]
 )
 
-# --- GENERATE PROMPT ENGINE ---
-if st.button("🚀 RACIK PROMPT KONTINUITAS KETAT"):
-    if not gemini_key or not client:
-        st.error("⚠️ Masukkan Gemini API Key terlebih dahulu di sidebar!")
-    elif not video_ready and not user_topic:
-        st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
+target_durasi_label = st.sidebar.selectbox(
+    "⏱️ Target Total Durasi Video (Kelipatan 8s):",
+    options=[
+        "16 Detik (2 Scene)",
+        "24 Detik (3 Scene)",
+        "32 Detik (4 Scene)",
+        "40 Detik (5 Scene)",
+        "48 Detik (6 Scene)",
+        "56 Detik (7 Scene)"
+    ]
+)
+
+# Konversi pilihan durasi jadi angka maksimal scene
+max_scenes = int(target_durasi_label.split("(")[1].split(" ")[0])
+
+# --- WORKFLOW SESSION STATE ---
+if "step" not in st.session_state:
+    st.session_state.step = 1
+    st.session_state.scene_history = []
+    st.session_state.current_story_context = ""
+
+# --- TAHAP 1: MEMBUAT SCENE 1 ---
+if st.session_state.step == 1:
+    st.subheader(f"🎬 Tahap 1 dari {max_scenes}: Buat Adegan Pertama (Scene 1)")
+    st.info(f"💡 Target total video lu: **{target_durasi_label}** (Setiap scene berdurasi tepat 8 detik).")
+    
+    input_mode = st.radio(
+        "Metode Input Awal:",
+        ("📁 Upload File Video Referensi", "✍️ Input Topik / Ide Cerita Baru")
+    )
+
+    video_path = "temp_video.mp4"
+    video_ready = False
+    user_topic = ""
+
+    if input_mode == "📁 Upload File Video Referensi":
+        uploaded_video = st.file_uploader("Upload Video Referensi:", type=["mp4", "mov", "avi"])
+        if uploaded_video is not None:
+            with open(video_path, "wb") as f:
+                f.write(uploaded_video.read())
+            video_ready = True
+            st.success("Video referensi siap!")
     else:
-        with st.spinner("AI sedang merancang scene dengan sistem konsistensi visual ketat..."):
-            try:
-                system_instruction = f"""
-                Kamu adalah Sutradara & Master Prompt Engineer spesialis AI Video Generation (Runway/Luma/Sora/Midjourney).
-                Tugasmu adalah meracik prompt per-scene berdurasi 8 detik dengan ATURAN KETAT AGAR TIDAK BERUBAH-UBAH (No Style Drift & No Teleportation):
+        user_topic = st.text_area("Tuliskan Ide / Topik Cerita Keseluruhan:")
+        if user_topic:
+            video_ready = True
 
-                1. KUNCI VISUAL UTAMA (WAJIB DITULIS SAMA PERSIS DI AWAL SETIAP PROMPT SCENE):
-                   - Gaya: {style_pilihan}. (Jika Ghibli, pastikan menggunakan format: Traditional 2D hand-drawn animation, cel-shaded, soft watercolor background, Miyazaki style).
-                   - Karakter Utama (Character Anchor): Definisikan secara detail bentuk, warna, pakaian, dan atribut objek utama di Scene 1, lalu PERTAHANKAN DAN SALIN ULANG DESKRIPSI INI KE SEMUA SCENE BERIKUTNYA tanpa ada perubahan fisik.
+    if st.button("🚀 Racik Prompt Scene 1"):
+        if not gemini_key or not client:
+            st.error("⚠️ Masukkan Gemini API Key di sidebar!")
+        elif not video_ready:
+            st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
+        else:
+            with st.spinner("AI sedang merancang fondasi karakter dan Scene 1 (8 detik)..."):
+                try:
+                    system_instruction = f"""
+                    Kamu adalah Sutradara & Master Prompt Engineer spesialis AI Video Generation.
+                    Tugasmu membuat SCENE 1 (Durasi tepat 8 detik) dari total {max_scenes} scene yang direncanakan.
+                    
+                    GAYA VISUAL WAJIB: {style_pilihan}.
+                    
+                    Tugas spesifik:
+                    1. Tetapkan 'CHARACTER ANCHOR' yang sangat detail (bentuk fisik, warna, pakaian, ekspresi) di awal prompt agar nanti bisa konsisten dipakai di {max_scenes} scene berikutnya.
+                    2. Buat Prompt Scene 1 yang sinematik berdurasi 8 detik.
+                    3. Buat Naskah Voiceover (VO) Scene 1 dalam Bahasa Indonesia yang pas untuk durasi 8 detik.
 
-                2. ATURAN KONTINUITAS SCENE (AGAR NYAMBUNG & TIDAK LONCAT-LONCAT):
-                   - Akhir dari Scene 1 harus menjadi titik awal (anchor) posisi transisi ke Scene 2. Jangan memindahkan posisi karakter secara mendadak (teleportasi).
-                   - Pergerakan kamera harus halus (smooth cinematic pan/zoom) melanjutkan scene sebelumnya.
+                    FORMAT OUTPUT MESTI TERPISAH:
+                    [SCENE_DESC]
+                    (Deskripsi detail karakter & prompt scene 1 - 8 detik)
+                    [/SCENE_DESC]
+                    [VO_SCRIPT]
+                    (Naskah VO Scene 1)
+                    [/VO_SCRIPT]
+                    """
 
-                SPESIFIKASI VIDEO:
-                - Target durasi: {durasi_pilihan}.
-                - Gaya Visual: {style_pilihan}.
-
-                FORMAT OUTPUT MESTI TERPISAH KETAT:
-                [PROMPT_SECTION]
-                (Tuliskan prompt per scene secara berurutan dengan format: **Scene X (Waktu):** `Prompt lengkap di sini`)
-                [/PROMPT_SECTION]
-
-                [VO_SECTION]
-                (Isi Naskah Dubbing Voiceover Bahasa Indonesia per scene untuk CapCut di sini)
-                [/VO_SECTION]
-
-                [SEO_SECTION]
-                (Isi Judul Hook, Deskripsi, dan Hashtag di sini)
-                [/SEO_SECTION]
-
-                [TAGS_SECTION]
-                (Isi kata kunci/tags dipisahkan koma di sini)
-                [/TAGS_SECTION]
-                """
-
-                if input_mode == "✍️ Input Topik / Ide Barumu":
-                    full_prompt = f"{system_instruction}\n\nIde User:\n{user_topic}"
-                    response = client.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=full_prompt
-                    )
-                else:
-                    with st.spinner("Mengunggah video ke server Gemini..."):
+                    if input_mode == "✍️ Input Topik / Ide Cerita Baru":
+                        full_prompt = f"{system_instruction}\n\nTopik Cerita:\n{user_topic}"
+                        response = client.models.generate_content(
+                            model='gemini-3.6-flash',
+                            contents=full_prompt
+                        )
+                    else:
                         video_file = client.files.upload(file=video_path)
-                    
-                    response = client.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=[video_file, system_instruction]
-                    )
+                        response = client.models.generate_content(
+                            model='gemini-3.6-flash',
+                            contents=[video_file, system_instruction]
+                        )
 
-                raw_text = response.text
+                    raw_text = response.text
+                    st.session_state.current_story_context = f"=== SCENE 1 (00:00 - 00:08) ===\n" + raw_text
+                    st.session_state.step = 2
+                    st.rerun()
 
-                # Parse Response per Section
-                prompt_content = raw_text.split("[PROMPT_SECTION]")[1].split("[/PROMPT_SECTION]")[0].strip() if "[PROMPT_SECTION]" in raw_text else raw_text
-                vo_content = raw_text.split("[VO_SECTION]")[1].split("[/VO_SECTION]")[0].strip() if "[VO_SECTION]" in raw_text else "Gagal memisahkan VO Script."
-                seo_content = raw_text.split("[SEO_SECTION]")[1].split("[/SEO_SECTION]")[0].strip() if "[SEO_SECTION]" in raw_text else "Gagal memisahkan SEO Pack."
-                tags_content = raw_text.split("[TAGS_SECTION]")[1].split("[/TAGS_SECTION]")[0].strip() if "[TAGS_SECTION]" in raw_text else "Gagal memisahkan Tags."
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
-                st.success("Racikan Prompt Kontinuitas Berhasil Dibuat!")
-                
-                # TAMPILAN TAB
-                tab1, tab2, tab3, tab4 = st.tabs(["🎬 Prompt Flow AI", "🎙️ VO Script CapCut", "🚀 SEO Pack", "🏷️ YouTube Tags"])
-                
-                with tab1:
-                    st.subheader("Prompt Scene Flow AI (Konsisten & Nyambung)")
-                    st.text_area("Copy Prompt Flow AI:", value=prompt_content, height=400)
-                
-                with tab2:
-                    st.subheader("Naskah Dubbing Voiceover")
-                    st.text_area("Copy VO Script:", value=vo_content, height=300)
-                    
-                with tab3:
-                    st.subheader("SEO Judul & Hashtag")
-                    st.text_area("Copy SEO Pack:", value=seo_content, height=300)
+# --- TAHAP BERIKUTNYA (SCENE 2 SAMPAI BATAS MAX_SCENES) ---
+elif 2 <= st.session_state.step <= max_scenes:
+    st.subheader(f"🎬 Tahap {st.session_state.step} dari {max_scenes}: Lanjutkan Scene Berikutnya")
+    st.info(f"💡 **Tips Kontinuitas:** Generate video Scene {st.session_state.step - 1} di AI generator-mu, lalu **Screenshot detik terakhirnya** dan upload di bawah agar karakter & posisinya nyambung!")
 
-                with tab4:
-                    st.subheader("Keywords / Tags YouTube")
-                    st.text_area("Copy Tags YouTube:", value=tags_content, height=200)
+    with st.expander("📂 Lihat Riwayat Script & Prompt Sebelumnya"):
+        st.write(st.session_state.current_story_context)
 
-            except Exception as e:
-                st.error(f"Gagal meracik prompt: {e}")
+    last_frame = st.file_uploader(
+        f"📸 Upload Screenshot Detik Terakhir dari Scene {st.session_state.step - 1}:", 
+        type=["png", "jpg", "jpeg"]
+    )
+    
+    next_action_note = st.text_input("Mau diarahkan ke kejadian apa di scene ini selanjutnya? (Opsional):", placeholder="Contoh: Kucing kaget lalu lari ke arah dapur...")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(f"🚀 Racik Prompt Scene {st.session_state.step}"):
+            if not client:
+                st.error("API Key belum diset.")
+            else:
+                start_time = (st.session_state.step - 1) * 8
+                end_time = st.session_state.step * 8
+                with st.spinner(f"AI menganalisis gambar akhir & meracik Scene {st.session_state.step} ({start_time}s - {end_time}s)..."):
+                    try:
+                        continuity_instruction = f"""
+                        Kamu adalah Sutradara AI profesional. Ini adalah kelanjutan Scene {st.session_state.step} dari total {max_scenes} scene.
+                        GAYA VISUAL WAJIB: {style_pilihan}.
+                        
+                        ATURAN UTAMA KONTINUITAS:
+                        1. Berdasarkan GAMBAR SCREENSHOT TERAKHIR yang di-upload user, pertahankan karakter, baju, gaya visual (Ghibli 2D hand-drawn), dan latar tempat yang sama persis (tidak boleh ada perubahan gaya / style drift!).
+                        2. Lanjutkan alur cerita ke scene berdurasi tepat 8 detik berikutnya secara mulus tanpa efek teleportasi.
+                        
+                        Catatan tambahan dari user untuk scene ini: {next_action_note}
+
+                        FORMAT OUTPUT MESTI TERPISAH:
+                        [SCENE_DESC]
+                        (Prompt Scene {st.session_state.step} berdurasi 8 detik yang konsisten dengan gambar referensi)
+                        [/SCENE_DESC]
+                        [VO_SCRIPT]
+                        (Naskah VO Scene {st.session_state.step} durasi 8 detik)
+                        [/VO_SCRIPT]
+                        """
+
+                        if last_frame is not None:
+                            frame_path = "temp_frame.jpg"
+                            with open(frame_path, "wb") as f:
+                                f.write(last_frame.read())
+                            uploaded_img = client.files.upload(file=frame_path)
+                            response = client.models.generate_content(
+                                model='gemini-3.6-flash',
+                                contents=[uploaded_img, continuity_instruction]
+                            )
+                        else:
+                            response = client.models.generate_content(
+                                model='gemini-3.6-flash',
+                                contents=continuity_instruction
+                            )
+
+                        raw_text = response.text
+                        st.session_state.current_story_context += f"\n\n=== SCENE {st.session_state.step} ({start_time:02d}:00 - {end_time:02d}:00) ===\n" + raw_text
+                        st.session_state.step += 1
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+
+    with col2:
+        if st.button("🔄 Reset / Mulai dari Awal"):
+            st.session_state.step = 1
+            st.session_state.scene_history = []
+            st.session_state.current_story_context = ""
+            st.rerun()
+
+    if st.session_state.current_story_context:
+        st.markdown("---")
+        st.subheader("📜 Riwayat Script & Prompt Keseluruhan")
+        st.text_area("Salin Semua Script & Prompt:", value=st.session_state.current_story_context, height=350)
+
+# --- JIKA SUDAH SELESAI SELURUH SCENE ---
+elif st.session_state.step > max_scenes:
+    st.success(f"🎉 Selamat! Semua {max_scenes} scene ({max_scenes * 8} Detik) Selesai Dirancang dengan Sempurna!")
+    st.info("Semua klip video masing-masing berdurasi pas 8 detik tanpa perlu dipotong-potong lagi saat digabung di CapCut.")
+    
+    st.subheader("📋 Final Master Script & Prompt Package")
+    st.text_area("Salin Paket Final untuk CapCut & Generator AI:", value=st.session_state.current_story_context, height=450)
+
+    if st.button("🔄 Buat Proyek Baru / Reset"):
+        st.session_state.step = 1
+        st.session_state.scene_history = []
+        st.session_state.current_story_context = ""
+        st.rerun()
