@@ -5,7 +5,7 @@ from google import genai
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - Pro Continuity UGC Engine", page_icon="⚡", layout="centered")
-st.title("⚡ UGC Shorts Studio AI (Kelipatan 8s Engine)")
+st.title("⚡ UGC Shorts Studio AI (VtoyzEngine)")
 st.caption("AI Video Continuity: Step-by-Step Chain + Sizing Pas 8s per Scene (No Cut CapCut!)")
 
 # --- API KEYS SETUP ---
