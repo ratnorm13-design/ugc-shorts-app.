@@ -6,7 +6,7 @@ import google.generativeai as genai
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
 st.title("⚡ UGC Shorts Studio AI")
-st.caption("Self-Refining AI Engine: Bedah Video -> Diskusi Internal -> Prompt Presisi & Unik!")
+st.caption("Multi-Brain AI Engine: Bedah Video -> Refinement Diskusi 2 Tahap -> Prompt Presisi & Unik!")
 
 # --- API KEYS SETUP ---
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib)", type="password")
@@ -75,39 +75,37 @@ style_pilihan = st.selectbox(
 )
 
 # --- GENERATE PROMPT ENGINE ---
-if st.button("🚀 RACIK PROMPT UNIK & PRESISI"):
+if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
     if not gemini_key:
         st.error("⚠️ Masukkan Gemini API Key terlebih dahulu di sidebar!")
     elif not video_ready and not user_topic:
         st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
     else:
-        with st.spinner("Gemini sedang membedah video, melakukan revisi internal, & meracik versi uniknya..."):
+        with st.spinner("AI sedang membedah video, menjalankan revisi logika 2 tahap, & meracik versi unik..."):
             try:
                 system_instruction = f"""
-                Kamu bertindak sebagai DUA PERAN SEKALIGUS:
-                1. [ANALIS VISUAL]: Bedah isi video/topik ini dan buat draf awal.
-                2. [SENIOR AI DIRECTOR & PROMPT EDITOR]: Review draf tersebut, modifikasi alur ceritanya minimal 30% agar BEBAS PLAGIAT (tambahkan twist/komedi segar), pertajam instruksi gerakan 8 detik per scene agar tidak patah, dan KUNCI 'Character Anchor' agar tidak berubah wajah/baju.
+                Kamu akan menjalankan SIMULASI DISKUSI DUA AI SEKALIGUS (Gemini Visual + DeepSeek Logic Engine):
 
-                DETAIL SPESIFIKASI:
-                - Target durasi video: {durasi_pilihan}.
-                - Gaya Visual Pilihan: {style_pilihan}.
-                
-                ATURAN OUTPUT:
-                1. Tentukan 1 'CHARACTER ANCHOR' (deskripsi fisik rinci seperti warna baju, gaya rambut, rentang umur, dan atribut wajib).
-                2. Tempelkan Gaya Visual '{style_pilihan}' dan 'CHARACTER ANCHOR' tersebut persis sama di awal SETIAP prompt scene.
-                3. Setiap SCENE wajib berdurasi 8 DETIK per prompt dengan instruksi gerakan bertahap, slow-motion, dan continuous movement.
-                4. Untuk Scene 2 dan seterusnya, sertakan catatan agar pengguna meng-upload screenshot detik ke-8 dari scene sebelumnya sebagai referensi Image-to-Video.
-                5. Buatkan Voiceover (VO) Script Bahasa Indonesia yang pas timing-nya per scene untuk CapCut.
-                6. Buatkan SEO Pack (Judul Hook, Deskripsi, Hashtag).
-                7. Buatkan Kata Kunci / Keywords YouTube (Tags) dipisahkan dengan koma.
+                [TAHAP 1: ANALISIS VISUAL & DRAFT]
+                - Bedah adegan, konteks visual, dan alur utama dari video/topik input.
+                - Buat draf kasar scene-by-scene.
 
-                FORMAT OUTPUT MESTI TERPISAH:
+                [TAHAP 2: DEEPSEEK REFINEMENT & LOGIC CHECK]
+                - Ambil draf dari Tahap 1, lalu UBAH ALUR CERITANYA MINIMAL 30% (tambahkan twist/komedi baru agar 100% BEBAS PLAGIAT).
+                - Kunci 1 'CHARACTER ANCHOR' rinci (baju, rambut, umur, aksesoris) dan pasang di AWAL SETIAP PROMPT agar konsisten.
+                - Buat prompt Flow AI berdurasi 8 detik per scene dengan pergerakan sinematik bertahap.
+
+                SPESIFIKASI VIDEO:
+                - Target durasi: {durasi_pilihan}.
+                - Gaya Visual: {style_pilihan}.
+
+                FORMAT OUTPUT MESTI TERPISAH KETAT:
                 [PROMPT_SECTION]
                 (Isi Character Anchor dan Prompt Scene Flow AI 8s per scene di sini)
                 [/PROMPT_SECTION]
 
                 [VO_SECTION]
-                (Isi Naskah Dubbing Voiceover per scene untuk CapCut di sini)
+                (Isi Naskah Dubbing Voiceover Bahasa Indonesia per scene untuk CapCut di sini)
                 [/VO_SECTION]
 
                 [SEO_SECTION]
@@ -127,7 +125,7 @@ if st.button("🚀 RACIK PROMPT UNIK & PRESISI"):
                     input_payload.append(prompt_input)
                 else:
                     uploaded_file = genai.upload_file(video_path)
-                    prompt_input = f"{system_instruction}\n\nAnalisis video terlampir. Lakukan bedah visual + revisi director internal untuk menghasilkan versi MODIFIKASI UNIK yang presisi dan bebas plagiat."
+                    prompt_input = f"{system_instruction}\n\nAnalisis video terlampir dan jalankan alur diskusi 2 tahap untuk membuat hasil modifikasi yang presisi & bebas plagiat."
                     input_payload = [uploaded_file, prompt_input]
 
                 response = model.generate_content(input_payload)
@@ -139,7 +137,7 @@ if st.button("🚀 RACIK PROMPT UNIK & PRESISI"):
                 seo_content = raw_text.split("[SEO_SECTION]")[1].split("[/SEO_SECTION]")[0].strip() if "[SEO_SECTION]" in raw_text else "Gagal memisahkan SEO Pack."
                 tags_content = raw_text.split("[TAGS_SECTION]")[1].split("[/TAGS_SECTION]")[0].strip() if "[TAGS_SECTION]" in raw_text else "Gagal memisahkan Tags."
 
-                st.success("Racikan Modifikasi Unik & Presisi Berhasil Dibuat!")
+                st.success("Racikan Dual-Brain AI Berhasil Dibuat!")
                 
                 # TAMPILAN TAB
                 tab1, tab2, tab3, tab4 = st.tabs(["🎬 Prompt Flow AI", "🎙️ VO Script CapCut", "🚀 SEO Pack", "🏷️ YouTube Tags"])
