@@ -6,7 +6,7 @@ from google import genai
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Studio AI - UGC Shorts Engine", page_icon="⚡", layout="centered")
 st.title("⚡ UGC Shorts Studio AI")
-st.caption("Multi-Brain AI Engine (AQ-Key Supported): Bedah Video -> Refinement Diskusi -> Prompt Presisi!")
+st.caption("Multi-Brain AI Engine: Ghibli 2D Strict Continuity Mode Active!")
 
 # --- API KEYS SETUP ---
 gemini_key = st.sidebar.text_input("Gemini API Key (Wajib - Format AQ...)", type="password")
@@ -71,30 +71,34 @@ durasi_pilihan = st.selectbox(
 style_pilihan = st.selectbox(
     "🎨 Pilih Gaya Visual Video:",
     options=[
+        "2D Anime (Studio Ghibli 100% Traditional Hand-Drawn Cel-Shaded Style)",
         "Realistis / Photorealistic (8K Cinematic)",
         "3D Animation (Pixar / Dreamworks Style)",
-        "2D Anime (Studio Ghibli Aesthetic)",
         "Comic Book / Pop Art (Bold Lines & Halftone)",
         "Claymation (Stop Motion Style)"
     ]
 )
 
 # --- GENERATE PROMPT ENGINE ---
-if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
+if st.button("🚀 RACIK PROMPT KONTINUITAS KETAT"):
     if not gemini_key or not client:
         st.error("⚠️ Masukkan Gemini API Key terlebih dahulu di sidebar!")
     elif not video_ready and not user_topic:
         st.error("⚠️ Masukkan input video atau topik terlebih dahulu!")
     else:
-        with st.spinner("AI sedang membedah video & meracik versi unik..."):
+        with st.spinner("AI sedang merancang scene dengan sistem konsistensi visual ketat..."):
             try:
                 system_instruction = f"""
-                Kamu adalah AI Director profesional untuk pembuatan prompt UGC Shorts.
-                Tugasmu:
-                1. Bedah isi input video atau topik.
-                2. Buat alur cerita baru yang dimodifikasi minimal 30% agar bebas plagiat, tambahkan twist/komedi segar.
-                3. Tetapkan 1 'CHARACTER ANCHOR' rinci (baju, rambut, umur, aksesoris) yang ditempel persis di awal setiap prompt scene.
-                4. Buat scene berdurasi 8 detik per scene.
+                Kamu adalah Sutradara & Master Prompt Engineer spesialis AI Video Generation (Runway/Luma/Sora/Midjourney).
+                Tugasmu adalah meracik prompt per-scene berdurasi 8 detik dengan ATURAN KETAT AGAR TIDAK BERUBAH-UBAH (No Style Drift & No Teleportation):
+
+                1. KUNCI VISUAL UTAMA (WAJIB DITULIS SAMA PERSIS DI AWAL SETIAP PROMPT SCENE):
+                   - Gaya: {style_pilihan}. (Jika Ghibli, pastikan menggunakan format: Traditional 2D hand-drawn animation, cel-shaded, soft watercolor background, Miyazaki style).
+                   - Karakter Utama (Character Anchor): Definisikan secara detail bentuk, warna, pakaian, dan atribut objek utama di Scene 1, lalu PERTAHANKAN DAN SALIN ULANG DESKRIPSI INI KE SEMUA SCENE BERIKUTNYA tanpa ada perubahan fisik.
+
+                2. ATURAN KONTINUITAS SCENE (AGAR NYAMBUNG & TIDAK LONCAT-LONCAT):
+                   - Akhir dari Scene 1 harus menjadi titik awal (anchor) posisi transisi ke Scene 2. Jangan memindahkan posisi karakter secara mendadak (teleportasi).
+                   - Pergerakan kamera harus halus (smooth cinematic pan/zoom) melanjutkan scene sebelumnya.
 
                 SPESIFIKASI VIDEO:
                 - Target durasi: {durasi_pilihan}.
@@ -102,7 +106,7 @@ if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
 
                 FORMAT OUTPUT MESTI TERPISAH KETAT:
                 [PROMPT_SECTION]
-                (Isi Character Anchor dan Prompt Scene Flow AI 8s per scene di sini)
+                (Tuliskan prompt per scene secara berurutan dengan format: **Scene X (Waktu):** `Prompt lengkap di sini`)
                 [/PROMPT_SECTION]
 
                 [VO_SECTION]
@@ -141,13 +145,13 @@ if st.button("🚀 RACIK PROMPT DUAL-BRAIN UNIK"):
                 seo_content = raw_text.split("[SEO_SECTION]")[1].split("[/SEO_SECTION]")[0].strip() if "[SEO_SECTION]" in raw_text else "Gagal memisahkan SEO Pack."
                 tags_content = raw_text.split("[TAGS_SECTION]")[1].split("[/TAGS_SECTION]")[0].strip() if "[TAGS_SECTION]" in raw_text else "Gagal memisahkan Tags."
 
-                st.success("Racikan Dual-Brain AI Berhasil Dibuat!")
+                st.success("Racikan Prompt Kontinuitas Berhasil Dibuat!")
                 
                 # TAMPILAN TAB
                 tab1, tab2, tab3, tab4 = st.tabs(["🎬 Prompt Flow AI", "🎙️ VO Script CapCut", "🚀 SEO Pack", "🏷️ YouTube Tags"])
                 
                 with tab1:
-                    st.subheader("Prompt Scene Flow AI (8s/Scene)")
+                    st.subheader("Prompt Scene Flow AI (Konsisten & Nyambung)")
                     st.text_area("Copy Prompt Flow AI:", value=prompt_content, height=400)
                 
                 with tab2:
