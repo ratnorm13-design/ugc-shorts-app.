@@ -1,13 +1,12 @@
 import streamlit as st
-import os
 import json
-import requests
 from google import genai
+from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Triple Engine Creative Director", 
-    page_icon="🔥", 
+    page_title="STUDIO AI - Gemini UGC Remaker & SEO", 
+    page_icon="⚡", 
     layout="centered"
 )
 
@@ -31,15 +30,14 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🔥 TRIPLE ENGINE BRAINSTORMING UGC</div>
-    <div class="sub-title">Gemini (Vision) 🤝 DeepSeek (Creative Plot Twist) 🤝 Qwen (Flow Prompt & SEO)</div>
+    <div class="main-title">⚡ STUDIO AI UGC REMAKER & SEO</div>
+    <div class="sub-title">Powered Purely by Gemini (Vision + Deep Comedy Logic + YouTube SEO)</div>
 </div>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR API CONFIG ---
-st.sidebar.markdown("### ⚙️ **API KEYS SETUP**")
-gemini_key = st.sidebar.text_input("1. Gemini API Key", type="password")
-openrouter_key = st.sidebar.text_input("2. OpenRouter API Key (DeepSeek & Qwen)", type="password")
+# --- SIDEBAR CONFIG ---
+st.sidebar.markdown("### ⚙️ **GEMINI API KEY SETUP**")
+gemini_key = st.sidebar.text_input("Gemini API Key:", type="password", placeholder="Paste API Key Gemini lo di sini...")
 
 client_gemini = None
 if gemini_key:
@@ -48,27 +46,6 @@ if gemini_key:
         st.sidebar.success("✓ Gemini Connected")
     except Exception as e:
         st.sidebar.error(f"Gemini Key Error: {e}")
-
-if openrouter_key:
-    st.sidebar.success("✓ DeepSeek & Qwen Connected")
-
-# --- HELPER OPENROUTER CALL ---
-def call_openrouter(model_name, system_prompt, user_prompt):
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {openrouter_key.strip()}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    res_data = response.json()
-    return res_data['choices'][0]['message']['content']
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🎨 **VISUAL & DURASI**")
@@ -104,7 +81,7 @@ if "step" not in st.session_state:
     st.session_state.original_summary = ""
     st.session_state.current_story_context = ""
 
-# --- TAHAP 1: TRIPLE AI BRAINSTORMING DISCUSSIONS ---
+# --- TAHAP 1: GEMINI ANALISIS & RACIK CERITA KOMEDI ---
 if st.session_state.step == 1:
     st.info(f"🎯 **Target Mode:** {target_durasi_label} (Masing-masing 8 Detik)")
     
@@ -134,92 +111,83 @@ if st.session_state.step == 1:
             video_ready = True
 
     st.markdown("---")
-    modification_notes = st.text_input("💡 (Opsional) Arahkan Genre Komedi/Cerita:", placeholder="Misal: Bikin lebih kocak absurd, ending ngakak, dsb...")
+    modification_notes = st.text_input("💡 (Opsional) Arahkan Genre Komedi/Cerita:", placeholder="Misal: Buat endingnya komedi absurd, ganti karakter utama, dll...")
 
-    if st.button("🚀 RACIK CERITA SUPER KOCAK (TRIPLE AI DISCUSSIONS)"):
-        if not gemini_key or not openrouter_key:
-            st.error("⚠️ Lengkapi Gemini Key dan OpenRouter Key di sidebar!")
+    if st.button("🚀 RACIK CERITA SUPER KOCAK & PROMPT"):
+        if not gemini_key:
+            st.error("⚠️ Masukkan Gemini API Key di sidebar terlebih dahulu!")
         elif not video_ready:
-            st.error("⚠️ Masukkan video/gambar referensi dulu!")
+            st.error("⚠️ Masukkan data referensi terlebih dahulu!")
         else:
-            with st.spinner("🔥 ENGINE 1 (Gemini): Membedah visual & potensi adegan kocak..."):
+            with st.spinner("🤖 Gemini sedang menganalisis video & meracik adegan komedi tambahan..."):
                 try:
-                    # 1. GEMINI VISION BEDAH VIDEO & KUNCI OBJEK
+                    contents_list = []
+                    
                     if input_mode == "✍️ Input Teks Cerita/Adegan Video":
-                        vision_summary = user_topic
+                        contents_list.append(f"Video Reference Text:\n{user_topic}")
+                    elif input_mode == "📁 Upload Beberapa Screenshot Urut":
+                        for idx, img_file in enumerate(multi_frames):
+                            p = f"temp_{idx}.jpg"
+                            with open(p, "wb") as f:
+                                f.write(img_file.read())
+                            contents_list.append(client_gemini.files.upload(file=p))
                     else:
-                        gemini_vision_prompt = """
-                        Bedah video/gambar ini secara rinci:
-                        1. Apa elemen komedi/kelucuan/keunikan utama dari video ini?
-                        2. Identifikasi subjek utama DAN semua objek yang dipegang/digunakan (HP, panci, helm, dll).
-                        3. Sebutkan adegan kunci yang buat penonton penasaran/kocak.
-                        """
-                        if input_mode == "📁 Upload Beberapa Screenshot Urut":
-                            imgs = []
-                            for idx, img_file in enumerate(multi_frames):
-                                p = f"temp_{idx}.jpg"
-                                with open(p, "wb") as f:
-                                    f.write(img_file.read())
-                                imgs.append(client_gemini.files.upload(file=p))
-                            res_gem = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=imgs + [gemini_vision_prompt])
-                        else:
-                            vid = client_gemini.files.upload(file=video_path)
-                            res_gem = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=[vid, gemini_vision_prompt])
-                        vision_summary = res_gem.text
+                        vid = client_gemini.files.upload(file=video_path)
+                        contents_list.append(vid)
 
-                    # 2. DEEPSEEK BRAINSTORMING: MERACIK ADEGAN TAMBAHAN BIAR JAUH LEBIH NENDANG
-                    st.toast("🔥 ENGINE 2 (DeepSeek): Meracik adegan tambahan & plot twist kocak...")
-                    deepseek_sys = "Kamu adalah DeepSeek Head Comedy Director. Tugasmu membuat video rujukan menjadi JAUH LEBIH LUCU, PENASARAN, DAN MENARIK dari video aslinya!"
-                    deepseek_user = f"""
-                    Hasil bedahan Gemini dari video ori:
-                    {vision_summary}
+                    system_instruction = f"""
+                    Kamu adalah Produser Video Viral & Scriptwriter Komedi Handal.
+                    Tugasmu adalah menganalisis media referensi lalu meraciknya menjadi video UGC baru yang JAUH LEBIH LUCU, PENASARAN, DAN NENDANG dibanding video aslinya.
 
-                    Catatan Tambahan User: {modification_notes}
-                    Target Durasi: {max_scenes} Scene (Total {max_scenes * 8} detik).
-
-                    TUGASMU:
-                    1. Ambil inti lucu dari video ori, lalu TAMBAHKAN adegan komedi/plot twist baru agar durasi {max_scenes * 8} detik terisi sempurna!
-                    2. Jika video asli pendek (misal 10 detik), tambahkan adegan reaksi kocak, kejadian tidak terduga, atau klimaks yang bikin audiens ngakak/kaget.
-                    3. Buat skenario ini jauh lebih seru dari video aslinya.
+                    INSTRUKSI UTAMA:
+                    1. Identifikasi subjek utama DAN semua objek penting yang dipegang/digunakan (HP, helm, panci, barang viral, dll). Kunci objek ini di `character_anchor` agar TIDAK LENTUR / HILANG / MORPHING!
+                    2. Jika video asli pendek, TAMBAHKAN adegan komedi/plot twist tak terduga agar durasi pas menjadi TEPAT {max_scenes} SCENE (8 detik per scene, total {max_scenes * 8} detik).
+                    3. Buatkan Naskah Voiceover Bahasa Indonesia yang lucu, santai, dan pas ritmenya.
+                    4. Catatan user: '{modification_notes}'.
                     """
-                    deepseek_out = call_openrouter("deepseek/deepseek-r1-distill-llama-70b", deepseek_sys, deepseek_user)
 
-                    # 3. QWEN MASTERMIND: MENYUSUN STORYBOARD & MEMBUNGKUS OBJEK ANTI-MORPHING
-                    st.toast("🔥 ENGINE 3 (Qwen): Mengunci objek & menyusun Prompt Google Flow...")
-                    qwen_sys = "Kamu adalah Qwen Prompt Mastermind. Format racikan DeepSeek & Gemini menjadi JSON Storyboard presisi."
-                    qwen_user = f"""
-                    Berdasarkan racikan komedi DeepSeek ini:
-                    {deepseek_out}
+                    contents_list.append(system_instruction)
 
-                    TUGAS QWEN:
-                    1. Susun 'character_anchor' Bahasa Inggris yang mengunci ciri fisik subjek DAN objek wajib yang dipegang (misal: 'firmly holding a yellow frypan throughout, no morphing').
-                    2. Buatkan persis {max_scenes} SCENE (8 detik per scene).
-                    3. Buatkan Naskah Voiceover (VO) Bahasa Indonesia yang sangat kocak, santai, dan pas dengan ritme adegan.
+                    # Pakai Structured Output JSON paksa dari Gemini (Anti Error Parsing)
+                    response = client_gemini.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=contents_list,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema={
+                                "type": "OBJECT",
+                                "properties": {
+                                    "new_concept_summary": {"type": "STRING"},
+                                    "character_anchor": {"type": "STRING"},
+                                    "scenes": {
+                                        "type": "ARRAY",
+                                        "items": {
+                                            "type": "OBJECT",
+                                            "properties": {
+                                                "scene_num": {"type": "INTEGER"},
+                                                "description": {"type": "STRING"},
+                                                "vo": {"type": "STRING"}
+                                            },
+                                            "required": ["scene_num", "description", "vo"]
+                                        }
+                                    }
+                                },
+                                "required": ["new_concept_summary", "character_anchor", "scenes"]
+                            }
+                        )
+                    )
 
-                    Format Output JSON Murni:
-                    {{
-                        "new_concept_summary": "Ringkasan konsep komedi racikan baru",
-                        "character_anchor": "Karakter + Objek Wajib yang dikunci ketat",
-                        "scenes": [
-                            {{"scene_num": 1, "description": "Deskripsi adegan kocak Scene 1", "vo": "VO Bahasa Indonesia Scene 1"}},
-                            {{"scene_num": 2, "description": "Deskripsi adegan kocak Scene 2", "vo": "VO Bahasa Indonesia Scene 2"}}
-                        ]
-                    }}
-                    """
-                    qwen_out = call_openrouter("qwen/qwen-2.5-72b-instruct", qwen_sys, qwen_user)
-
-                    clean_json = qwen_out.replace("```json", "").replace("```", "").strip()
-                    parsed = json.loads(clean_json)
+                    parsed = json.loads(response.text)
 
                     st.session_state.master_storyboard = parsed["scenes"]
                     st.session_state.character_anchor = parsed["character_anchor"]
-                    st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Komedi Racikan Triple AI.")
+                    st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Komedi Gemini.")
                     
                     st.session_state.step = 2
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"Gagal memproses Triple AI: {e}")
+                    st.error(f"Gagal memproses dengan Gemini: {e}")
 
 # --- TAHAP 2 S/D SELESAI: GENERATE PROMPT KETAT (ANTI-MORPHING) ---
 elif 2 <= st.session_state.step <= (max_scenes + 1):
@@ -231,7 +199,7 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
 
     st.markdown(f"""
     <div class="reconcept-card">
-        <b>💡 Hasil Racikan Komedi 3 AI (Jauh Lebih Nendang):</b><br>
+        <b>💡 Konsep Komedi Hasil Racikan Gemini:</b><br>
         <span>{st.session_state.original_summary}</span>
     </div>
     <div class="story-card">
@@ -244,30 +212,31 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            if not gemini_key or not openrouter_key:
-                st.error("API Key belum diset lengkap.")
+            if not gemini_key:
+                st.error("API Key belum diset.")
             else:
                 start_time = curr_idx * 8
                 end_time = (curr_idx + 1) * 8
                 
-                with st.spinner(f"⚡ Qwen menyusun prompt visual 8 detik untuk Google Flow..."):
+                with st.spinner(f"⚡ Gemini menyusun prompt visual 8 detik untuk Google Flow..."):
                     try:
-                        prompt_enforcer_sys = "Kamu adalah Qwen Prompt Specialist. Buat prompt visual 8 detik super detail untuk Google Flow AI."
-                        prompt_enforcer_user = f"""
-                        Buat prompt Bahasa Inggris 8 detik adegan: "{curr_scene['description']}".
-                        Gaya Visual: {style_pilihan}.
+                        prompt_spec_prompt = f"""
+                        Buatlah prompt video 8 detik dalam Bahasa Inggris untuk Google Flow AI berdasarkan adegan ini: "{curr_scene['description']}".
+                        Gaya Visual Target: {style_pilihan}.
                         
-                        KUNCI OBJEK & SUBJEK (ANTI-MORPHING):
-                        - Anchor Utama: {st.session_state.character_anchor}
-                        - TEGASKAN BAHWA SUBJEK DAN OBJEK TERSEBUT KONSISTEN DIPEGANG/DIBAWA DARI AWAL DETIK SAMPAI AKHIR DETIK.
-                        - Tambahkan instruksi kamera (cinematic panning, zoom, lighting).
+                        PERATURAN PENGUNCIAN OBJEK EKSTRIM (ANTI-MORPHING / ANTI-HILANG):
+                        1. Karakter & Objek Anchor Utama yang wajib ada dan tidak boleh berubah: {st.session_state.character_anchor}
+                        2. TEGASKAN DI PROMPT: Sebutkan objek yang dipegang/digunakan secara konsisten dari awal sampai akhir (misal: 'hands firmly holding [object] continuously, no morphing, object never disappears').
+                        3. Format kalimat: [Subject & Held Object] + [Action/Emotion] + [Environment & Lighting] + [Camera Style].
 
-                        Format Output:
+                        Berikan format output persis seperti ini:
                         [PROMPT_SCENE]
                         (Google Flow Prompt Bahasa Inggris)
                         [/PROMPT_SCENE]
                         """
-                        res_text = call_openrouter("qwen/qwen-2.5-72b-instruct", prompt_enforcer_sys, prompt_enforcer_user)
+                        res_gen = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=prompt_spec_prompt)
+                        res_text = res_gen.text
+
                         p_scene = res_text.split("[PROMPT_SCENE]")[1].split("[/PROMPT_SCENE]")[0].strip() if "[PROMPT_SCENE]" in res_text else res_text
 
                         scene_feed = f"\n\n=== SCENE {scene_number} ({start_time:02d}:00 - {end_time:02d}:00) ===\nGOOGLE FLOW PROMPT:\n{p_scene}\n\nVO SCRIPT:\n{curr_scene['vo']}"
@@ -293,26 +262,26 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
         st.subheader("📜 Live Output Feed")
         st.text_area("Script & Flow Prompt Feed:", value=st.session_state.current_story_context, height=250)
 
-# --- TAHAP AKHIR: AUTOMATIC YOUTUBE SEO (PACK VIRAL) ---
+# --- TAHAP AKHIR: AUTOMATIC YOUTUBE SEO PACK ---
 else:
     st.balloons()
-    st.success(f"🎉 **RACIKAN 3 AI SELESAI!** Seluruh {max_scenes} Scene Siap Digenerate!")
+    st.success(f"🎉 **PROYEK SELESAI!** Seluruh {max_scenes} Scene Siap Digenerate!")
 
-    with st.spinner("🔥 DeepSeek & Qwen meracik Judul Clickbait Viral + Deskripsi & Tag SEO..."):
+    with st.spinner("🔥 Gemini meracik Judul Clickbait Viral + Deskripsi & Tag SEO YouTube..."):
         try:
-            seo_sys = "Kamu adalah YouTube Content Strategist Spesialis Video Viral & FYP."
-            seo_user = f"""
-            Berdasarkan ide racikan video super kocak ini:
+            seo_prompt = f"""
+            Berdasarkan konsep cerita dan naskah komedi berikut:
             Konsep: {st.session_state.original_summary}
             Detail Script: {st.session_state.current_story_context}
 
-            Buatkan SEO Pack YouTube Shorts dalam Bahasa Indonesia:
-            1. 3 Opsi JUDUL CLICKBAIT VIRAL (Lucu, Bikin Penasaran, Emosional + Emoji).
-            2. DESKRIPSI YOUTUBE (Menarik, singkat, menyelipkan keyword SEO).
-            3. TAG SEO HIGH-VOLUME (Dipisahkan koma, siap paste ke YouTube Studio).
-            4. HASHTAG VIRAL (5-8 hashtag populer).
+            Buatkan SEO Pack YouTube Shorts dalam Bahasa Indonesia yang sangat memancing emosi/penasaran/lucu & tembus algoritma:
+            1. 3 Opsi JUDUL CLICKBAIT VIRAL (Lucu/Penasaran, pakai emoji menarik).
+            2. DESKRIPSI VIDEO (Singkat, menarik, menyisipkan kata kunci pencarian SEO, dan mengajak subscribe/like).
+            3. TAG SEO HIGH-VOLUME (Kumpulan kata kunci dipisahkan koma untuk dipaste langsung ke kolom Tags YouTube Studio).
+            4. HASHTAG VIRAL (5-8 hashtag populer seperti #Shorts #Lucu #Viral).
             """
-            youtube_seo_pack = call_openrouter("deepseek/deepseek-r1-distill-llama-70b", seo_sys, seo_user)
+            seo_res = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=seo_prompt)
+            youtube_seo_pack = seo_res.text
         except Exception as e:
             youtube_seo_pack = f"Gagal membuat Paket SEO: {e}"
 
@@ -323,8 +292,8 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    st.subheader("📋 Final Master Output")
-    st.text_area("Copy Master Flow Prompts & Script:", value=st.session_state.current_story_context, height=350)
+    st.subheader("📋 Final Master Prompt & Script Output")
+    st.text_area("Copy Master Flow Prompts:", value=st.session_state.current_story_context, height=350)
 
     if st.button("🚀 MULAI PROYEK BARU"):
         st.session_state.step = 1
