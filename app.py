@@ -165,7 +165,7 @@ if st.session_state.step == 1:
                         full_content = [vid, reconcept_prompt]
 
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=full_content
                     )
 
@@ -176,8 +176,8 @@ if st.session_state.step == 1:
                     st.session_state.character_anchor = parsed["character_anchor"]
                     st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Baru Berhasil Diracik.")
                     
-                    # MULAI DARI SCENE 1 (BUKAN LANGSUNG DI-GENERATE OTOMATIS)
-                    st.session_state.step = 2  # Step 2 merepresentasikan pengerjaan Scene Index ke-0 (Scene 1)
+                    # MULAI DARI SCENE 1
+                    st.session_state.step = 2  
                     st.rerun()
 
                 except Exception as e:
@@ -253,12 +253,12 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
                                 f.write(last_frame.read())
                             uploaded_img = client.files.upload(file=frame_path)
                             res = client.models.generate_content(
-                                model='gemini-2.5-flash',
+                                model='gemini-3.6-flash',
                                 contents=[uploaded_img, flow_prompt_rules]
                             )
                         else:
                             res = client.models.generate_content(
-                                model='gemini-2.5-flash',
+                                model='gemini-3.6-flash',
                                 contents=flow_prompt_rules
                             )
 
