@@ -6,7 +6,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Gemini 3.6 & DeepSeek UGC Creator", 
+    page_title="STUDIO AI - UGC Creator", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -33,7 +33,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🎬 DUAL-ENGINE UGC CREATOR</div>
-    <div class="sub-title">Powered by Gemini 3.6 Flash × DeepSeek R1 (Brainstorm & Strict Anchor Engine)</div>
+    <div class="sub-title">Powered by Zagrest (Brainstorm & Strict Anchor Engine)</div>
 </div>
 """, unsafe_allow_html=True)
 
