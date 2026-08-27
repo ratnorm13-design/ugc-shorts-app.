@@ -30,7 +30,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">⚡ STUDIO AI UGC SHORTS</div>
-    <div class="sub-title">Google Flow AI Optimized • Anti-Plagiarism Re-Conceptor</div>
+    <div class="sub-title">Google Flow AI Optimized • Re-Conceptor</div>
 </div>
 """, unsafe_allow_html=True)
 
