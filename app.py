@@ -5,7 +5,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Gemini UGC Remaker & SEO", 
+    page_title="STUDIO AI - Gemini 3.6 UGC Remaker & SEO", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -31,19 +31,19 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">⚡ STUDIO AI UGC REMAKER & SEO</div>
-    <div class="sub-title">Powered Purely by Gemini (Vision + Deep Comedy Logic + YouTube SEO)</div>
+    <div class="sub-title">Powered by Gemini 3.6 Flash (Vision + Comedy Logic + SEO Engine)</div>
 </div>
 """, unsafe_allow_html=True)
 
 # --- SIDEBAR CONFIG ---
 st.sidebar.markdown("### ⚙️ **GEMINI API KEY SETUP**")
-gemini_key = st.sidebar.text_input("Gemini API Key:", type="password", placeholder="Paste API Key Gemini lo di sini...")
+gemini_key = st.sidebar.text_input("Gemini API Key:", type="password", placeholder="Masukkan API Key Gemini lo di sini...")
 
 client_gemini = None
 if gemini_key:
     try:
         client_gemini = genai.Client(api_key=gemini_key.strip())
-        st.sidebar.success("✓ Gemini Connected")
+        st.sidebar.success("✓ Gemini 3.6 Flash Connected")
     except Exception as e:
         st.sidebar.error(f"Gemini Key Error: {e}")
 
@@ -81,7 +81,7 @@ if "step" not in st.session_state:
     st.session_state.original_summary = ""
     st.session_state.current_story_context = ""
 
-# --- TAHAP 1: GEMINI ANALISIS & RACIK CERITA KOMEDI ---
+# --- TAHAP 1: GEMINI 3.6 FLASH ANALISIS & RACIK CERITA ---
 if st.session_state.step == 1:
     st.info(f"🎯 **Target Mode:** {target_durasi_label} (Masing-masing 8 Detik)")
     
@@ -119,7 +119,7 @@ if st.session_state.step == 1:
         elif not video_ready:
             st.error("⚠️ Masukkan data referensi terlebih dahulu!")
         else:
-            with st.spinner("🤖 Gemini sedang menganalisis video & meracik adegan komedi tambahan..."):
+            with st.spinner("🤖 Gemini 3.6 Flash sedang membedah video & meracik adegan komedi nendang..."):
                 try:
                     contents_list = []
                     
@@ -148,9 +148,9 @@ if st.session_state.step == 1:
 
                     contents_list.append(system_instruction)
 
-                    # Pakai Structured Output JSON paksa dari Gemini (Anti Error Parsing)
+                    # Memakai Gemini 3.6 Flash dengan Structured JSON Output
                     response = client_gemini.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=contents_list,
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
@@ -181,13 +181,13 @@ if st.session_state.step == 1:
 
                     st.session_state.master_storyboard = parsed["scenes"]
                     st.session_state.character_anchor = parsed["character_anchor"]
-                    st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Komedi Gemini.")
+                    st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Komedi Gemini 3.6.")
                     
                     st.session_state.step = 2
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"Gagal memproses dengan Gemini: {e}")
+                    st.error(f"Gagal memproses dengan Gemini 3.6 Flash: {e}")
 
 # --- TAHAP 2 S/D SELESAI: GENERATE PROMPT KETAT (ANTI-MORPHING) ---
 elif 2 <= st.session_state.step <= (max_scenes + 1):
@@ -199,7 +199,7 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
 
     st.markdown(f"""
     <div class="reconcept-card">
-        <b>💡 Konsep Komedi Hasil Racikan Gemini:</b><br>
+        <b>💡 Konsep Komedi Racikan Gemini 3.6:</b><br>
         <span>{st.session_state.original_summary}</span>
     </div>
     <div class="story-card">
@@ -218,7 +218,7 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
                 start_time = curr_idx * 8
                 end_time = (curr_idx + 1) * 8
                 
-                with st.spinner(f"⚡ Gemini menyusun prompt visual 8 detik untuk Google Flow..."):
+                with st.spinner(f"⚡ Gemini 3.6 menyusun prompt visual 8 detik untuk Google Flow..."):
                     try:
                         prompt_spec_prompt = f"""
                         Buatlah prompt video 8 detik dalam Bahasa Inggris untuk Google Flow AI berdasarkan adegan ini: "{curr_scene['description']}".
@@ -234,7 +234,7 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
                         (Google Flow Prompt Bahasa Inggris)
                         [/PROMPT_SCENE]
                         """
-                        res_gen = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=prompt_spec_prompt)
+                        res_gen = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=prompt_spec_prompt)
                         res_text = res_gen.text
 
                         p_scene = res_text.split("[PROMPT_SCENE]")[1].split("[/PROMPT_SCENE]")[0].strip() if "[PROMPT_SCENE]" in res_text else res_text
@@ -267,7 +267,7 @@ else:
     st.balloons()
     st.success(f"🎉 **PROYEK SELESAI!** Seluruh {max_scenes} Scene Siap Digenerate!")
 
-    with st.spinner("🔥 Gemini meracik Judul Clickbait Viral + Deskripsi & Tag SEO YouTube..."):
+    with st.spinner("🔥 Gemini 3.6 meracik Judul Clickbait Viral + Deskripsi & Tag SEO YouTube..."):
         try:
             seo_prompt = f"""
             Berdasarkan konsep cerita dan naskah komedi berikut:
@@ -280,7 +280,7 @@ else:
             3. TAG SEO HIGH-VOLUME (Kumpulan kata kunci dipisahkan koma untuk dipaste langsung ke kolom Tags YouTube Studio).
             4. HASHTAG VIRAL (5-8 hashtag populer seperti #Shorts #Lucu #Viral).
             """
-            seo_res = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=seo_prompt)
+            seo_res = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=seo_prompt)
             youtube_seo_pack = seo_res.text
         except Exception as e:
             youtube_seo_pack = f"Gagal membuat Paket SEO: {e}"
