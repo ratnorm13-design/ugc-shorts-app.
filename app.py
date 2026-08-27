@@ -1,11 +1,11 @@
 import streamlit as st
+import os
 import json
 from google import genai
-from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Gemini 3.6 UGC Remaker & SEO", 
+    page_title="STUDIO AI - Full Gemini UGC Remaker & SEO", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -31,24 +31,24 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">⚡ STUDIO AI UGC REMAKER & SEO</div>
-    <div class="sub-title">Powered by Gemini 3.6 Flash (Vision + Comedy Logic + SEO Engine)</div>
+    <div class="sub-title">Powered 100% by Gemini (Vision + Logic + Prompt & YouTube SEO Engine)</div>
 </div>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR CONFIG ---
-st.sidebar.markdown("### ⚙️ **GEMINI API KEY SETUP**")
+# --- SIDEBAR API CONFIG ---
+st.sidebar.markdown("### ⚙️ **GEMINI API CONFIG**")
 gemini_key = st.sidebar.text_input("Gemini API Key:", type="password", placeholder="Masukkan API Key Gemini lo di sini...")
 
 client_gemini = None
 if gemini_key:
     try:
         client_gemini = genai.Client(api_key=gemini_key.strip())
-        st.sidebar.success("✓ Gemini 3.6 Flash Connected")
+        st.sidebar.success("✓ Gemini Connected Successfully!")
     except Exception as e:
         st.sidebar.error(f"Gemini Key Error: {e}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎨 **VISUAL & DURASI**")
+st.sidebar.markdown("### 🎨 **VISUAL ENGINE**")
 
 style_pilihan = st.sidebar.selectbox(
     "Gaya Visual Target Google Flow:",
@@ -81,13 +81,13 @@ if "step" not in st.session_state:
     st.session_state.original_summary = ""
     st.session_state.current_story_context = ""
 
-# --- TAHAP 1: GEMINI 3.6 FLASH ANALISIS & RACIK CERITA ---
+# --- TAHAP 1: GEMINI ANALISIS & STORYBOARD ---
 if st.session_state.step == 1:
-    st.info(f"🎯 **Target Mode:** {target_durasi_label} (Masing-masing 8 Detik)")
+    st.info(f"🎯 **Target Mode:** {target_durasi_label} (8 Detik per Scene)")
     
     input_mode = st.radio(
         "Pilih Sumber Input Referensi:",
-        ("✍️ Input Teks Cerita/Adegan Video", "📁 Upload Beberapa Screenshot Urut", "📁 Upload File Video Referensi")
+        ("✍️ Input Teks Tepat Urutan Cerita", "📁 Upload Beberapa Screenshot Urut (Multi-Frame)", "📁 Upload File Video Referensi")
     )
 
     video_ready = False
@@ -95,7 +95,7 @@ if st.session_state.step == 1:
     multi_frames = []
     video_path = "temp_video.mp4"
 
-    if input_mode == "📁 Upload Beberapa Screenshot Urut":
+    if input_mode == "📁 Upload Beberapa Screenshot Urut (Multi-Frame)":
         multi_frames = st.file_uploader("Upload Urutan Gambar Adegan:", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
         if multi_frames:
             video_ready = True
@@ -106,90 +106,73 @@ if st.session_state.step == 1:
                 f.write(uploaded_video.read())
             video_ready = True
     else:
-        user_topic = st.text_area("Tuliskan Cerita Video Asli:", placeholder="Ketik adegan video asli di sini...")
+        user_topic = st.text_area("Tuliskan Urutan Cerita Referensi:", placeholder="Ketik urutan adegan dan objek penting di sini...")
         if user_topic:
             video_ready = True
 
     st.markdown("---")
-    modification_notes = st.text_input("💡 (Opsional) Arahkan Genre Komedi/Cerita:", placeholder="Misal: Buat endingnya komedi absurd, ganti karakter utama, dll...")
+    modification_notes = st.text_input("💡 (Opsional) Ide Modifikasi Khusus:", placeholder="Misal: Ubah jadi komedi absurd, ganti latar, dll...")
 
-    if st.button("🚀 RACIK CERITA SUPER KOCAK & PROMPT"):
+    if st.button("🚀 PROSES DENGAN GEMINI ENGINE"):
         if not gemini_key:
             st.error("⚠️ Masukkan Gemini API Key di sidebar terlebih dahulu!")
         elif not video_ready:
             st.error("⚠️ Masukkan data referensi terlebih dahulu!")
         else:
-            with st.spinner("🤖 Gemini 3.6 Flash sedang membedah video & meracik adegan komedi nendang..."):
+            with st.spinner("🤖 Gemini sedang membaca media, meracik cerita baru, dan menyusun storyboard JSON..."):
                 try:
-                    contents_list = []
+                    # STEP 1 & 2 & 3: Gemini menangani semuanya sekaligus secara cerdas
+                    master_prompt = f"""
+                    Kamu adalah Sutradara AI profesional & Prompt Engineer tingkat mahir untuk Google Flow AI.
+                    Tugasmu adalah menganalisis input referensi, lalu meracik ulang cerita agar ANTI-PLAGIAT namun tetap mempertahankan kelucuan/daya tarik aslinya.
                     
-                    if input_mode == "✍️ Input Teks Cerita/Adegan Video":
-                        contents_list.append(f"Video Reference Text:\n{user_topic}")
-                    elif input_mode == "📁 Upload Beberapa Screenshot Urut":
+                    Catatan Modifikasi Tambahan Dari User: '{modification_notes}'
+
+                    INSTRUKSI UTAMA:
+                    1. Identifikasi subjek/karakter utama dan SEMUA objek/properti penting yang dipegang/digunakan (misal: HP, makanan, helm, hewan, dll) agar nanti dikunci ketat.
+                    2. Bagi cerita menjadi TEPAT {max_scenes} SCENE (masing-masing 8 detik).
+                    3. Berikan output dalam format JSON MURNI tanpa teks pembuka/penutup, dengan struktur berikut:
+                    {{
+                        "new_concept_summary": "Ringkasan konsep cerita baru yang sudah dimodifikasi",
+                        "character_anchor": "Deskripsi fisik subjek DAN objek wajib yang dipegang secara spesifik agar tidak berubah/hilang (anti-morphing)",
+                        "scenes": [
+                            {{"scene_num": 1, "description": "Deskripsi adegan Scene 1", "vo": "Naskah Voiceover Bahasa Indonesia Scene 1"}},
+                            {{"scene_num": 2, "description": "Deskripsi adegan Scene 2", "vo": "Naskah Voiceover Bahasa Indonesia Scene 2"}}
+                        ]
+                    }}
+                    """
+
+                    if input_mode == "✍️ Input Teks Tepat Urutan Cerita":
+                        contents = [f"Urutan Cerita Referensi:\n{user_topic}\n\n{master_prompt}"]
+                    elif input_mode == "📁 Upload Beberapa Screenshot Urut (Multi-Frame)":
+                        imgs = []
                         for idx, img_file in enumerate(multi_frames):
                             p = f"temp_{idx}.jpg"
                             with open(p, "wb") as f:
                                 f.write(img_file.read())
-                            contents_list.append(client_gemini.files.upload(file=p))
+                            imgs.append(client_gemini.files.upload(file=p))
+                        contents = imgs + [master_prompt]
                     else:
                         vid = client_gemini.files.upload(file=video_path)
-                        contents_list.append(vid)
+                        contents = [vid, master_prompt]
 
-                    system_instruction = f"""
-                    Kamu adalah Produser Video Viral & Scriptwriter Komedi Handal.
-                    Tugasmu adalah menganalisis media referensi lalu meraciknya menjadi video UGC baru yang JAUH LEBIH LUCU, PENASARAN, DAN NENDANG dibanding video aslinya.
+                    response = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=contents)
+                    raw_text = response.text
 
-                    INSTRUKSI UTAMA:
-                    1. Identifikasi subjek utama DAN semua objek penting yang dipegang/digunakan (HP, helm, panci, barang viral, dll). Kunci objek ini di `character_anchor` agar TIDAK LENTUR / HILANG / MORPHING!
-                    2. Jika video asli pendek, TAMBAHKAN adegan komedi/plot twist tak terduga agar durasi pas menjadi TEPAT {max_scenes} SCENE (8 detik per scene, total {max_scenes * 8} detik).
-                    3. Buatkan Naskah Voiceover Bahasa Indonesia yang lucu, santai, dan pas ritmenya.
-                    4. Catatan user: '{modification_notes}'.
-                    """
-
-                    contents_list.append(system_instruction)
-
-                    # Memakai Gemini 3.6 Flash dengan Structured JSON Output
-                    response = client_gemini.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=contents_list,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema={
-                                "type": "OBJECT",
-                                "properties": {
-                                    "new_concept_summary": {"type": "STRING"},
-                                    "character_anchor": {"type": "STRING"},
-                                    "scenes": {
-                                        "type": "ARRAY",
-                                        "items": {
-                                            "type": "OBJECT",
-                                            "properties": {
-                                                "scene_num": {"type": "INTEGER"},
-                                                "description": {"type": "STRING"},
-                                                "vo": {"type": "STRING"}
-                                            },
-                                            "required": ["scene_num", "description", "vo"]
-                                        }
-                                    }
-                                },
-                                "required": ["new_concept_summary", "character_anchor", "scenes"]
-                            }
-                        )
-                    )
-
-                    parsed = json.loads(response.text)
+                    clean_json = raw_text.replace("```json", "").replace("```", "").strip()
+                    parsed = json.loads(clean_json)
 
                     st.session_state.master_storyboard = parsed["scenes"]
                     st.session_state.character_anchor = parsed["character_anchor"]
-                    st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Komedi Gemini 3.6.")
+                    st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Hasil Racikan Gemini.")
                     
                     st.session_state.step = 2
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"Gagal memproses dengan Gemini 3.6 Flash: {e}")
+                    st.error(f"Gagal memproses dengan Gemini: {e}")
 
-# --- TAHAP 2 S/D SELESAI: GENERATE PROMPT KETAT (ANTI-MORPHING) ---
+# --- TAHAP 2 S/D SELESAI: EKSEKUSI PROMPT GOOGLE FLOW AI (ANTI-MORPHING) ---
 elif 2 <= st.session_state.step <= (max_scenes + 1):
     curr_idx = st.session_state.step - 2
     scene_number = curr_idx + 1
@@ -199,15 +182,21 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
 
     st.markdown(f"""
     <div class="reconcept-card">
-        <b>💡 Konsep Komedi Racikan Gemini 3.6:</b><br>
+        <b>💡 Ide Konsep Modifikasi (Gemini Brain):</b><br>
         <span>{st.session_state.original_summary}</span>
     </div>
     <div class="story-card">
         <b>🎯 Target Adegan Scene {scene_number}:</b><br>
-        <span>{curr_scene['description']}</span><br><br>
-        <b>🗣️ Voiceover Kocak:</b> <i>"{curr_scene['vo']}"</i>
+        <span>{curr_scene['description']}</span>
     </div>
     """, unsafe_allow_html=True)
+
+    if scene_number > 1:
+        st.info(f"📸 **Lock Frame System:** Upload screenshot detik terakhir Scene {scene_number - 1} untuk Google Flow AI.")
+        last_frame = st.file_uploader(f"Upload Screenshot Detik Terakhir Scene {scene_number - 1}:", type=["png", "jpg", "jpeg"])
+    else:
+        last_frame = None
+        st.info("💡 Scene Pertama. Langsung generate prompt di bawah!")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -218,7 +207,7 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
                 start_time = curr_idx * 8
                 end_time = (curr_idx + 1) * 8
                 
-                with st.spinner(f"⚡ Gemini 3.6 menyusun prompt visual 8 detik untuk Google Flow..."):
+                with st.spinner(f"⚡ Gemini menyusun prompt ketat (Anti-Morphing Objek)..."):
                     try:
                         prompt_spec_prompt = f"""
                         Buatlah prompt video 8 detik dalam Bahasa Inggris untuk Google Flow AI berdasarkan adegan ini: "{curr_scene['description']}".
@@ -226,20 +215,25 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
                         
                         PERATURAN PENGUNCIAN OBJEK EKSTRIM (ANTI-MORPHING / ANTI-HILANG):
                         1. Karakter & Objek Anchor Utama yang wajib ada dan tidak boleh berubah: {st.session_state.character_anchor}
-                        2. TEGASKAN DI PROMPT: Sebutkan objek yang dipegang/digunakan secara konsisten dari awal sampai akhir (misal: 'hands firmly holding [object] continuously, no morphing, object never disappears').
-                        3. Format kalimat: [Subject & Held Object] + [Action/Emotion] + [Environment & Lighting] + [Camera Style].
+                        2. TEGASKAN DI PROMPT: Sebutkan objek yang dipegang/digunakan secara konsisten dari awal sampai akhir (misal: 'hands firmly holding the object continuously, no morphing, object never disappears').
+                        3. Susunan kalimat: [Subject & Held Object] + [Action/Emotion] + [Environment & Lighting] + [Camera Style].
 
                         Berikan format output persis seperti ini:
                         [PROMPT_SCENE]
                         (Google Flow Prompt Bahasa Inggris)
                         [/PROMPT_SCENE]
+
+                        [VO_SCENE]
+                        {curr_scene['vo']}
+                        [/VO_SCENE]
                         """
-                        res_gen = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=prompt_spec_prompt)
+                        res_gen = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=prompt_spec_prompt)
                         res_text = res_gen.text
 
                         p_scene = res_text.split("[PROMPT_SCENE]")[1].split("[/PROMPT_SCENE]")[0].strip() if "[PROMPT_SCENE]" in res_text else res_text
+                        vo_scene = curr_scene['vo']
 
-                        scene_feed = f"\n\n=== SCENE {scene_number} ({start_time:02d}:00 - {end_time:02d}:00) ===\nGOOGLE FLOW PROMPT:\n{p_scene}\n\nVO SCRIPT:\n{curr_scene['vo']}"
+                        scene_feed = f"\n\n=== SCENE {scene_number} ({start_time:02d}:00 - {end_time:02d}:00) ===\nGOOGLE FLOW PROMPT:\n{p_scene}\n\nVO SCRIPT:\n{vo_scene}"
                         st.session_state.current_story_context += scene_feed
                         
                         st.session_state.step += 1
@@ -259,7 +253,7 @@ elif 2 <= st.session_state.step <= (max_scenes + 1):
 
     if st.session_state.current_story_context:
         st.markdown("---")
-        st.subheader("📜 Live Output Feed")
+        st.subheader("📜 Live Output Master Feed")
         st.text_area("Script & Flow Prompt Feed:", value=st.session_state.current_story_context, height=250)
 
 # --- TAHAP AKHIR: AUTOMATIC YOUTUBE SEO PACK ---
@@ -267,20 +261,20 @@ else:
     st.balloons()
     st.success(f"🎉 **PROYEK SELESAI!** Seluruh {max_scenes} Scene Siap Digenerate!")
 
-    with st.spinner("🔥 Gemini 3.6 meracik Judul Clickbait Viral + Deskripsi & Tag SEO YouTube..."):
+    with st.spinner("🔥 Gemini sedang meracik Judul Clickbait Viral + Deskripsi & Tag SEO YouTube..."):
         try:
             seo_prompt = f"""
-            Berdasarkan konsep cerita dan naskah komedi berikut:
+            Berdasarkan konsep cerita dan naskah berikut:
             Konsep: {st.session_state.original_summary}
-            Detail Script: {st.session_state.current_story_context}
+            Detail Context: {st.session_state.current_story_context}
 
-            Buatkan SEO Pack YouTube Shorts dalam Bahasa Indonesia yang sangat memancing emosi/penasaran/lucu & tembus algoritma:
-            1. 3 Opsi JUDUL CLICKBAIT VIRAL (Lucu/Penasaran, pakai emoji menarik).
-            2. DESKRIPSI VIDEO (Singkat, menarik, menyisipkan kata kunci pencarian SEO, dan mengajak subscribe/like).
-            3. TAG SEO HIGH-VOLUME (Kumpulan kata kunci dipisahkan koma untuk dipaste langsung ke kolom Tags YouTube Studio).
-            4. HASHTAG VIRAL (5-8 hashtag populer seperti #Shorts #Lucu #Viral).
+            Buatkan YouTube Shorts/Video SEO Pack dalam Bahasa Indonesia yang sangat menarik, lucu/penasaran, dan ramah algoritma YouTube:
+            1. 3 Opsi JUDUL VIRAL (Clickbait emosional, bikin penasaran, pakai emoji).
+            2. DESKRIPSI VIDEO (Singkat, menarik, ada keyword SEO, dan call-to-action).
+            3. TAG SEO HIGH-VOLUME (Kumpulan tag dipisahkan koma untuk dicopy-paste ke YouTube Studio).
+            4. HASHTAG VIRAL (5-8 Hashtag untuk mempercepat FYP).
             """
-            seo_res = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=seo_prompt)
+            seo_res = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=seo_prompt)
             youtube_seo_pack = seo_res.text
         except Exception as e:
             youtube_seo_pack = f"Gagal membuat Paket SEO: {e}"
