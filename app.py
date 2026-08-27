@@ -156,7 +156,7 @@ if st.session_state.step == 1:
                         vid = client_gemini.files.upload(file=video_path)
                         contents = [vid, master_prompt]
 
-                    response = client_gemini.models.generate_content(model='gemini-2.5-flash', contents=contents)
+                    response = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=contents)
                     raw_text = response.text
 
                     clean_json = raw_text.replace("```json", "").replace("```", "").strip()
