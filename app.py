@@ -64,10 +64,10 @@ target_durasi_label = st.sidebar.selectbox(
     "Target Total Durasi Video:",
     options=[
         "32 Detik (4 Scene)",
-        "16 Detik (2 Scene)",
-        "24 Detik (3 Scene)",
         "40 Detik (5 Scene)",
-        "48 Detik (6 Scene)"
+        "48 Detik (6 Scene)",
+        "24 Detik (3 Scene)",
+        "16 Detik (2 Scene)"
     ]
 )
 
@@ -118,13 +118,13 @@ if st.session_state.step == 1:
     st.markdown("---")
     modification_notes = st.text_input("💡 (Opsional) Ide Modifikasi Khusus:", placeholder="Misal: Ubah jadi komedi sci-fi, atau ganti buaya jadi komodo...")
 
-    if st.button("🚀 ANALISIS & GENERATE PROMPT GOOGLE FLOW AI"):
+    if st.button("🚀 ANALISIS & GENERATE MASTER STORYBOARD"):
         if not gemini_key or not client:
             st.error("⚠️ Masukkan Gemini API Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Masukkan data/gambar/video referensi terlebih dahulu!")
         else:
-            with st.spinner("⚡ Mengoptimalkan prompt khusus Google Flow AI (Anti-Plagiat + Consistent Characters)..."):
+            with st.spinner("⚡ Menganalisis & memecah scene secara berurutan..."):
                 try:
                     reconcept_prompt = f"""
                     Kamu adalah Prompt Engineer Spesialis GOOGLE FLOW AI & Master Director.
@@ -133,20 +133,19 @@ if st.session_state.step == 1:
                     1. Bedah urutan adegan dari referensi dari awal sampai akhir.
                     2. Modifikasi cerita agar TIDAK PLAGIAT tapi tetap mempertahankan tempo lucu/menariknya. Catatan modifikasi: '{modification_notes}'.
                     3. Buat 'character_anchor' berupa deskripsi fisik rinci untuk Google Flow AI dalam Bahasa Inggris.
-                    4. Bagi menjadi {max_scenes} SCENE (8 detik per scene).
+                    4. Bagi cerita secara presisi menjadi TEPAT {max_scenes} SCENE BERURUTAN (dari Scene 1 sampai Scene {max_scenes}).
 
-                    STRUKTUR PROMPT KHUSUS GOOGLE FLOW AI (WAJIB DIPATUHI):
-                    - Gunakan Bahasa Inggris deskriptif yang lugas dan tidak berbelit-belit.
-                    - Susun kalimat dengan format: [Main Subject & Visual Details] + [Action/Movement] + [Environment & Lighting] + [Camera Shot].
-                    - JANGAN gunakan kata buzzer tanpa arti seperti "hyperrealistic", "4k", atau "masterpiece". Gunakan istilah konkret seperti "smooth 3D animation, soft daylight, 35mm lens shot".
+                    STRUKTUR PROMPT KHUSUS GOOGLE FLOW AI:
+                    - Gunakan Bahasa Inggris deskriptif yang lugas.
+                    - Susun kalimat: [Main Subject & Visual Details] + [Action/Movement] + [Environment & Lighting] + [Camera Shot].
 
-                    Format JSON Output:
+                    Format JSON Output persis berikut tanpa teks lain:
                     {{
                         "new_concept_summary": "Ringkasan konsep racikan baru",
-                        "character_anchor": "Chubby orange tabby cat with round face. Fat pink pig wearing aviator goggles and brown leather helmet.",
+                        "character_anchor": "Chubby orange tabby cat with round face. Fat pink pig wearing aviator goggles.",
                         "scenes": [
-                            {{"scene_num": 1, "description": "Deskripsi baru Scene 1 (Indo)", "prompt": "Google Flow Prompt Scene 1 (English)", "vo": "Voiceover Scene 1 (Indo)"}},
-                            {{"scene_num": 2, "description": "Deskripsi baru Scene 2 (Indo)", "prompt": "Google Flow Prompt Scene 2 (English)", "vo": "Voiceover Scene 2 (Indo)"}}
+                            {{"scene_num": 1, "description": "Deskripsi adegan Scene 1", "prompt": "Google Flow Prompt Scene 1 (English)", "vo": "Voiceover Scene 1 (Indo)"}},
+                            {{"scene_num": 2, "description": "Deskripsi adegan Scene 2", "prompt": "Google Flow Prompt Scene 2 (English)", "vo": "Voiceover Scene 2 (Indo)"}}
                         ]
                     }}
                     """
@@ -166,7 +165,7 @@ if st.session_state.step == 1:
                         full_content = [vid, reconcept_prompt]
 
                     response = client.models.generate_content(
-                        model='gemini-3.6-flash',
+                        model='gemini-2.5-flash',
                         contents=full_content
                     )
 
@@ -177,21 +176,21 @@ if st.session_state.step == 1:
                     st.session_state.character_anchor = parsed["character_anchor"]
                     st.session_state.original_summary = parsed.get("new_concept_summary", "Konsep Baru Berhasil Diracik.")
                     
-                    s1 = parsed["scenes"][0]
-                    st.session_state.current_story_context = f"📌 RE-CONCEPT SUMMARY:\n{st.session_state.original_summary}\n\n📌 GOOGLE FLOW CHARACTER ANCHOR:\n{parsed['character_anchor']}\n\n=== SCENE 1 (00:00 - 00:08) ===\nGOOGLE FLOW PROMPT:\n{s1['prompt']}\n\nVO SCRIPT:\n{s1['vo']}"
-                    
-                    st.session_state.step = 2
+                    # MULAI DARI SCENE 1 (BUKAN LANGSUNG DI-GENERATE OTOMATIS)
+                    st.session_state.step = 2  # Step 2 merepresentasikan pengerjaan Scene Index ke-0 (Scene 1)
                     st.rerun()
 
                 except Exception as e:
                     st.error(f"Gagal memproses prompt: {e}")
 
-# --- TAHAP 2 S/D SELESAI: GENERATE PER SCENE UNTUK FLOW AI ---
-elif 2 <= st.session_state.step <= max_scenes:
-    curr_idx = st.session_state.step - 1
-    curr_scene = st.session_state.master_storyboard[curr_idx]
+# --- EKSEKUSI BERTAHAP PER SCENE (MULAI DARI SCENE 1) ---
+elif 2 <= st.session_state.step <= (max_scenes + 1):
+    curr_idx = st.session_state.step - 2
+    scene_number = curr_idx + 1
 
-    st.subheader(f"🎬 Eksekusi Scene {st.session_state.step} dari {max_scenes}")
+    st.subheader(f"🎬 Eksekusi Scene {scene_number} dari {max_scenes}")
+
+    curr_scene = st.session_state.master_storyboard[curr_idx]
 
     st.markdown(f"""
     <div class="reconcept-card">
@@ -199,28 +198,31 @@ elif 2 <= st.session_state.step <= max_scenes:
         <span>{st.session_state.original_summary}</span>
     </div>
     <div class="story-card">
-        <b>🎯 Target Adegan Scene {st.session_state.step} (Hasil Remake):</b><br>
+        <b>🎯 Target Adegan Scene {scene_number} (Hasil Remake):</b><br>
         <span>{curr_scene['description']}</span>
     </div>
     """, unsafe_allow_html=True)
 
-    st.info(f"📸 **Lock Frame System:** Upload screenshot detik terakhir Scene {st.session_state.step - 1} untuk Google Flow AI.")
-
-    last_frame = st.file_uploader(
-        f"Upload Screenshot Detik Terakhir Scene {st.session_state.step - 1}:", 
-        type=["png", "jpg", "jpeg"]
-    )
+    if scene_number > 1:
+        st.info(f"📸 **Lock Frame System:** Upload screenshot detik terakhir Scene {scene_number - 1} untuk Google Flow AI.")
+        last_frame = st.file_uploader(
+            f"Upload Screenshot Detik Terakhir Scene {scene_number - 1}:", 
+            type=["png", "jpg", "jpeg"]
+        )
+    else:
+        last_frame = None
+        st.info("💡 Ini adalah Scene Pertama. Langsung klik tombol di bawah untuk menghasilkan prompt Google Flow AI.")
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button(f"🚀 GENERATE PROMPT SCENE {st.session_state.step}"):
+        if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
             if not client:
                 st.error("API Key belum diset.")
             else:
                 start_time = curr_idx * 8
                 end_time = (curr_idx + 1) * 8
                 
-                with st.spinner(f"⚡ Meracik Google Flow Prompt Scene {st.session_state.step}..."):
+                with st.spinner(f"⚡ Meracik Google Flow Prompt Scene {scene_number}..."):
                     try:
                         flow_prompt_rules = f"""
                         Kamu adalah Google Flow AI Prompt Optimizer.
@@ -251,12 +253,12 @@ elif 2 <= st.session_state.step <= max_scenes:
                                 f.write(last_frame.read())
                             uploaded_img = client.files.upload(file=frame_path)
                             res = client.models.generate_content(
-                                model='gemini-3.6-flash',
+                                model='gemini-2.5-flash',
                                 contents=[uploaded_img, flow_prompt_rules]
                             )
                         else:
                             res = client.models.generate_content(
-                                model='gemini-3.6-flash',
+                                model='gemini-2.5-flash',
                                 contents=flow_prompt_rules
                             )
 
@@ -264,7 +266,11 @@ elif 2 <= st.session_state.step <= max_scenes:
                         p_scene = raw_text.split("[PROMPT_SCENE]")[1].split("[/PROMPT_SCENE]")[0].strip() if "[PROMPT_SCENE]" in raw_text else raw_text
                         vo_scene = raw_text.split("[VO_SCENE]")[1].split("[/VO_SCENE]")[0].strip() if "[VO_SCENE]" in raw_text else "Naskah VO."
 
-                        st.session_state.current_story_context += f"\n\n=== SCENE {st.session_state.step} ({start_time:02d}:00 - {end_time:02d}:00) ===\nGOOGLE FLOW PROMPT:\n{p_scene}\n\nVO SCRIPT:\n{vo_scene}"
+                        # Simpan ke feed
+                        scene_feed = f"\n\n=== SCENE {scene_number} ({start_time:02d}:00 - {end_time:02d}:00) ===\nGOOGLE FLOW PROMPT:\n{p_scene}\n\nVO SCRIPT:\n{vo_scene}"
+                        st.session_state.current_story_context += scene_feed
+                        
+                        # Naik ke scene berikutnya
                         st.session_state.step += 1
                         st.rerun()
 
@@ -282,10 +288,10 @@ elif 2 <= st.session_state.step <= max_scenes:
 
     if st.session_state.current_story_context:
         st.markdown("---")
-        st.subheader("📜 Live Output Master Feed (Optimized for Google Flow)")
-        st.text_area("Script & Flow Prompt Feed:", value=st.session_state.current_story_context, height=300)
+        st.subheader("📜 Live Output Master Feed")
+        st.text_area("Script & Flow Prompt Feed:", value=st.session_state.current_story_context, height=250)
 
-elif st.session_state.step > max_scenes:
+else:
     st.balloons()
     st.success(f"🎉 **PROYEK GOOGLE FLOW SELESAI!** Seluruh {max_scenes} Scene Siap Digenerate!")
     
