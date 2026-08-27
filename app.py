@@ -5,7 +5,7 @@ from google import genai
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Full Gemini UGC Remaker & SEO", 
+    page_title="STUDIO AI UGC MR. ZAGREST", 
     page_icon="⚡", 
     layout="centered"
 )
