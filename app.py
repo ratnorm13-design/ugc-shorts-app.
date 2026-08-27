@@ -5,7 +5,7 @@ from google import genai
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Story Tracker UGC Engine", 
+    page_title="STUDIO AI - Story Tracker UGC Engine by Vtoyz", 
     page_icon="⚡", 
     layout="centered"
 )
@@ -29,7 +29,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">⚡ STUDIO AI UGC SHORTS</div>
-    <div class="sub-title">Master Storyboard Tracker • Strict Chronological Narrative Engine</div>
+    <div class="sub-title">Master Storyboard Tracker • Character Anchor & Continuity Engine</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -77,9 +77,10 @@ max_scenes = int(target_durasi_label.split("(")[1].split(" ")[0])
 if "step" not in st.session_state:
     st.session_state.step = 1
     st.session_state.master_storyboard = []
+    st.session_state.character_anchor = ""
     st.session_state.current_story_context = ""
 
-# --- TAHAP 1: ANALISIS KRONOLOGIS URUT & LOCK MASTER STORYBOARD ---
+# --- TAHAP 1: EKSTRAK KRONOLOGI + CHARACTER ANCHOR ---
 if st.session_state.step == 1:
     st.info(f"🎯 **Target Mode:** {target_durasi_label} (8 Detik per Scene)")
     
@@ -108,32 +109,31 @@ if st.session_state.step == 1:
     else:
         user_topic = st.text_area(
             "Tuliskan Urutan Cerita (Wajib Pakai Nomor Kronologis):", 
-            placeholder="Scene 1: Kucing Oranye memasukkan bom ke mulut buaya kecil di pinggir sungai.\nScene 2: Kucing membawa buaya dalam gerobak dorong.\nScene 3: Kucing memukul kepala Babi berkarakter santai dengan wajan penggorengan..."
+            placeholder="Scene 1: Kucing Oranye memasukkan bom ke mulut buaya kecil...\nScene 2: Kucing membawa buaya dalam gerobak...\nScene 3: Babi naik motor datang..."
         )
         if user_topic:
             video_ready = True
 
-    if st.button("🚀 ANALISIS CERITA & GENERATE MASTER STORYBOARD"):
+    if st.button("🚀 ANALISIS CERITA & LOCK CHARACTER ANCHOR"):
         if not gemini_key or not client:
             st.error("⚠️ Masukkan Gemini API Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Masukkan data/gambar/video referensi terlebih dahulu!")
         else:
-            with st.spinner("⚡ Otak Analisis sedang membedah urutan waktu secara ketat..."):
+            with st.spinner("⚡ Otak Analisis sedang mengunci bentuk visual karakter & cerita..."):
                 try:
                     strict_prompt = f"""
                     Kamu adalah Sutradara & AI Script Analyst Komputer. 
-                    Tugas utama: Ekstrak urutan adegan SECARA KRONOLOGIS DETIK-DEMI-DETIK dari awal hingga akhir TANPA LOMPAT ADEGAN.
+                    Tugas utama:
+                    1. Buat 'character_anchor': Deskripsi fisik DETAIL & KAKU untuk setiap karakter utama (misal: Kucing Oranye gemuk berbulu realistis, Babi merah muda naik motor pakai helm penerbang, Buaya kecil).
+                    2. Ekstrak urutan adegan SECARA KRONOLOGIS DETIK-DEMI-DETIK dari awal hingga akhir.
 
                     Bagi cerita menjadi TEPAT {max_scenes} SCENE BERURUTAN (Tiap scene 8 detik).
                     Gaya Visual: {style_pilihan}.
 
-                    ATURAN KETAT:
-                    - SCENE 1 HARUS MEMULAI ADEGAN PERTAMA (Awal sekali dari cerita/video/gambar).
-                    - TIDAK BOLEH mendahului adegan tengah/akhir di Scene 1.
-                    
                     Format JSON Output persis berikut:
                     {{
+                        "character_anchor": "Karakter Kucing: Kucing oranye gemuk berbulu halus realistis, mata cokelat. Karakter Babi: Babi pink chubby gemuk tanpa baju, pakai helm pilot cokelat tua dan kacamata vintage, mengendarai motor klasik merah.",
                         "scenes": [
                             {{"scene_num": 1, "description": "Deskripsi adegan 1", "prompt": "AI Video Prompt Scene 1", "vo": "Voiceover Scene 1"}},
                             {{"scene_num": 2, "description": "Deskripsi adegan 2", "prompt": "AI Video Prompt Scene 2", "vo": "Voiceover Scene 2"}}
@@ -164,18 +164,18 @@ if st.session_state.step == 1:
                     parsed = json.loads(clean_json)
 
                     st.session_state.master_storyboard = parsed["scenes"]
+                    st.session_state.character_anchor = parsed["character_anchor"]
                     
-                    # Store Initial Prompt Feed
                     s1 = parsed["scenes"][0]
-                    st.session_state.current_story_context = f"=== SCENE 1 (00:00 - 00:08) ===\nPROMPT:\n{s1['prompt']}\n\nVO SCRIPT:\n{s1['vo']}"
+                    st.session_state.current_story_context = f"📌 CHARACTER ANCHOR (VISUAL LOCK):\n{parsed['character_anchor']}\n\n=== SCENE 1 (00:00 - 00:08) ===\nPROMPT:\n{s1['prompt']}\n\nVO SCRIPT:\n{s1['vo']}"
                     
                     st.session_state.step = 2
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"Gagal membedah kronologi: {e}. Pastikan format data jelas!")
+                    st.error(f"Gagal membedah kronologi: {e}. Coba jalankan ulang!")
 
-# --- TAHAP 2 S/D SELESAI: LOCK CONTINUITY PER SCENE ---
+# --- TAHAP 2 S/D SELESAI: PROMPT GENERATION DENGAN DUAL LOCK ---
 elif 2 <= st.session_state.step <= max_scenes:
     curr_idx = st.session_state.step - 1
     curr_scene = st.session_state.master_storyboard[curr_idx]
@@ -184,12 +184,12 @@ elif 2 <= st.session_state.step <= max_scenes:
 
     st.markdown(f"""
     <div class="story-card">
-        <b>🎯 Target Adegan Scene {st.session_state.step} (Locked Kronologis):</b><br>
+        <b>🎯 Target Adegan Scene {st.session_state.step}:</b><br>
         <span>{curr_scene['description']}</span>
     </div>
     """, unsafe_allow_html=True)
 
-    st.info(f"📸 **Lock Frame System:** Upload screenshot akhir **Scene {st.session_state.step - 1}** untuk menjaga visual karakter (Babi/Kucing/Buaya).")
+    st.info(f"📸 **Lock Frame System:** Upload screenshot detik terakhir Scene {st.session_state.step - 1} (seperti foto Babi di atas motor).")
 
     last_frame = st.file_uploader(
         f"Upload Screenshot Detik Terakhir Scene {st.session_state.step - 1}:", 
@@ -205,22 +205,24 @@ elif 2 <= st.session_state.step <= max_scenes:
                 start_time = curr_idx * 8
                 end_time = (curr_idx + 1) * 8
                 
-                with st.spinner(f"⚡ Meracik Prompt Scene {st.session_state.step}..."):
+                with st.spinner(f"⚡ Meracik Prompt Scene {st.session_state.step} dengan Character Anchor..."):
                     try:
                         continuity_prompt = f"""
-                        Kamu adalah Sutradara AI Video.
-                        Buat prompt video 8 detik KHUSUS untuk adegan berikut:
+                        Kamu adalah Sutradara AI Video profesional.
+                        Buat prompt AI video 8 detik KHUSUS untuk adegan berikut:
                         "{curr_scene['description']}"
 
                         GAYA VISUAL: {style_pilihan}.
-                        
-                        PENTING:
-                        1. Kunci visual karakter utama berdasarkan screenshot terlampir (jika ada).
-                        2. JANGAN mengubah alur cerita ini.
+
+                        ATURAN KONSISTENSI KARAKTER (MANDATORY & STRICT):
+                        1. Gunakan panduan visual karakter ini ke dalam deskripsi teks prompt secara mutlak:
+                           {st.session_state.character_anchor}
+                        2. Jika ada gambar terlampir (seperti screenshot babi), kunci gaya visual 3D/realistis, lingkungan, dan tekstur objek dari gambar tersebut.
+                        3. Apabila karakter Kucing atau karakter lain baru muncul kembali di scene ini namun tidak ada di gambar terlampir, GUNAKAN DESKRIPSI TEKS DARI CHARACTER ANCHOR DI ATAS agar bentuknya TIDAK BERUBAH MENJADI KARTUN LAIN!
 
                         FORMAT RESPONS:
                         [PROMPT_SCENE]
-                        (Prompt AI Video 8 detik)
+                        (Prompt AI Video 8 detik yang lengkap mengunci detail fisik karakter)
                         [/PROMPT_SCENE]
 
                         [VO_SCENE]
@@ -258,6 +260,7 @@ elif 2 <= st.session_state.step <= max_scenes:
         if st.button("🔄 RESET PROJECT"):
             st.session_state.step = 1
             st.session_state.master_storyboard = []
+            st.session_state.character_anchor = ""
             st.session_state.current_story_context = ""
             st.rerun()
 
@@ -268,7 +271,7 @@ elif 2 <= st.session_state.step <= max_scenes:
 
 elif st.session_state.step > max_scenes:
     st.balloons()
-    st.success(f"🎉 **PROYEK SELESAI!** Seluruh {max_scenes} Scene Berhasil Dieksekusi Urut!")
+    st.success(f"🎉 **PROYEK SELESAI!** Seluruh {max_scenes} Scene Berhasil Dieksekusi!")
     
     st.subheader("📋 Final Master Output (Siap Pakai untuk CapCut / Generator Video)")
     st.text_area("Copy Master Output:", value=st.session_state.current_story_context, height=450)
@@ -276,5 +279,6 @@ elif st.session_state.step > max_scenes:
     if st.button("🚀 MULAI PROYEK BARU"):
         st.session_state.step = 1
         st.session_state.master_storyboard = []
+        st.session_state.character_anchor = ""
         st.session_state.current_story_context = ""
         st.rerun()
