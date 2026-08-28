@@ -6,7 +6,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Zagrest UGC Creator", 
+    page_title="STUDIO AI - Gemini 3.6 & DeepSeek UGC Creator", 
     page_icon="🎬", 
     layout="centered"
 )
