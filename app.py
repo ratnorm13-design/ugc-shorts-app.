@@ -6,7 +6,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - UGC Creator", 
+    page_title="STUDIO AI - Zagrest UGC Creator", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -33,7 +33,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🎬 DUAL-ENGINE UGC CREATOR</div>
-    <div class="sub-title">Powered by Zagrest (Brainstorm & Strict Anchor Engine)</div>
+    <div class="sub-title">Powered by Gemini 3.6 Flash × DeepSeek R1 (Brainstorm & Strict Anchor Engine)</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -159,7 +159,7 @@ if st.session_state.step == 1:
                     Analisis referensi ini secara mendalam. Tentukan:
                     1. Genre/Mood utama (Komedi / Seram-Misteri / Penasaran / Emosional / Thriller / Unik).
                     2. Rangkuman alur asli.
-                    3. KUNCI KETAT: Objek visual utama, karakter, dan pakaian/peralatan yang dipegang (`character_anchor`).
+                    3. KUNCI KETAT UKURAN & BENTUK: Detailkan karakter utama, proporsi fisik, ukuran tubuh (misal: adult pig, medium build), dan peralatan/objek yang dipegang (`character_anchor`).
                     Format: GENRE: [genre] | ANCHOR: [anchor] | SUMMARY: [summary]
                     """
                     contents_list.append(analysis_prompt)
@@ -256,7 +256,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     if scene_number > 1:
         st.markdown("### 📸 **Upload Screenshot Detik Terakhir Scene Sebelumnya**")
         last_frame_file = st.file_uploader(
-            f"Upload screenshot hasil video Scene {scene_number - 1} agar posisi & wujud objek di Scene {scene_number} TETAP KONSISTEN (ANTI-MORPHING/ANTI-CRASH):",
+            f"Upload screenshot hasil video Scene {scene_number - 1} agar posisi & UKURAN/PROPORSI KARAKTER di Scene {scene_number} TETAP KONSISTEN (ANTI-MORPHING/ANTI-RESIZING):",
             type=["png", "jpg", "jpeg"],
             key=f"uploader_scene_{scene_number}"
         )
@@ -276,17 +276,18 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                             with open(temp_frame_path, "wb") as f:
                                 f.write(last_frame_file.read())
                             prompt_contents.append(client_gemini.files.upload(file=temp_frame_path))
-                            prompt_contents.append("Gambar ini adalah DETIK TERAKHIR dari scene sebelumnya. Lanjutkan adegan dari posisi, pencahayaan, dan detail subjek/objek ini secara presisi tanpa ada yang berubah bentuk (anti-morphing).")
+                            prompt_contents.append("Gambar ini adalah DETIK TERAKHIR dari scene sebelumnya. Lanjutkan adegan dari posisi, pencahayaan, dan UKURAN/PROPORSI TUBUH KARAKTER ini secara presisi tanpa ada yang menyusut/mengecil (strict no resizing).")
 
                         prompt_spec = f"""
                         Buatkan prompt video 8 detik Bahasa Inggris untuk Google Flow AI berdasarkan adegan ini: "{curr_scene['description']}".
                         Gaya Visual: {st.session_state.style_pilihan}.
                         Genre/Mood: {st.session_state.detected_genre}.
-                        Penguncian Karakter & Objek Utama (STRICT NO MORPHING): {st.session_state.character_anchor}.
+                        Penguncian Karakter & Objek Utama: {st.session_state.character_anchor}.
 
-                        ATURAN FORMAT PROMPT GOOGLE FLOW:
-                        1. Sebutkan karakter & barang yang dipegang secara konsisten ('hands holding [object] continuously, no morphing').
-                        2. Deskripsikan aksi, ekspresi muka, pergerakan kamera, dan lighting.
+                        ATURAN KETAT PENGUNCIAN SKALA & UKURAN KARAKTER (ANTI-MORPHING/ANTI-MINI):
+                        1. KUNCI UKURAN TUBUH: Karakter utama (seperti babi/hewan) HARUS mempertahankan skala tubuh penuh (full-sized adult, exact same height & body volume as previous frame). DILARANG KERAS mengecilkan karakter menjadi kerdil, mini, atau anak hewan!
+                        2. Masukkan frasa ini ke dalam prompt: 'maintaining exact same body size, scale, height, and physical proportions of the adult character from reference frame, strictly no size reduction or mini-version'.
+                        3. Deskripsikan aksi, gerakan kamera, pencahayaan, dan latar belakang secara terperinci.
 
                         Format output:
                         [PROMPT_SCENE]
@@ -336,7 +337,7 @@ else:
 
             Buatkan GLOBAL & LOCAL YOUTUBE SEO PACK (Bilingual: Bahasa Indonesia & English) yang memancing CTR tinggi:
 
-            1. 3 Opsi JUDUL CLICKBAIT (Bahas Indonesia & English) yang sesuai genre ({st.session_state.detected_genre}).
+            1. 3 Opsi JUDUL CLICKBAIT (Bahasa Indonesia & English) yang sesuai genre ({st.session_state.detected_genre}).
             2. DESKRIPSI VIDEO BILINGUAL (Singkat, SEO-friendly, menarik audiens global & lokal).
             3. EXACTLY 15 HIGH-VOLUME SEO KEYWORDS / TAGS (Campuran Bahasa Inggris & Bahasa Indonesia, dipisahkan dengan koma).
             4. HASHTAG VIRAL GLOBAL & LOKAL (8-10 hashtag populer).
