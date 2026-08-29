@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UGC GENERATOR CREATOR", 
+    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
