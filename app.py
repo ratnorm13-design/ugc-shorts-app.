@@ -32,7 +32,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (AURA & EMOTION ENHANCED)</div>
-    <div class="sub-title">STRICT ANATOMY | HIGH-EMOTION AURA | AUTO RETRY 503 | SEO PACKAGE</div>
+    <div class="sub-title">STRICT ANATOMY | HIGH-EMOTION AURA | SEO PACKAGE</div>
 </div>
 """, unsafe_allow_html=True)
 
