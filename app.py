@@ -6,7 +6,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - Multi-Scene Flow AI Generator", 
+    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -21,7 +21,6 @@ st.markdown("""
     label, p, span, div, .stMarkdown, .stRadio label, .stTextInput label, .stSelectbox label { color: #000000 !important; font-weight: 700 !important; }
     div.stButton > button { width: 100%; background: #dc2626 !important; color: #ffffff !important; font-weight: 900 !important; border: 2px solid #000000 !important; padding: 0.8rem 1.5rem; border-radius: 10px; text-transform: uppercase; font-size: 1rem !important; }
     .stTextInput input, .stTextArea textarea, .stSelectbox select { background-color: #ffffff !important; border: 2px solid #000000 !important; color: #000000 !important; font-weight: 700 !important; border-radius: 8px !important; }
-    .config-card { background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
     .brainstorm-card { background: #fefce8; border: 2px solid #eab308; border-radius: 10px; padding: 12px; margin-bottom: 12px; color: #000000 !important; }
     .story-card { background: #eff6ff; border: 2px solid #2563eb; border-radius: 10px; padding: 12px; margin-bottom: 12px; color: #000000 !important; }
     .audio-card { background: #f0fdf4; border: 2px solid #16a34a; border-radius: 10px; padding: 12px; margin-bottom: 12px; color: #000000 !important; }
@@ -31,8 +30,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW MULTI-SCENE GENERATOR</div>
-    <div class="sub-title">🔒 DYNAMIC DURATION (8s - 56s) | STRICT LOCK & AUDIO ENGINE</div>
+    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (UNIVERSAL)</div>
+    <div class="sub-title">AUTO-IDENTITY LOCK | DYNAMIC DURATION | SOUND & VO PROMPT</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -76,17 +75,19 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1: KONFIGURASI PENGATURAN & PILIHAN DURASI ---
 if st.session_state.step == 1:
-    st.markdown("### 🎛️ **PENGATURAN VISUAL & PILIHAN DURASI VIDEO**")
+    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
         style_pilihan = st.selectbox(
             "Gaya Visual Target Google Flow:",
             options=[
-                "Photorealistic 8K Warzone Action (Cinematic lighting, dynamic texture)",
-                "3D Cinematic Animation (Pixar style, vibrant color)",
-                "2D Anime Action Style (Studio Ghibli aesthetic)",
-                "Dark Cinematic Thriller / Action Mood"
+                "Original / Auto-Detect from Source Video",
+                "Photorealistic 8K Cinematic (Real Life)",
+                "3D Animation Style (Pixar / Unreal Engine 5)",
+                "2D Anime / Manga Style",
+                "Cyberpunk / Sci-Fi Mood",
+                "Dark Action Thriller Cinematic"
             ]
         )
     with col_cfg2:
@@ -108,9 +109,8 @@ if st.session_state.step == 1:
     st.session_state.max_scenes = max_scenes
 
     st.markdown("---")
-    st.markdown("### 📥 **REFERENSI VIDEO & DRAFT ADEGAN**")
+    st.markdown("### 📥 **INPUT REFERENSI VIDEO ASLI**")
     
-    accent_color = st.text_input("Warna Aksen Aksesori / Background:", value="Merah Terang / Red Headband & Black Tactical Vest")
     input_mode = st.radio("Upload Sumber Video Asli:", ("📁 Upload Video Asli (.mp4)", "📁 Upload Screenshots Frame Utuh", "✍️ Teks Deskripsi Scene"))
     
     video_ready = False
@@ -119,7 +119,7 @@ if st.session_state.step == 1:
     video_path = "temp_orig_video.mp4"
 
     if input_mode == "📁 Upload Screenshots Frame Utuh":
-        multi_frames = st.file_uploader("Upload Screenshots Frame Awal & Akhir Video Asli:", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+        multi_frames = st.file_uploader("Upload Screenshots Frame Video Asli:", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
         if multi_frames: video_ready = True
     elif input_mode == "📁 Upload Video Asli (.mp4)":
         uploaded_video = st.file_uploader("Upload Video Asli (.mp4):", type=["mp4", "mov", "avi"])
@@ -127,19 +127,19 @@ if st.session_state.step == 1:
             with open(video_path, "wb") as f: f.write(uploaded_video.read())
             video_ready = True
     else:
-        user_topic = st.text_area("Deskripsi Video Asli:", value="Kucing prajurit memakai ikat kepala merah dan rompi taktis berjalan memegang senapan di jalanan perang hancur.")
+        user_topic = st.text_area("Deskripsi Adegan Video Asli:", placeholder="Tuliskan subjek dan adegan video asli di sini...")
         if user_topic: video_ready = True
 
-    extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan (Agar Kontinu Tanpa Freeze):", 
-        value="Kucing melanjutkan langkah konstan, membidik senjata ke kanan dengan mata fokus, gerakan kontinu tanpa pause, derap langkah di puing & suara ledakan jernih.")
+    extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan Khusus (Opsional):", 
+        placeholder="Kosongkan jika ingin AI Gemini & DeepSeek otomatis yang meracik kelanjutan adegan...")
 
-    if st.button(f"🔒 PROSES LOCK IDENTITY & SUSUN {max_scenes} SCENE ({max_scenes*8} DETIK)"):
+    if st.button(f"🔒 PROSES AUTO-LOCK IDENTITY & SUSUN {max_scenes} SCENE ({max_scenes*8} DETIK)"):
         if not gemini_key or not openrouter_key:
             st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner(f"👁️ Mengunci Subjek Kucing Dewasa & Merancang {max_scenes} Scene..."):
+            with st.spinner(f"👁️ Mengunci Subjek Otomatis & Merancang {max_scenes} Scene..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -153,17 +153,16 @@ if st.session_state.step == 1:
                         contents_list.append(client_gemini.files.upload(file=video_path))
 
                     lock_prompt = f"""
-                    Analisis video/gambar referensi ini.
-                    KUNCI SUBJEK SECARA MUTLAK (STRICT CHARACTER LOCK):
-                    1. Karakter Utama: Full-sized adult ginger tabby cat (Kucing dewasa berbulu oranye bergaris, BUKAN kitten/kucing kecil).
-                    2. Aksesori Wajib: Bright RED HEADBAND tied firmly on forehead, BLACK TACTICAL VEST, holding M4 assault rifle.
-                    3. Aksen / Modifikasi: {accent_color}.
+                    Analisis video/gambar referensi ini secara komprehensif.
+                    TUGAS PENGUNCIAN SUBJEK (AUTO IDENTITY LOCK):
+                    1. Identifikasi Subjek Utama (apapun itu: manusia, hewan, kendaraan, karakter animasi, produk, dll).
+                    2. Catat seluruh detail visual khas secara ketat: bentuk fisik, pakaian, warna aksoris, warna kulit/bulu/cat, dan properti yang dibawa.
                     
-                    Rancang persis {max_scenes} SCENE (masing-masing 8 detik = Total {max_scenes*8} Detik).
-                    Setiap pergantian scene HARUS menyambung MULUS tanpa ada gerakan berhenti/pause/freeze.
+                    Rancang persis {max_scenes} SCENE berkesinambungan (masing-masing 8 detik = Total {max_scenes*8} Detik).
+                    Gerakan antar-scene harus KONTINU (fluid motion), tanpa ada adegan mati/freeze/pause.
                     
                     Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Kucing & Aksesori Terkunci]
+                    CHARACTER_ANCHOR: [Deskripsi Kunci Subjek & Properti Terkunci]
                     SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
@@ -171,22 +170,21 @@ if st.session_state.step == 1:
                     gemini_analysis = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=contents_list).text
 
                     deepseek_prompt = f"""
-                    Optimalkan storyboard total {max_scenes*8} detik ({max_scenes} Scene) berikut agar adegan mengalir kontinu tanpa jeda diam:
-                    Hasil Analisis & Anchor Gemini:
+                    Rancangkan adegan aksi & audio mengalir tanpa jeda diam berdasarkan analisis Gemini ini:
                     {gemini_analysis}
 
-                    Instruksi Ekstra User: {extra_action_note}
+                    Catatan Tambahan User (jika ada): {extra_action_note if extra_action_note else 'Bebas, buatkan kelanjutan yang paling alami dan dramatis'}
                     
-                    Pastikan pergerakan kamera dan fisik berkesinambungan serta tambahkan petunjuk Audio/VO yang sangat jernih dan detail.
+                    Buat pergerakan kamera dinamis serta audio effect (SFX) & Voiceover yang sangat realistis untuk {max_scenes} scene.
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
 
                     final_struct_prompt = f"""
-                    Berdasarkan Ide DeepSeek & Analisis Gemini:
-                    {deepseek_ideas}
-                    {gemini_analysis}
+                    Gabungkan hasil DeepSeek & Gemini menjadi JSON valid.
+                    Hasil Gemini: {gemini_analysis}
+                    Hasil DeepSeek: {deepseek_ideas}
 
-                    Outputkan persis {max_scenes} SCENE JSON Object untuk durasi total {max_scenes*8} detik!
+                    Outputkan persis {max_scenes} SCENE JSON Object untuk durasi {max_scenes*8} detik!
                     """
                     response = client_gemini.models.generate_content(
                         model='gemini-3.6-flash',
@@ -234,10 +232,10 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
     st.markdown(f"""
     <div class="brainstorm-card">
-        <b>🔒 STRICT IDENTITY ANCHOR (LOCKED):</b><br>{st.session_state.character_anchor}
+        <b>🔒 AUTO IDENTITY ANCHOR (TERKUNCI):</b><br>{st.session_state.character_anchor}
     </div>
     <div class="story-card">
-        <b>🎯 Visual Motion (No Freeze):</b> {curr_scene['description']}
+        <b>🎯 Visual Motion (Kontinu):</b> {curr_scene['description']}
     </div>
     <div class="audio-card">
         <b>🔊 High-Detail Audio & Voiceover Prompt:</b><br><i>"{curr_scene['audio_fx_and_vo']}"</i>
@@ -248,7 +246,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     if scene_number > 1:
         st.markdown(f"### 📸 **Upload Screenshot Frame Detik Ke-{(scene_number-1)*8} (Akhir Scene {scene_number-1})**")
         last_frame_file = st.file_uploader(
-            f"Upload screenshot detik terakhir dari Scene {scene_number-1} agar bentuk wajah, warna bulu, ikat kepala merah, & ukuran kucing 100% SAMA (Anti-Kitten & Anti-Morphing):",
+            f"Upload screenshot detik terakhir Scene {scene_number-1} agar visual subjek konsisten 100%:",
             type=["png", "jpg", "jpeg"],
             key=f"uploader_scene_{scene_number}"
         )
@@ -256,7 +254,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner("⚡ Meracik prompt dengan penguncian ketat & audio detail..."):
+            with st.spinner("⚡ Meracik prompt visual & audio..."):
                 try:
                     prompt_contents = []
                     
@@ -264,20 +262,19 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         temp_p = f"last_frame_s{scene_number}.jpg"
                         with open(temp_p, "wb") as f: f.write(last_frame_file.read())
                         prompt_contents.append(client_gemini.files.upload(file=temp_p))
-                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek WAJIB kucing dewasa yang sama, ikat kepala merah menyala (red headband) TETAP TERPASANG di dahi, rompi taktis hitam, tanpa perubahan rasio tubuh.")
+                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, pakaian, warna, dan proporsi tubuh WAJIB 100% SAMA dengan gambar referensi.")
 
                     prompt_spec = f"""
                     Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
                     Adegan Target: {curr_scene['description']}.
                     Audio/VO Target: {curr_scene['audio_fx_and_vo']}.
-                    Visual Style: {st.session_state.style_pilihan}.
+                    Visual Style Target: {st.session_state.style_pilihan}.
                     Anchor Terkunci: {st.session_state.character_anchor}.
 
-                    PERINTAH MUTLAK PENGUNCIAN AI (MANDATORY INSTRUCTIONS):
-                    1. CHARACTER IDENTITY LOCK: Write explicitly 'A full-sized adult ginger tabby cat with mature facial structure, wearing a bright red bandana/headband tied securely around its forehead, wearing a black tactical vest, holding a black rifle'.
-                    2. ANTI-KITTEN MANDATE: Write 'STRICTLY NO KITTEN, NO PROPORTION SHRINKING, KEEP EXACT ADULT CAT FACIAL PROPORTIONS FROM REFERENCE'.
-                    3. CONTINUOUS DYNAMIC MOTION (NO FREEZE): Write 'Continuous fluid movement, seamless tracking shot, unbroken action, no static freezing or motion pauses'.
-                    4. AUDIO SPECIFICATION: Include explicit sound directives: 'Crisp studio voiceover audio, clear directional sound effect of footsteps on gravel, ambient wind blowing, distant explosions, cinematic immersive soundscape'.
+                    INTRUKSI KETAT:
+                    1. SUBJECT IDENTITY LOCK: Pertahankan visual subjek secara presisi sesuai Anchor.
+                    2. CONTINUOUS DYNAMIC MOTION: Tuliskan perintah gerakan fluida tanpa jeda/freeze ('seamless action, continuous motion, no static pause').
+                    3. AUDIO DETAILED: Sertakan panduan suara detail (Sound Effects & Voiceover).
 
                     Format Output:
                     [PROMPT_SCENE]
@@ -285,7 +282,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     [/PROMPT_SCENE]
 
                     [AUDIO_PROMPT]
-                    (Prompt Khusus Sound FX & VO Google Flow)
+                    (Prompt Audio SFX & VO Google Flow)
                     [/AUDIO_PROMPT]
                     """
                     prompt_contents.append(prompt_spec)
