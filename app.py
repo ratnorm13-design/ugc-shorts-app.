@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL UGC GENERATOR", 
+    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -31,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 UGC CREATOR ENGINE</div>
-    <div class="sub-title">STRICT ANATOMY</div>
+    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (YOUTUBE SHORTS VIRAL SEO)</div>
+    <div class="sub-title">STRICT ANATOMY | HIGH-EMOTION AURA | YOUTUBE SHORTS BILINGUAL ALGORITHM</div>
 </div>
 """, unsafe_allow_html=True)
 
