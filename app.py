@@ -1,12 +1,13 @@
 import streamlit as st
 import json
 import requests
+import time
 from google import genai
 from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
+    page_title="UGC GENERATOR CREATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -30,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (UNIVERSAL)</div>
-    <div class="sub-title">AUTO-IDENTITY LOCK | STRICT ANATOMY | DYNAMIC DURATION | AUDIO & VO PROMPT</div>
+    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (AURA & EMOTION ENHANCED)</div>
+    <div class="sub-title">STRICT ANATOMY | HIGH-EMOTION AURA | AUTO RETRY 503 | SEO PACKAGE</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -50,6 +51,20 @@ if gemini_key:
 
 if openrouter_key:
     st.sidebar.success("✓ DeepSeek Connected")
+
+# --- HELPER FUNCTION: AUTO-RETRY KHUSUS GEMINI 3.6-FLASH ---
+def safe_gemini_generate(client, contents, config=None, retries=4):
+    for attempt in range(retries):
+        try:
+            if config:
+                return client.models.generate_content(model='gemini-3.6-flash', contents=contents, config=config)
+            return client.models.generate_content(model='gemini-3.6-flash', contents=contents)
+        except Exception as e:
+            if ("503" in str(e) or "high demand" in str(e).lower() or "UNAVAILABLE" in str(e)) and attempt < retries - 1:
+                time.sleep(3 * (attempt + 1))
+                continue
+            else:
+                raise e
 
 def call_deepseek(prompt_text, api_key):
     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
@@ -70,6 +85,7 @@ if "step" not in st.session_state:
     st.session_state.master_storyboard = []
     st.session_state.character_anchor = ""
     st.session_state.current_story_context = ""
+    st.session_state.seo_package = ""
     st.session_state.style_pilihan = ""
     st.session_state.max_scenes = 1
 
@@ -139,7 +155,7 @@ if st.session_state.step == 1:
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner(f"👁️ Mengunci Subjek Otomatis & Merancang {max_scenes} Scene..."):
+            with st.spinner(f"👁️ Menganalisis Aura Subjek & Merancang {max_scenes} Scene..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -154,28 +170,32 @@ if st.session_state.step == 1:
 
                     lock_prompt = f"""
                     Analisis video/gambar referensi ini secara presisi.
-                    TUGAS PENGUNCIAN SUBJEK (AUTO IDENTITY LOCK):
+                    TUGAS PENGUNCIAN SUBJEK & AMBIENCE AURA:
                     1. Identifikasi Subjek Utama (manusia, hewan, kendaraan, karakter animasi, produk, dll).
-                    2. Catat seluruh detail visual khas secara ketat: bentuk fisik, pakaian, aksesoris, warna, anatomi, dan properti.
+                    2. Catat detail visual khas: bentuk fisik, pakaian, aksesoris, warna, anatomi, dan properti.
+                    3. IDENTIFIKASI AURA & EMOSI UTAMA: (misal: marah/intense, gembira/happy, tegang/suspense, penasaran/curious, humoris, berani, dll).
                     
                     Rancang persis {max_scenes} SCENE berkesinambungan (masing-masing 8 detik = Total {max_scenes*8} Detik).
-                    Gerakan antar-scene harus KONTINU (fluid motion), tanpa ada adegan mati/freeze/pause.
+                    Gerakan harus jauh lebih MENAMPOL & MENARIK dibanding video asli, mempertegas aura ekspresi subjek secara dramatis tanpa ada freeze/pause.
                     
                     Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Kunci Subjek & Properti Terkunci]
+                    CHARACTER_ANCHOR: [Deskripsi Kunci Subjek + Aura & Ekspresi Emosi Dominan Terkunci]
                     SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
                     
-                    gemini_analysis = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=contents_list).text
+                    gemini_res = safe_gemini_generate(client_gemini, contents_list)
+                    gemini_analysis = gemini_res.text
 
                     deepseek_prompt = f"""
-                    Rancangkan adegan aksi & audio mengalir tanpa jeda diam berdasarkan analisis Gemini ini:
+                    Tingkatkan kualitas narasi dan aura sinematik berdasarkan hasil analisis Gemini ini:
                     {gemini_analysis}
 
-                    Catatan Tambahan User (jika ada): {extra_action_note if extra_action_note else 'Bebas, buatkan kelanjutan yang paling alami dan dramatis secara otomatis'}
+                    Catatan Tambahan User (jika ada): {extra_action_note if extra_action_note else 'Bebas, buatkan kelanjutan adegan yang paling hidup, emosional, dan dramatis secara otomatis'}
                     
-                    Buat pergerakan kamera dinamis serta audio effect (SFX) & Voiceover yang sangat realistis untuk {max_scenes} scene.
+                    TUGAS KHUSUS DEEPSEEK:
+                    Perkuat AURA dan EMOSI SUBJEK (ekspresi wajah, tatapan mata, aura kehadiran/vibe) agar terlihat level-up melebihi video aslinya.
+                    Buat pergerakan kamera dinamis serta audio effect (SFX) & Voiceover yang sangat pas dengan aura tersebut untuk {max_scenes} scene.
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
 
@@ -186,33 +206,31 @@ if st.session_state.step == 1:
 
                     Outputkan persis {max_scenes} SCENE JSON Object untuk durasi {max_scenes*8} detik!
                     """
-                    response = client_gemini.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=[final_struct_prompt],
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema={
-                                "type": "OBJECT",
-                                "properties": {
-                                    "character_anchor": {"type": "STRING"},
-                                    "scenes": {
-                                        "type": "ARRAY",
-                                        "items": {
-                                            "type": "OBJECT",
-                                            "properties": {
-                                                "scene_num": {"type": "INTEGER"},
-                                                "description": {"type": "STRING"},
-                                                "audio_fx_and_vo": {"type": "STRING"}
-                                            },
-                                            "required": ["scene_num", "description", "audio_fx_and_vo"]
-                                        }
+                    
+                    config_json = types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema={
+                            "type": "OBJECT",
+                            "properties": {
+                                "character_anchor": {"type": "STRING"},
+                                "scenes": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": {
+                                            "scene_num": {"type": "INTEGER"},
+                                            "description": {"type": "STRING"},
+                                            "audio_fx_and_vo": {"type": "STRING"}
+                                        },
+                                        "required": ["scene_num", "description", "audio_fx_and_vo"]
                                     }
-                                },
-                                "required": ["character_anchor", "scenes"]
-                            }
-                        )
+                                }
+                            },
+                            "required": ["character_anchor", "scenes"]
+                        }
                     )
-
+                    
+                    response = safe_gemini_generate(client_gemini, [final_struct_prompt], config=config_json)
                     parsed = json.loads(response.text)
                     st.session_state.master_storyboard = parsed["scenes"]
                     st.session_state.character_anchor = parsed["character_anchor"]
@@ -232,10 +250,10 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
     st.markdown(f"""
     <div class="brainstorm-card">
-        <b>🔒 AUTO IDENTITY ANCHOR (TERKUNCI):</b><br>{st.session_state.character_anchor}
+        <b>🔒 AUTO IDENTITY & AURA ANCHOR:</b><br>{st.session_state.character_anchor}
     </div>
     <div class="story-card">
-        <b>🎯 Visual Motion (Kontinu):</b> {curr_scene['description']}
+        <b>🎯 Visual Motion & Expression:</b> {curr_scene['description']}
     </div>
     <div class="audio-card">
         <b>🔊 High-Detail Audio & Voiceover Prompt:</b><br><i>"{curr_scene['audio_fx_and_vo']}"</i>
@@ -254,7 +272,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner("⚡ Meracik prompt visual & audio dengan proteksi anatomi ketat..."):
+            with st.spinner("⚡ Meracik prompt visual bermuatan aura kuat & audio..."):
                 try:
                     prompt_contents = []
                     
@@ -262,20 +280,21 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         temp_p = f"last_frame_s{scene_number}.jpg"
                         with open(temp_p, "wb") as f: f.write(last_frame_file.read())
                         prompt_contents.append(client_gemini.files.upload(file=temp_p))
-                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, pakaian, warna, dan proporsi tubuh WAJIB 100% SAMA dengan gambar referensi.")
+                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, ekspresi aura, pakaian, warna, dan proporsi tubuh WAJIB 100% SAMA dengan gambar referensi.")
 
                     prompt_spec = f"""
                     Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
                     Adegan Target: {curr_scene['description']}.
                     Audio/VO Target: {curr_scene['audio_fx_and_vo']}.
                     Visual Style Target: {st.session_state.style_pilihan}.
-                    Anchor Terkunci: {st.session_state.character_anchor}.
+                    Anchor & Aura Terkunci: {st.session_state.character_anchor}.
 
-                    INTRUKSI KETAT PENGUNCIAN & ANATOMI (STRICT ANATOMY & MOTION RULES):
-                    1. SUBJECT IDENTITY LOCK: Pertahankan visual subjek secara presisi sesuai Anchor.
-                    2. STRICT ANATOMY ACCURACY: Maintain correct physical anatomy and limb count. STRICTLY NO EXTRA LEGS, NO MUTATED PAWS, NO EXTRA ARMS, NO DUPLICATE LIMBS ON THE GROUND, NO FLOATING BODY PARTS.
-                    3. CONTINUOUS DYNAMIC MOTION: Tuliskan perintah gerakan fluida tanpa jeda/freeze ('seamless action, continuous motion, no static pause').
-                    4. AUDIO DETAILED: Sertakan panduan suara detail (Sound Effects & Voiceover).
+                    INTRUKSI LEVEL-UP VISUAL & EMOSI:
+                    1. AURA & EMOTION AMPLIFIER: Pertegas aura emosi subjek (facial expression, eye focus, vivid body language, mood lighting) agar visualnya tampil lebih dramatis & kuat dibanding video asli.
+                    2. SUBJECT IDENTITY LOCK: Pertahankan visual subjek secara presisi sesuai Anchor.
+                    3. STRICT ANATOMY ACCURACY: Maintain correct physical anatomy and limb count. STRICTLY NO EXTRA LEGS, NO MUTATED PAWS, NO EXTRA ARMS, NO DUPLICATE LIMBS ON THE GROUND, NO FLOATING BODY PARTS.
+                    4. CONTINUOUS DYNAMIC MOTION: Tuliskan perintah gerakan fluida tanpa jeda/freeze ('seamless action, continuous motion, dynamic framing').
+                    5. AUDIO DETAILED: Sertakan panduan suara detail (Sound Effects & Voiceover).
 
                     Format Output:
                     [PROMPT_SCENE]
@@ -288,7 +307,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     """
                     prompt_contents.append(prompt_spec)
 
-                    res_gen = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=prompt_contents)
+                    res_gen = safe_gemini_generate(client_gemini, prompt_contents)
                     res_text = res_gen.text
                     
                     p_scene = res_text.split("[PROMPT_SCENE]")[1].split("[/PROMPT_SCENE]")[0].strip() if "[PROMPT_SCENE]" in res_text else res_text
@@ -298,7 +317,23 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     end_t = scene_number * 8
                     scene_feed = f"\n\n=== SCENE {scene_number} ({start_t:02d}:00 - {end_t:02d}:00) ===\nGOOGLE FLOW VIDEO PROMPT:\n{p_scene}\n\nGOOGLE FLOW AUDIO / VO PROMPT:\n{p_audio}"
                     st.session_state.current_story_context += scene_feed
-                    
+
+                    # JIKA INI SCENE TERAKHIR (TERMASUK DURASI 8 DETIK), AUTO GENERATE SEO
+                    if scene_number == st.session_state.max_scenes:
+                        seo_prompt = f"""
+                        Berdasarkan adegan video berikut:
+                        Anchor Subjek & Aura: {st.session_state.character_anchor}
+                        Script Adegan: {st.session_state.current_story_context}
+
+                        Buatkan PAKET SEO KONTEN SHORT-FORM (YouTube Shorts/TikTok/Reels) Bahasa Indonesia yang sangat menarik & klik-able:
+                        1. 3 PILIHAN JUDUL VIRAL (Clickbait positif, memancing emosi/rasa penasaran).
+                        2. DESKRIPSI KONTEN (Lengkap dengan call-to-action & ringkasan adegan).
+                        3. HASHTAG VIRAL (10-15 Hashtag campuran relevan & trending).
+                        4. TAGS/KEYWORDS SEO (Teks dipisahkan koma untuk input tag video).
+                        """
+                        seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
+                        st.session_state.seo_package = seo_res.text
+
                     st.session_state.step += 1
                     st.rerun()
 
@@ -311,6 +346,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
             st.session_state.master_storyboard = []
             st.session_state.character_anchor = ""
             st.session_state.current_story_context = ""
+            st.session_state.seo_package = ""
             st.rerun()
 
     if st.session_state.current_story_context:
@@ -320,13 +356,18 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
 else:
     st.balloons()
-    st.success(f"🎉 **PROMPT MASTER TOTAL {st.session_state.max_scenes*8} DETIK SELESAI!**")
-    st.subheader("📋 Salin Prompt Ini Langsung ke Google Flow AI:")
-    st.text_area("Master Output Prompt:", value=st.session_state.current_story_context, height=400)
+    st.success(f"🎉 **PROMPT MASTER & PAKET SEO TOTAL {st.session_state.max_scenes*8} DETIK SELESAI!**")
+    
+    st.markdown("### 🎬 **1. MASTER PROMPT GOOGLE FLOW**")
+    st.text_area("Master Video & Audio Prompt:", value=st.session_state.current_story_context, height=350)
+    
+    st.markdown("### 🚀 **2. PAKET SEO KONTEN (JUDUL, DESKRIPSI, HASHTAG & TAGS)**")
+    st.text_area("Paket SEO Lengkap Shorts/TikTok/Reels:", value=st.session_state.seo_package, height=350)
     
     if st.button("🔄 RESTART PROYEK BARU"):
         st.session_state.step = 1
         st.session_state.master_storyboard = []
         st.session_state.character_anchor = ""
         st.session_state.current_story_context = ""
+        st.session_state.seo_package = ""
         st.rerun()
