@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL UGC SHORTS CREATOR ENGINE", 
+    page_title="UNIVERSAL UGC GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -31,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE</div>
-    <div class="sub-title">STRICT ANATOMY | HIGH-EMOTION</div>
+    <div class="main-title">🎬 UGC CREATOR ENGINE</div>
+    <div class="sub-title">STRICT ANATOMY</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -91,7 +91,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1: KONFIGURASI PENGATURAN & PILIHAN DURASI ---
 if st.session_state.step == 1:
-    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -318,26 +318,31 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     scene_feed = f"\n\n=== SCENE {scene_number} ({start_t:02d}:00 - {end_t:02d}:00) ===\nGOOGLE FLOW VIDEO PROMPT:\n{p_scene}\n\nGOOGLE FLOW AUDIO / VO PROMPT:\n{p_audio}"
                     st.session_state.current_story_context += scene_feed
 
-                    # JIKA INI SCENE TERAKHIR, AUTO GENERATE PAKET SEO DWI-BAHASA (ENGLISH GLOBAL & INDONESIA)
+                    # JIKA INI SCENE TERAKHIR, AUTO GENERATE PAKET SEO KHUSUS YOUTUBE SHORTS (BILINGUAL STACK)
                     if scene_number == st.session_state.max_scenes:
                         seo_prompt = f"""
                         Berdasarkan adegan video berikut:
                         Anchor Subjek & Aura: {st.session_state.character_anchor}
                         Script Adegan: {st.session_state.current_story_context}
 
-                        Buatkan PAKET SEO KONTEN SHORT-FORM DENGAN DUA VERSI BAHASA (ENGLISH FOR GLOBAL AUDIENCE & BAHASA INDONESIA):
+                        Rancang PAKET SEO KHUSUS YOUTUBE SHORTS untuk target audiens Global & Indonesia.
+                        FORMAT PENULISAN WAJIB BILINGUAL: BAHASA INGGRIS DI ATAS, BAHASA INDONESIA DIPRODUKSI PATEN DI BAWAHNYA.
 
-                        🌐 --- GLOBAL TARGET (ENGLISH VERSION) ---
-                        1. 3 VIRAL TITLES (High CTR, catchy, curiosity-driven).
-                        2. SHORT VIDEO DESCRIPTION (Compelling storytelling with Call-To-Action).
-                        3. GLOBAL VIRAL HASHTAGS (10-15 trending global hashtags like #Shorts, #Viral, etc).
-                        4. SEO KEYWORDS / TAGS (Comma-separated list of high-volume English keywords).
+                        Format Output SEO:
 
-                        🇮🇩 --- LOKAL TARGET (INDONESIAN VERSION) ---
-                        1. 3 PILIHAN JUDUL VIRAL (Clickbait positif & memancing rasa penasaran).
-                        2. DESKRIPSI KONTEN (Ringkasan menarik & Call-To-Action).
-                        3. HASHTAG VIRAL LOKAL (10-15 hashtag tren Indonesia & umum).
-                        4. TAGS/KEYWORDS SEO (Teks dipisahkan koma).
+                        📌 3 OPTIONAL BILINGUAL SHORTS TITLES (High CTR & Curiosity Driven):
+                        1. [Judul English] - [Judul Indonesia]
+                        2. [Judul English] - [Judul Indonesia]
+                        3. [Judul English] - [Judul Indonesia]
+
+                        📝 BILINGUAL SHORTS DESCRIPTION:
+                        (Tulis 2-3 kalimat ringkasan adegan & Call To Action dalam Bahasa Inggris, lalu langsung di bawahnya versi Bahasa Indonesia)
+
+                        🔥 YOUTUBE SHORTS VIRAL HASHTAGS:
+                        (Sediakan 12-15 Hashtag YouTube Shorts gabungan Global & Lokal yang dipisahkan spasi. Contoh: #Shorts #Viral #Trending #SubjekTopik #ShortsIndonesia dll)
+
+                        🏷️ YOUTUBE SEO TAGS / KEYWORDS:
+                        (Sediakan 15-20 Keyword SEO dipisahkan koma, berisi gabungan kata kunci pencarian YouTube versi English dan Indonesia).
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
                         st.session_state.seo_package = seo_res.text
@@ -364,18 +369,10 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
 else:
     st.balloons()
-    st.success(f"🎉 **PROMPT MASTER & PAKET GLOBAL SEO TOTAL {st.session_state.max_scenes*8} DETIK SELESAI!**")
+    st.success(f"🎉 **PROMPT MASTER & PAKET YOUTUBE SHORTS SEO TOTAL {st.session_state.max_scenes*8} DETIK SELESAI!**")
     
     st.markdown("### 🎬 **1. MASTER PROMPT GOOGLE FLOW**")
     st.text_area("Master Video & Audio Prompt:", value=st.session_state.current_story_context, height=350)
     
-    st.markdown("### 🌐 **2. PAKET SEO GLOBAL & LOKAL (ENGLISH & INDONESIA)**")
-    st.text_area("Paket SEO Lengkap (Judul, Deskripsi, Hashtags & Tags):", value=st.session_state.seo_package, height=450)
-    
-    if st.button("🔄 RESTART PROYEK BARU"):
-        st.session_state.step = 1
-        st.session_state.master_storyboard = []
-        st.session_state.character_anchor = ""
-        st.session_state.current_story_context = ""
-        st.session_state.seo_package = ""
-        st.rerun()
+    st.markdown("### 🔴 **2. PAKET SEO YOUTUBE SHORTS (BILINGUAL GLOBAL + LOKAL)**")
+    st.text_area("Paket SEO Shorts (Judul Bilingual, Deskripsi, Hashtags & Tags):", value=st.session_state.seo_packa
