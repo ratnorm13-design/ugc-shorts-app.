@@ -6,7 +6,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="STUDIO AI - UGC Creator", 
+    page_title="STUDIO AI - Gemini 3.6 & DeepSeek UGC Creator", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -32,8 +32,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 ZAGREST UGC CREATOR</div>
-    <div class="sub-title">Powered by Zagrest (Brainstorm & Strict Anchor Engine)</div>
+    <div class="main-title">🎬 DUAL-ENGINE UGC CREATOR</div>
+    <div class="sub-title">Powered by Gemini 3.6 Flash × DeepSeek R1 (Anti-Plagiarism & Strict Anchor Engine)</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -82,7 +82,7 @@ if "step" not in st.session_state:
     st.session_state.brainstorm_ideas = ""
     st.session_state.current_story_context = ""
     st.session_state.style_pilihan = ""
-    st.session_state.max_scenes = 2
+    st.session_state.max_scenes = 1
 
 # --- TAHAP 1: KONFIGURASI MAIN SCREEN & BRAINSTORMING ---
 if st.session_state.step == 1:
@@ -103,7 +103,13 @@ if st.session_state.step == 1:
     with col_cfg2:
         target_durasi_label = st.selectbox(
             "Target Total Durasi Video:",
-            options=["16 Detik (2 Scene)", "24 Detik (3 Scene)", "32 Detik (4 Scene)", "40 Detik (5 Scene)"]
+            options=[
+                "8 Detik (1 Scene)", 
+                "16 Detik (2 Scene)", 
+                "24 Detik (3 Scene)", 
+                "32 Detik (4 Scene)", 
+                "40 Detik (5 Scene)"
+            ]
         )
     
     max_scenes = int(target_durasi_label.split("(")[1].split(" ")[0])
@@ -133,7 +139,7 @@ if st.session_state.step == 1:
         user_topic = st.text_area("Deskripsi/Cerita Video Asli:", placeholder="Ketik adegan video asli di sini...")
         if user_topic: video_ready = True
 
-    modification_notes = st.text_input("💡 Instruksi Tambahan Ide/Revisi Adegan (Opsional):", placeholder="Misal: Buat lebih tegang di tengah, ending absurd, dll...")
+    modification_notes = st.text_input("💡 Instruksi Tambahan Ide/Revisi Adegan Utama (Opsional):", placeholder="Misal: Ubah kostum kucing, ganti tempat di dapur, ending konyol...")
 
     if st.button("🤝 JALANKAN BRAINSTORMING DUAL-ENGINE (GEMINI 3.6 × DEEPSEEK)"):
         if not gemini_key or not openrouter_key:
@@ -141,9 +147,9 @@ if st.session_state.step == 1:
         elif not video_ready:
             st.error("⚠️ Masukkan bahan referensi awal terlebih dahulu!")
         else:
-            with st.spinner("👁️ Gemini 3.6 Flash mendeteksi detail visual, genre asli & objek anchor..."):
+            with st.spinner("👁️ Gemini 3.6 mendeteksi visual asli & merancang elemen anti-plagiat..."):
                 try:
-                    # 1. Gemini 3.6 Analisis Visual & Genre
+                    # 1. Gemini 3.6 Analisis Visual & Rencana Variasi Unik
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Video":
                         contents_list.append(f"Video Text Reference:\n{user_topic}")
@@ -156,38 +162,41 @@ if st.session_state.step == 1:
                         contents_list.append(client_gemini.files.upload(file=video_path))
 
                     analysis_prompt = """
-                    Analisis referensi ini secara mendalam. Tentukan:
-                    1. Genre/Mood utama (Komedi / Seram-Misteri / Penasaran / Emosional / Thriller / Unik).
-                    2. Rangkuman alur asli.
-                    3. KUNCI KETAT UKURAN & BENTUK: Detailkan karakter utama, proporsi fisik, ukuran tubuh (misal: adult pig, medium build), dan peralatan/objek yang dipegang (`character_anchor`).
-                    Format: GENRE: [genre] | ANCHOR: [anchor] | SUMMARY: [summary]
+                    Analisis referensi video ini secara mendalam. 
+                    Tugas Utama (ANTI-PLAGIARISM RE-CREATION):
+                    1. Tentukan Genre/Mood utama.
+                    2. Rangkuman alur cerita asli.
+                    3. BEDAKAN ELEMEN VISUAL DARI ASLINYA: Buatkan identitas unik baru untuk subjek (ubah kostum/baju, aksesoris, jenis/warna bulu/karakter jika memungkinkan, latar belakang/background baru, serta variasi gerakan adegan baru agar TIDAK 100% PERSIS VIDEO ASLI).
+                    4. KUNCI KARAKTER BARU: Tentukan `character_anchor` baru dengan detail kostum/aksesoris/skala tubuh unik ini secara konsisten!
+                    
+                    Format output: GENRE: [genre] | ANCHOR: [anchor] | SUMMARY: [summary]
                     """
                     contents_list.append(analysis_prompt)
                     gemini_analysis = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=contents_list).text
 
-                    # 2. DeepSeek R1 Brainstorming & Revisi Adegan
-                    st.toast("🧠 DeepSeek R1 melempar ide plot twist, komedi/seram & penambahan adegan...")
+                    # 2. DeepSeek R1 Brainstorming & Variasi Adegan
+                    st.toast("🧠 DeepSeek R1 meracik variasi adegan unik & plot twist anti-plagiat...")
                     deepseek_prompt = f"""
-                    Hasil analisis referensi visual dari Gemini 3.6:
+                    Hasil analisis & racikan variasi visual Gemini 3.6:
                     {gemini_analysis}
                     
                     Instruksi User: {modification_notes}
 
                     Sebagai Creative Director UGC Viral:
-                    1. Pertahankan atau tingkatkan mood asli (Apakah itu Lucu, Seram, Penasaran, atau Action).
-                    2. Kembangkan dan REVISI alur cerita agar menjadi pas TEPAT {max_scenes} SCENE (masing-masing 8 detik).
-                    3. Berikan penambahan adegan, plot twist, atau reaksi emosional yang bikin penonton NGENA / BEDA dari video asli.
+                    1. Rancang alur cerita BARU yang terinspirasi dari video asli tetapi memiliki variasi adegan, latar tempat, kostum/aksesoris unik, dan plot twist beda agar BEBAS PLAGIAT.
+                    2. Kembangkan cerita menjadi pas TEPAT {max_scenes} SCENE (masing-masing 8 detik).
+                    3. Pastikan humor/mood tetap kuat dan menarik audiens global & lokal.
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
                     st.session_state.brainstorm_ideas = deepseek_ideas
 
                     # 3. Gemini 3.6 Final Structuring JSON
-                    st.toast("⚡ Gemini 3.6 menyusun naskah storyboard final & mengunci objek...")
+                    st.toast("⚡ Gemini 3.6 menyusun storyboard final & mengunci karakter unik...")
                     final_struct_prompt = f"""
                     Berdasarkan Ide Brainstorming DeepSeek:
                     {deepseek_ideas}
 
-                    Dan Hasil Analisis Visual Awal Gemini 3.6:
+                    Dan Hasil Analisis Visual Gemini 3.6:
                     {gemini_analysis}
 
                     Susun storyboard final presisi menjadi persis {max_scenes} SCENE JSON Object!
@@ -243,7 +252,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     <div class="brainstorm-card">
         <b>🎭 Genre Terdeteksi:</b> {st.session_state.detected_genre.upper()}<br>
         <b>🎨 Gaya Visual:</b> {st.session_state.style_pilihan}<br>
-        <b>🔒 Character & Object Anchor (Locked):</b> {st.session_state.character_anchor}
+        <b>🔒 Character & Anti-Plagiarism Anchor (Locked):</b> {st.session_state.character_anchor}
     </div>
     <div class="story-card">
         <b>🎯 Adegan Target Scene {scene_number}:</b><br>{curr_scene['description']}<br><br>
@@ -251,12 +260,19 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     </div>
     """, unsafe_allow_html=True)
 
+    # INSTRUKSI TAMBAHAN PER-SCENE (ADA DI SETIAP SCENE 1, 2, 3, DST.)
+    scene_custom_instruction = st.text_input(
+        f"💡 Instruksi Tambahan / Revisi Ide Khusus Scene {scene_number} (Opsional):",
+        placeholder="Misal: Tambahkan kucing kaget pas piring jatuh, ubah sudut kamera zoom-in...",
+        key=f"scene_custom_input_{scene_number}"
+    )
+
     # UPLOADER SCREENSHOT DETIK TERAKHIR UNTUK SCENE 2 KE ATAS
     last_frame_file = None
     if scene_number > 1:
         st.markdown("### 📸 **Upload Screenshot Detik Terakhir Scene Sebelumnya**")
         last_frame_file = st.file_uploader(
-            f"Upload screenshot hasil video Scene {scene_number - 1} agar posisi & UKURAN/PROPORSI KARAKTER di Scene {scene_number} TETAP KONSISTEN (ANTI-MORPHING/ANTI-RESIZING):",
+            f"Upload screenshot hasil video Scene {scene_number - 1} agar wujud karakter & ukuran tubuh di Scene {scene_number} TETAP KONSISTEN (ANTI-MORPHING/ANTI-RESIZING):",
             type=["png", "jpg", "jpeg"],
             key=f"uploader_scene_{scene_number}"
         )
@@ -267,7 +283,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
             if not gemini_key:
                 st.error("API Key belum diset di sidebar.")
             else:
-                with st.spinner("⚡ Gemini 3.6 menganalisis screenshot lanjutan & mengunci prompt..."):
+                with st.spinner("⚡ Gemini 3.6 meracik prompt visual anti-plagiat & mengunci detail..."):
                     try:
                         prompt_contents = []
                         
@@ -276,18 +292,19 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                             with open(temp_frame_path, "wb") as f:
                                 f.write(last_frame_file.read())
                             prompt_contents.append(client_gemini.files.upload(file=temp_frame_path))
-                            prompt_contents.append("Gambar ini adalah DETIK TERAKHIR dari scene sebelumnya. Lanjutkan adegan dari posisi, pencahayaan, dan UKURAN/PROPORSI TUBUH KARAKTER ini secara presisi tanpa ada yang menyusut/mengecil (strict no resizing).")
+                            prompt_contents.append("Gambar ini adalah DETIK TERAKHIR dari scene sebelumnya. Lanjutkan adegan dari posisi, kostum, aksesoris, latar tempat, dan UKURAN TUBUH ini secara presisi tanpa ada yang menyusut/berubah bentuk.")
 
                         prompt_spec = f"""
                         Buatkan prompt video 8 detik Bahasa Inggris untuk Google Flow AI berdasarkan adegan ini: "{curr_scene['description']}".
                         Gaya Visual: {st.session_state.style_pilihan}.
                         Genre/Mood: {st.session_state.detected_genre}.
-                        Penguncian Karakter & Objek Utama: {st.session_state.character_anchor}.
+                        Penguncian Karakter & Objek Utama (Anti-Plagiarism Unik): {st.session_state.character_anchor}.
+                        Instruksi Tambahan User Khusus Scene Ini: {scene_custom_instruction}
 
-                        ATURAN KETAT PENGUNCIAN SKALA & UKURAN KARAKTER (ANTI-MORPHING/ANTI-MINI):
-                        1. KUNCI UKURAN TUBUH: Karakter utama (seperti babi/hewan) HARUS mempertahankan skala tubuh penuh (full-sized adult, exact same height & body volume as previous frame). DILARANG KERAS mengecilkan karakter menjadi kerdil, mini, atau anak hewan!
-                        2. Masukkan frasa ini ke dalam prompt: 'maintaining exact same body size, scale, height, and physical proportions of the adult character from reference frame, strictly no size reduction or mini-version'.
-                        3. Deskripsikan aksi, gerakan kamera, pencahayaan, dan latar belakang secara terperinci.
+                        ATURAN KETAT MEMBUAT PROMPT UNIK & ANTI-PLAGIAT:
+                        1. KUNCI KARAKTER & AKSEOSRIS: Pertahankan kostum, aksesoris, warna bulu/kulit, latar tempat, dan skala tubuh penuh dari karakter (strictly no size reduction/no mini version).
+                        2. VARIATIF DARI VIDEO ASLI: Deskripsikan pergerakan kamera, ekspresi wajah baru, dan interaksi objek yang unik agar tampak sebagai video orisinil baru.
+                        3. Sebutkan detail aksi 8 detik secara sinematik dan tajam.
 
                         Format output:
                         [PROMPT_SCENE]
@@ -362,4 +379,4 @@ else:
         st.session_state.master_storyboard = []
         st.session_state.character_anchor = ""
         st.session_state.current_story_context = ""
-        st.rerun()
+        st.re
