@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
+    page_title="UNIVERSAL UGC GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -31,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (YOUTUBE SHORTS VIRAL SEO)</div>
-    <div class="sub-title">STRICT ANATOMY | HIGH-EMOTION AURA | YOUTUBE SHORTS BILINGUAL ALGORITHM</div>
+    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE</div>
+    <div class="sub-title">STRICT ANATOMY</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -52,7 +52,7 @@ if gemini_key:
 if openrouter_key:
     st.sidebar.success("✓ DeepSeek Connected")
 
-# --- HELPER FUNCTION: AUTO-RETRY KHUSUS GEMINI 3.6-FLASH ---
+# --- HELPER FUNCTION ---
 def safe_gemini_generate(client, contents, config=None, retries=4):
     for attempt in range(retries):
         try:
@@ -89,9 +89,9 @@ if "step" not in st.session_state:
     st.session_state.style_pilihan = ""
     st.session_state.max_scenes = 1
 
-# --- TAHAP 1: KONFIGURASI PENGATURAN & PILIHAN DURASI ---
+# --- TAHAP 1 ---
 if st.session_state.step == 1:
-    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -149,13 +149,13 @@ if st.session_state.step == 1:
     extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan Khusus (Opsional):", 
         placeholder="Kosongkan jika ingin AI Gemini & DeepSeek otomatis yang meracik kelanjutan adegan...")
 
-    if st.button(f"🔒 PROSES AUTO-LOCK IDENTITY & SUSUN {max_scenes} SCENE ({max_scenes*8} DETIK)"):
+    if st.button("🔒 PROSES AUTO-LOCK IDENTITY"):
         if not gemini_key or not openrouter_key:
             st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner(f"👁️ Menganalisis Aura Subjek & Merancang {max_scenes} Scene..."):
+            with st.spinner("👁️ Menganalisis Aura Subjek..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -170,16 +170,14 @@ if st.session_state.step == 1:
 
                     lock_prompt = f"""
                     Analisis video/gambar referensi ini secara presisi.
-                    TUGAS PENGUNCIAN SUBJEK & AMBIENCE AURA:
-                    1. Identifikasi Subjek Utama (manusia, hewan, kendaraan, karakter animasi, produk, dll).
-                    2. Catat detail visual khas: bentuk fisik, pakaian, aksesoris, warna, anatomi, dan properti.
-                    3. IDENTIFIKASI AURA & EMOSI UTAMA: (misal: marah/intense, gembira/happy, tegang/suspense, penasaran/curious, humoris, berani, dll).
+                    1. Identifikasi Subjek Utama.
+                    2. Catat detail visual khas.
+                    3. IDENTIFIKASI AURA & EMOSI UTAMA.
                     
-                    Rancang persis {max_scenes} SCENE berkesinambungan (masing-masing 8 detik = Total {max_scenes*8} Detik).
-                    Gerakan harus jauh lebih MENAMPOL & MENARIK dibanding video asli, mempertegas aura ekspresi subjek secara dramatis tanpa ada freeze/pause.
+                    Rancang persis {max_scenes} SCENE berkesinambungan.
                     
                     Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Kunci Subjek + Aura & Ekspresi Emosi Dominan Terkunci]
+                    CHARACTER_ANCHOR: [Deskripsi Kunci Subjek + Aura & Ekspresi Emosi Terkunci]
                     SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
@@ -191,11 +189,7 @@ if st.session_state.step == 1:
                     Tingkatkan kualitas narasi dan aura sinematik berdasarkan hasil analisis Gemini ini:
                     {gemini_analysis}
 
-                    Catatan Tambahan User (jika ada): {extra_action_note if extra_action_note else 'Bebas, buatkan kelanjutan adegan yang paling hidup, emosional, dan dramatis secara otomatis'}
-                    
-                    TUGAS KHUSUS DEEPSEEK:
-                    Perkuat AURA dan EMOSI SUBJEK (ekspresi wajah, tatapan mata, aura kehadiran/vibe) agar terlihat level-up melebihi video aslinya.
-                    Buat pergerakan kamera dinamis serta audio effect (SFX) & Voiceover yang sangat pas dengan aura tersebut untuk {max_scenes} scene.
+                    Catatan Tambahan: {extra_action_note if extra_action_note else 'Bebas'}
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
 
@@ -204,7 +198,7 @@ if st.session_state.step == 1:
                     Hasil Gemini: {gemini_analysis}
                     Hasil DeepSeek: {deepseek_ideas}
 
-                    Outputkan persis {max_scenes} SCENE JSON Object untuk durasi {max_scenes*8} detik!
+                    Outputkan persis {max_scenes} SCENE JSON Object!
                     """
                     
                     config_json = types.GenerateContentConfig(
@@ -240,12 +234,12 @@ if st.session_state.step == 1:
                 except Exception as e:
                     st.error(f"Error Penguncian Subjek: {e}")
 
-# --- TAHAP 2 S/D SELESAI: GENERATE PROMPT PER SCENE ---
+# --- TAHAP 2 S/D SELESAI ---
 elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     curr_idx = st.session_state.step - 2
     scene_number = curr_idx + 1
 
-    st.subheader(f"🎬 Eksekusi Scene {scene_number} dari {st.session_state.max_scenes} (Detik {curr_idx*8} - {scene_number*8})")
+    st.subheader(f"🎬 Eksekusi Scene {scene_number} dari {st.session_state.max_scenes}")
     curr_scene = st.session_state.master_storyboard[curr_idx]
 
     st.markdown(f"""
@@ -262,9 +256,9 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
     last_frame_file = None
     if scene_number > 1:
-        st.markdown(f"### 📸 **Upload Screenshot Frame Detik Ke-{(scene_number-1)*8} (Akhir Scene {scene_number-1})**")
+        st.markdown(f"### 📸 **Upload Screenshot Frame Scene {scene_number-1}**")
         last_frame_file = st.file_uploader(
-            f"Upload screenshot detik terakhir Scene {scene_number-1} agar visual subjek konsisten 100%:",
+            "Upload screenshot detik terakhir scene sebelumnya:",
             type=["png", "jpg", "jpeg"],
             key=f"uploader_scene_{scene_number}"
         )
@@ -272,7 +266,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner("⚡ Meracik prompt visual bermuatan aura kuat & audio..."):
+            with st.spinner("⚡ Meracik prompt visual & audio..."):
                 try:
                     prompt_contents = []
                     
@@ -280,7 +274,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         temp_p = f"last_frame_s{scene_number}.jpg"
                         with open(temp_p, "wb") as f: f.write(last_frame_file.read())
                         prompt_contents.append(client_gemini.files.upload(file=temp_p))
-                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, ekspresi aura, pakaian, warna, dan proporsi tubuh WAJIB 100% SAMA dengan gambar referensi.")
+                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya.")
 
                     prompt_spec = f"""
                     Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
@@ -289,12 +283,12 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     Visual Style Target: {st.session_state.style_pilihan}.
                     Anchor & Aura Terkunci: {st.session_state.character_anchor}.
 
-                    INTRUKSI LEVEL-UP VISUAL & EMOSI:
-                    1. AURA & EMOTION AMPLIFIER: Pertegas aura emosi subjek (facial expression, eye focus, vivid body language, mood lighting) agar visualnya tampil lebih dramatis & kuat dibanding video asli.
-                    2. SUBJECT IDENTITY LOCK: Pertahankan visual subjek secara presisi sesuai Anchor.
-                    3. STRICT ANATOMY ACCURACY: Maintain correct physical anatomy and limb count. STRICTLY NO EXTRA LEGS, NO MUTATED PAWS, NO EXTRA ARMS, NO DUPLICATE LIMBS ON THE GROUND, NO FLOATING BODY PARTS.
-                    4. CONTINUOUS DYNAMIC MOTION: Tuliskan perintah gerakan fluida tanpa jeda/freeze ('seamless action, continuous motion, dynamic framing').
-                    5. AUDIO DETAILED: Sertakan panduan suara detail (Sound Effects & Voiceover).
+                    INTRUKSI:
+                    1. Pertegas aura emosi subjek.
+                    2. Pertahankan visual subjek secara presisi.
+                    3. STRICT ANATOMY ACCURACY.
+                    4. CONTINUOUS DYNAMIC MOTION.
+                    5. AUDIO DETAILED.
 
                     Format Output:
                     [PROMPT_SCENE]
@@ -318,31 +312,18 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     scene_feed = f"\n\n=== SCENE {scene_number} ({start_t:02d}:00 - {end_t:02d}:00) ===\nGOOGLE FLOW VIDEO PROMPT:\n{p_scene}\n\nGOOGLE FLOW AUDIO / VO PROMPT:\n{p_audio}"
                     st.session_state.current_story_context += scene_feed
 
-                    # JIKA INI SCENE TERAKHIR, AUTO GENERATE PAKET SEO KHUSUS YOUTUBE SHORTS (BILINGUAL STACK)
                     if scene_number == st.session_state.max_scenes:
                         seo_prompt = f"""
                         Berdasarkan adegan video berikut:
                         Anchor Subjek & Aura: {st.session_state.character_anchor}
                         Script Adegan: {st.session_state.current_story_context}
 
-                        Rancang PAKET SEO KHUSUS YOUTUBE SHORTS untuk target audiens Global & Indonesia.
-                        FORMAT PENULISAN WAJIB BILINGUAL: BAHASA INGGRIS DI ATAS, BAHASA INDONESIA DIPRODUKSI PATEN DI BAWAHNYA.
-
-                        Format Output SEO:
-
-                        📌 3 OPTIONAL BILINGUAL SHORTS TITLES (High CTR & Curiosity Driven):
-                        1. [Judul English] - [Judul Indonesia]
-                        2. [Judul English] - [Judul Indonesia]
-                        3. [Judul English] - [Judul Indonesia]
-
-                        📝 BILINGUAL SHORTS DESCRIPTION:
-                        (Tulis 2-3 kalimat ringkasan adegan & Call To Action dalam Bahasa Inggris, lalu langsung di bawahnya versi Bahasa Indonesia)
-
-                        🔥 YOUTUBE SHORTS VIRAL HASHTAGS:
-                        (Sediakan 12-15 Hashtag YouTube Shorts gabungan Global & Lokal yang dipisahkan spasi. Contoh: #Shorts #Viral #Trending #SubjekTopik #ShortsIndonesia dll)
-
-                        🏷️ YOUTUBE SEO TAGS / KEYWORDS:
-                        (Sediakan 15-20 Keyword SEO dipisahkan koma, berisi gabungan kata kunci pencarian YouTube versi English dan Indonesia).
+                        Rancang PAKET SEO KHUSUS YOUTUBE SHORTS (Bilingual: English + Indonesia).
+                        Sediakan:
+                        - 3 Judul Shorts Bilingual
+                        - Deskripsi Shorts Bilingual
+                        - 12-15 Hashtags Shorts
+                        - 15-20 Tags SEO
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
                         st.session_state.seo_package = seo_res.text
@@ -369,10 +350,19 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
 else:
     st.balloons()
-    st.success(f"🎉 **PROMPT MASTER & PAKET YOUTUBE SHORTS SEO TOTAL {st.session_state.max_scenes*8} DETIK SELESAI!**")
+    st.success("🎉 **PROMPT MASTER & PAKET YOUTUBE SHORTS SEO SELESAI!**")
     
     st.markdown("### 🎬 **1. MASTER PROMPT GOOGLE FLOW**")
     st.text_area("Master Video & Audio Prompt:", value=st.session_state.current_story_context, height=350)
     
-    st.markdown("### 🔴 **2. PAKET SEO YOUTUBE SHORTS (BILINGUAL GLOBAL + LOKAL)**")
-    st.text_area("Paket SEO Shorts (Judul Bilingual, Deskripsi, Hashtags & Tags):", value=st.session_state.seo_packa
+    st.markdown("### 🔴 **2. PAKET SEO YOUTUBE SHORTS**")
+    # Nama parameter disederhanakan agar tidak pernah terpotong saat disalin dari HP
+    st.text_area("Paket SEO Shorts:", value=st.session_state.seo_package, height=450)
+    
+    if st.button("🔄 RESTART PROYEK BARU"):
+        st.session_state.step = 1
+        st.session_state.master_storyboard = []
+        st.session_state.character_anchor = ""
+        st.session_state.current_story_context = ""
+        st.session_state.seo_package = ""
+        st.rerun()
