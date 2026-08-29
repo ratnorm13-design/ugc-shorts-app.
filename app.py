@@ -31,7 +31,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (UNIVERSAL)</div>
-    <div class="sub-title">AUTO-IDENTITY LOCK | DYNAMIC DURATION | SOUND & VO PROMPT</div>
+    <div class="sub-title">AUTO-IDENTITY LOCK | STRICT ANATOMY | DYNAMIC DURATION | AUDIO & VO PROMPT</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -75,7 +75,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1: KONFIGURASI PENGATURAN & PILIHAN DURASI ---
 if st.session_state.step == 1:
-    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -153,10 +153,10 @@ if st.session_state.step == 1:
                         contents_list.append(client_gemini.files.upload(file=video_path))
 
                     lock_prompt = f"""
-                    Analisis video/gambar referensi ini secara komprehensif.
+                    Analisis video/gambar referensi ini secara presisi.
                     TUGAS PENGUNCIAN SUBJEK (AUTO IDENTITY LOCK):
-                    1. Identifikasi Subjek Utama (apapun itu: manusia, hewan, kendaraan, karakter animasi, produk, dll).
-                    2. Catat seluruh detail visual khas secara ketat: bentuk fisik, pakaian, warna aksoris, warna kulit/bulu/cat, dan properti yang dibawa.
+                    1. Identifikasi Subjek Utama (manusia, hewan, kendaraan, karakter animasi, produk, dll).
+                    2. Catat seluruh detail visual khas secara ketat: bentuk fisik, pakaian, aksesoris, warna, anatomi, dan properti.
                     
                     Rancang persis {max_scenes} SCENE berkesinambungan (masing-masing 8 detik = Total {max_scenes*8} Detik).
                     Gerakan antar-scene harus KONTINU (fluid motion), tanpa ada adegan mati/freeze/pause.
@@ -173,7 +173,7 @@ if st.session_state.step == 1:
                     Rancangkan adegan aksi & audio mengalir tanpa jeda diam berdasarkan analisis Gemini ini:
                     {gemini_analysis}
 
-                    Catatan Tambahan User (jika ada): {extra_action_note if extra_action_note else 'Bebas, buatkan kelanjutan yang paling alami dan dramatis'}
+                    Catatan Tambahan User (jika ada): {extra_action_note if extra_action_note else 'Bebas, buatkan kelanjutan yang paling alami dan dramatis secara otomatis'}
                     
                     Buat pergerakan kamera dinamis serta audio effect (SFX) & Voiceover yang sangat realistis untuk {max_scenes} scene.
                     """
@@ -254,7 +254,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner("⚡ Meracik prompt visual & audio..."):
+            with st.spinner("⚡ Meracik prompt visual & audio dengan proteksi anatomi ketat..."):
                 try:
                     prompt_contents = []
                     
@@ -271,10 +271,11 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     Visual Style Target: {st.session_state.style_pilihan}.
                     Anchor Terkunci: {st.session_state.character_anchor}.
 
-                    INTRUKSI KETAT:
+                    INTRUKSI KETAT PENGUNCIAN & ANATOMI (STRICT ANATOMY & MOTION RULES):
                     1. SUBJECT IDENTITY LOCK: Pertahankan visual subjek secara presisi sesuai Anchor.
-                    2. CONTINUOUS DYNAMIC MOTION: Tuliskan perintah gerakan fluida tanpa jeda/freeze ('seamless action, continuous motion, no static pause').
-                    3. AUDIO DETAILED: Sertakan panduan suara detail (Sound Effects & Voiceover).
+                    2. STRICT ANATOMY ACCURACY: Maintain correct physical anatomy and limb count. STRICTLY NO EXTRA LEGS, NO MUTATED PAWS, NO EXTRA ARMS, NO DUPLICATE LIMBS ON THE GROUND, NO FLOATING BODY PARTS.
+                    3. CONTINUOUS DYNAMIC MOTION: Tuliskan perintah gerakan fluida tanpa jeda/freeze ('seamless action, continuous motion, no static pause').
+                    4. AUDIO DETAILED: Sertakan panduan suara detail (Sound Effects & Voiceover).
 
                     Format Output:
                     [PROMPT_SCENE]
