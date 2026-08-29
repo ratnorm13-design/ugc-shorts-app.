@@ -91,7 +91,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1: KONFIGURASI PENGATURAN & PILIHAN DURASI ---
 if st.session_state.step == 1:
-    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
