@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL UGC GENERATOR", 
+    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -31,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE</div>
-    <div class="sub-title">STRICT ANATOMY</div>
+    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (ULTIMATE OBJECT LOCK)</div>
+    <div class="sub-title">STRICT OBJECT PERMANENCE | NO MORPHING | YOUTUBE SHORTS BILINGUAL SEO</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -149,13 +149,13 @@ if st.session_state.step == 1:
     extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan Khusus (Opsional):", 
         placeholder="Kosongkan jika ingin AI Gemini & DeepSeek otomatis yang meracik kelanjutan adegan...")
 
-    if st.button("🔒 PROSES AUTO-LOCK IDENTITY"):
+    if st.button("🔒 PROSES AUTO-LOCK IDENTITY & OBJECT PERMANENCE"):
         if not gemini_key or not openrouter_key:
             st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner("👁️ Menganalisis Aura Subjek..."):
+            with st.spinner("👁️ Menganalisis Subjek & Kunci Objek Fizikal..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -170,14 +170,15 @@ if st.session_state.step == 1:
 
                     lock_prompt = f"""
                     Analisis video/gambar referensi ini secara presisi.
-                    1. Identifikasi Subjek Utama.
-                    2. Catat detail visual khas.
-                    3. IDENTIFIKASI AURA & EMOSI UTAMA.
+                    TUGAS PENGUNCIAN MUTLAK (STRICT OBJECT PERMANENCE & ANCHOR):
+                    1. Identifikasi Subjek Utama (detail fisik, wajah, pakaian, bentuk tubuh).
+                    2. Identifikasi SELURUH OBJEK/PROPERTI FISIK yang dipegang atau berada di dekat subjek (misal: dompet, botol, tas, mainan, dll).
+                    3. KUNCI AURA & EMOSI UTAMA.
                     
-                    Rancang persis {max_scenes} SCENE berkesinambungan.
+                    Rancang persis {max_scenes} SCENE berkesinambungan. Semua objek fisik yang dipegang WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT, LENYAP, ATAU BERUBAH BENTUK di scene manapun!
                     
                     Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Kunci Subjek + Aura & Ekspresi Emosi Terkunci]
+                    CHARACTER_ANCHOR: [Deskripsi Subjek + Kunci Seluruh Objek Fizikal Terikat + Aura Emosi]
                     SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
@@ -186,10 +187,11 @@ if st.session_state.step == 1:
                     gemini_analysis = gemini_res.text
 
                     deepseek_prompt = f"""
-                    Tingkatkan kualitas narasi dan aura sinematik berdasarkan hasil analisis Gemini ini:
+                    Tingkatkan kualitas narasi dan sinematik berdasarkan analisis Gemini:
                     {gemini_analysis}
 
                     Catatan Tambahan: {extra_action_note if extra_action_note else 'Bebas'}
+                    ATURAN MUTLAK DEEPSEEK: Pastikan pergerakan subjek memperhitungkan keberadaan objek fisik agar objek TIDAK MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
 
@@ -244,7 +246,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
     st.markdown(f"""
     <div class="brainstorm-card">
-        <b>🔒 AUTO IDENTITY & AURA ANCHOR:</b><br>{st.session_state.character_anchor}
+        <b>🔒 AUTO IDENTITY & OBJECT LOCK ANCHOR:</b><br>{st.session_state.character_anchor}
     </div>
     <div class="story-card">
         <b>🎯 Visual Motion & Expression:</b> {curr_scene['description']}
@@ -266,7 +268,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner("⚡ Meracik prompt visual & audio..."):
+            with st.spinner("⚡ Meracik prompt visual & pengunci objek mutlak..."):
                 try:
                     prompt_contents = []
                     
@@ -274,21 +276,21 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         temp_p = f"last_frame_s{scene_number}.jpg"
                         with open(temp_p, "wb") as f: f.write(last_frame_file.read())
                         prompt_contents.append(client_gemini.files.upload(file=temp_p))
-                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya.")
+                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, pakaian, dan SEMUA OBJEK yang dipegang WAJIB 100% KONSISTEN Tanpa Berubah/Hilang.")
 
                     prompt_spec = f"""
                     Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
                     Adegan Target: {curr_scene['description']}.
                     Audio/VO Target: {curr_scene['audio_fx_and_vo']}.
                     Visual Style Target: {st.session_state.style_pilihan}.
-                    Anchor & Aura Terkunci: {st.session_state.character_anchor}.
+                    Anchor Subjek & Objek Terkunci: {st.session_state.character_anchor}.
 
-                    INTRUKSI:
-                    1. Pertegas aura emosi subjek.
-                    2. Pertahankan visual subjek secara presisi.
-                    3. STRICT ANATOMY ACCURACY.
-                    4. CONTINUOUS DYNAMIC MOTION.
-                    5. AUDIO DETAILED.
+                    INTRUKSI KETAT PENGUNCIAN OBJEK (STRICT OBJECT PERMANENCE RULES):
+                    1. CRITICAL OBJECT PERMANENCE REQUIREMENT: All physical items/props held by or positioned near the subject MUST REMAIN CONSTANTLY VISIBLE AND PHYSICALLY PRESENT THROUGHOUT THE ENTIRE 8 SECONDS.
+                    2. NO SHAPE-SHIFTING OR MORPHING: Items MUST NOT fade out, shrink, disappear, alter form, or morph into other objects during movements or gestures.
+                    3. ANATOMY & MOTION ACCURACY: Maintain physical realistic behavior. If subject reaches out one hand/paw, ensure the other hand/body CONTINUES TO SECURELY HOLD THE OBJECT in full view.
+                    4. CONTINUOUS DYNAMIC MOTION: Fluid movement, no freeze, dramatic mood expression.
+                    5. AUDIO DETAILED: High detailed Sound Effects & Voiceover prompt.
 
                     Format Output:
                     [PROMPT_SCENE]
@@ -318,12 +320,12 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         Anchor Subjek & Aura: {st.session_state.character_anchor}
                         Script Adegan: {st.session_state.current_story_context}
 
-                        Rancang PAKET SEO KHUSUS YOUTUBE SHORTS (Bilingual: English + Indonesia).
+                        Rancang PAKET SEO KHUSUS YOUTUBE SHORTS (Bilingual Vertical Stack: English di atas, Indonesia di bawah).
                         Sediakan:
-                        - 3 Judul Shorts Bilingual
+                        - 3 Judul Shorts Bilingual (Clickbait Positif / High CTR)
                         - Deskripsi Shorts Bilingual
-                        - 12-15 Hashtags Shorts
-                        - 15-20 Tags SEO
+                        - 12-15 Hashtags Shorts Viral (Global + Indonesia)
+                        - 15-20 Tags SEO / Keywords
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
                         st.session_state.seo_package = seo_res.text
@@ -356,7 +358,6 @@ else:
     st.text_area("Master Video & Audio Prompt:", value=st.session_state.current_story_context, height=350)
     
     st.markdown("### 🔴 **2. PAKET SEO YOUTUBE SHORTS**")
-    # Nama parameter disederhanakan agar tidak pernah terpotong saat disalin dari HP
     st.text_area("Paket SEO Shorts:", value=st.session_state.seo_package, height=450)
     
     if st.button("🔄 RESTART PROYEK BARU"):
