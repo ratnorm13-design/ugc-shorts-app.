@@ -54,14 +54,13 @@ if openrouter_key:
 
 # --- FAST HELPER FUNCTIONS ---
 def safe_gemini_generate(client, contents, config=None):
-    # Direct Call Tanpa Delay Panjang
+    # Menggunakan model resmi gemini-1.5-flash
     if config:
-        return client.models.generate_content(model='gemini-2.5-flash', contents=contents, config=config)
-    return client.models.generate_content(model='gemini-2.5-flash', contents=contents)
+        return client.models.generate_content(model='gemini-1.5-flash', contents=contents, config=config)
+    return client.models.generate_content(model='gemini-1.5-flash', contents=contents)
 
 def call_deepseek_fast(prompt_text, api_key):
     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
-    # Memakai model DeepSeek V3 (jauh lebih cepat dibanding R1 reasoning)
     payload = {
         "model": "deepseek/deepseek-chat", 
         "messages": [{"role": "user", "content": prompt_text}],
@@ -86,7 +85,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1 ---
 if st.session_state.step == 1:
-    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -164,7 +163,6 @@ if st.session_state.step == 1:
                             contents_list.append(client_gemini.files.upload(file=p))
                     else:
                         up_file = client_gemini.files.upload(file=video_path)
-                        # Cek status file video hingga siap (biar ga hang)
                         while up_file.state.name == "PROCESSING":
                             time.sleep(1)
                             up_file = client_gemini.files.get(name=up_file.name)
@@ -186,7 +184,6 @@ if st.session_state.step == 1:
                     """
                     contents_list.append(lock_prompt)
                     
-                    # Direct Generation Fast Path
                     config_json = types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema={
