@@ -31,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (ULTIMATE OBJECT LOCK)</div>
-    <div class="sub-title">STRICT OBJECT PERMANENCE | NO MORPHING | YOUTUBE SHORTS BILINGUAL SEO</div>
+    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (UNIQUE MODIFIER & OBJECT LOCK)</div>
+    <div class="sub-title">STRICT OBJECT PERMANENCE | UNIQUE VISUAL OVERRIDE | YOUTUBE SHORTS BILINGUAL SEO</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -146,16 +146,16 @@ if st.session_state.step == 1:
         user_topic = st.text_area("Deskripsi Adegan Video Asli:", placeholder="Tuliskan subjek dan adegan video asli di sini...")
         if user_topic: video_ready = True
 
-    extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan Khusus (Opsional):", 
-        placeholder="Kosongkan jika ingin AI Gemini & DeepSeek otomatis yang meracik kelanjutan adegan...")
+    extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan Khusus (WAJIB Diisi jika ingin ubah warna, baju, latar agar TIDAK PLAGIAT):", 
+        placeholder="Contoh: Ubah warna bulu kucing jadi putih dengan aksen hitam di atas kepala. Tambahkan air mata berlinang...")
 
-    if st.button("🔒 PROSES AUTO-LOCK IDENTITY & OBJECT PERMANENCE"):
+    if st.button("🔒 PROSES AUTO-LOCK IDENTITY & MODIFIED OBJECT PERMANENCE"):
         if not gemini_key or not openrouter_key:
             st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner("👁️ Menganalisis Subjek & Kunci Objek Fizikal..."):
+            with st.spinner("👁️ Menganalisis Video & Menerapkan Modifikasi Visual..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -169,16 +169,20 @@ if st.session_state.step == 1:
                         contents_list.append(client_gemini.files.upload(file=video_path))
 
                     lock_prompt = f"""
-                    Analisis video/gambar referensi ini secara presisi.
-                    TUGAS PENGUNCIAN MUTLAK (STRICT OBJECT PERMANENCE & ANCHOR):
-                    1. Identifikasi Subjek Utama (detail fisik, wajah, pakaian, bentuk tubuh).
-                    2. Identifikasi SELURUH OBJEK/PROPERTI FISIK yang dipegang atau berada di dekat subjek (misal: dompet, botol, tas, mainan, dll).
-                    3. KUNCI AURA & EMOSI UTAMA.
+                    Analisis video/gambar referensi ini.
                     
-                    Rancang persis {max_scenes} SCENE berkesinambungan. Semua objek fisik yang dipegang WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT, LENYAP, ATAU BERUBAH BENTUK di scene manapun!
+                    ⚠️ INSTRUKSI OVERRIDE MODIFIKASI KHUSUS DARI USER (ANTI-PLAGIAT):
+                    "{extra_action_note if extra_action_note else 'Tidak ada modifikasi khusus, gunakan detail unik opsional.'}"
                     
+                    ATURAN WAJIB (PRIORITAS UTAMA):
+                    1. Jika terdapat 'INSTRUKSI OVERRIDE MODIFIKASI' di atas (seperti perubahan warna bulu, jenis pakaian, aksesoris, atau latar belakang), kamu WAJIB MENGGANTI detail visual asli dari video dengan instruksi modifikasi tersebut! JANGAN gunakan detail warna/visual asli jika user meminta perubahan.
+                    2. Ambil HANYA alur gerakan dasar dan ekspresi dari video asli agar tidak terjadi pelanggaran hak cipta visual.
+                    3. Kunci detail fisik baru hasil modifikasi tersebut ke dalam CHARACTER_ANCHOR.
+
+                    Rancang persis {max_scenes} SCENE berkesinambungan. Seluruh objek fisik hasil modifikasi WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT ATAU MENGHILANG di scene manapun!
+
                     Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Subjek + Kunci Seluruh Objek Fizikal Terikat + Aura Emosi]
+                    CHARACTER_ANCHOR: [Deskripsi Subjek Hasil Modifikasi User + Kunci Objek Fizikal Terikat + Aura Emosi]
                     SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
@@ -190,8 +194,10 @@ if st.session_state.step == 1:
                     Tingkatkan kualitas narasi dan sinematik berdasarkan analisis Gemini:
                     {gemini_analysis}
 
-                    Catatan Tambahan: {extra_action_note if extra_action_note else 'Bebas'}
-                    ATURAN MUTLAK DEEPSEEK: Pastikan pergerakan subjek memperhitungkan keberadaan objek fisik agar objek TIDAK MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
+                    Catatan Modifikasi User: {extra_action_note if extra_action_note else 'Bebas'}
+                    ATURAN MUTLAK DEEPSEEK:
+                    1. Pastikan warna, elemen visual, dan kostum MENGGUNAKAN HASIL MODIFIKASI USER (Bukan visual asli dari video original).
+                    2. Objek fisik yang dipegang TIDAK BOLEH MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
 
@@ -246,7 +252,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
     st.markdown(f"""
     <div class="brainstorm-card">
-        <b>🔒 AUTO IDENTITY & OBJECT LOCK ANCHOR:</b><br>{st.session_state.character_anchor}
+        <b>🔒 AUTO IDENTITY & MODIFIED OBJECT LOCK ANCHOR:</b><br>{st.session_state.character_anchor}
     </div>
     <div class="story-card">
         <b>🎯 Visual Motion & Expression:</b> {curr_scene['description']}
