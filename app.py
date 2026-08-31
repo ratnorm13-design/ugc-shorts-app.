@@ -146,8 +146,10 @@ if st.session_state.step == 1:
         user_topic = st.text_area("Deskripsi Adegan Video Asli:", placeholder="Tuliskan subjek dan adegan video asli di sini...")
         if user_topic: video_ready = True
 
-    extra_action_note_t1 = st.text_area("💡 Penyesuaian/Penambahan Modifikasi Utama (WAJIB Diisi agar Tidak Plagiat):", 
-        placeholder="Contoh: Ubah subjek/karakter, pakaian, warna, latar belakang, atau tambah efek visual khusus...")
+    extra_action_note_t1 = st.text_area(
+        "💡 Penyesuaian/Penambahan Modifikasi Utama (Opsional / Biarkan AI Berkreasi Otomatis):", 
+        placeholder="Kosongkan jika ingin AI menentukan warna/latar/objek unik secara otomatis, ATAU isi sendiri jika ada keinginan khusus..."
+    )
 
     if st.button("🔒 PROSES AUTO-LOCK IDENTITY & MODIFIED OBJECT PERMANENCE"):
         if not gemini_key or not openrouter_key:
@@ -168,21 +170,24 @@ if st.session_state.step == 1:
                     else:
                         contents_list.append(client_gemini.files.upload(file=video_path))
 
+                    user_custom_instruction = extra_action_note_t1.strip() if extra_action_note_t1.strip() else "KOSONG (AI WAJIB SECARA KREATIF MENGUBAH WARNA, KOSTUM, BACKGROUND, ATAU ELEMEN VISUAL SECARA OTOMATIS AGAR SANGAT UNIK DAN ANTI-PLAGIAT)"
+
                     lock_prompt = f"""
                     Analisis video/gambar referensi ini secara universal (segala niche).
                     
-                    ⚠️ INSTRUKSI OVERRIDE MODIFIKASI KHUSUS DARI USER (ANTI-PLAGIAT):
-                    "{extra_action_note_t1 if extra_action_note_t1 else 'Tidak ada modifikasi khusus, gunakan detail unik opsional.'}"
+                    ⚠️ INSTRUKSI MODIFIKASI USER:
+                    "{user_custom_instruction}"
                     
-                    ATURAN WAJIB (PRIORITAS UTAMA):
-                    1. Jika terdapat 'INSTRUKSI OVERRIDE MODIFIKASI' di atas (seperti perubahan subjek, warna, pakaian, aksesoris, objek bawaan, atau latar), kamu WAJIB MENGGANTI detail visual asli dari video dengan instruksi modifikasi tersebut! JANGAN gunakan detail visual asli jika user meminta perubahan.
-                    2. Ambil HANYA alur gerakan dasar dan tempo dari video asli agar terhindar dari klaim hak cipta.
-                    3. Kunci detail fisik baru hasil modifikasi tersebut ke dalam CHARACTER_ANCHOR.
+                    ATURAN KREATIF:
+                    1. Jika instruksi user KOSONG, Gemini & DeepSeek WAJIB bekerja sama menentukan warna baru, background baru, dan objek unik baru agar hasil video tidak persis meniru video asli (Anti-Plagiat).
+                    2. Jika instruksi user ADA ISI-NYA, prioritas utama adalah mengikuti arahan khusus tersebut.
+                    3. Ambil HANYA alur gerakan dasar dan tempo dari video asli.
+                    4. Kunci detail fisik baru hasil racikan ini ke dalam CHARACTER_ANCHOR.
 
                     Rancang persis {max_scenes} SCENE berkesinambungan. Seluruh objek fisik hasil modifikasi WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT ATAU MENGHILANG di scene manapun!
 
                     Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Subjek Hasil Modifikasi User + Kunci Objek Fizikal Terikat + Aura Emosi]
+                    CHARACTER_ANCHOR: [Deskripsi Subjek Hasil Modifikasi + Kunci Objek Fizikal Terikat + Aura Emosi]
                     SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
@@ -194,9 +199,9 @@ if st.session_state.step == 1:
                     Tingkatkan kualitas narasi dan sinematik berdasarkan analisis Gemini:
                     {gemini_analysis}
 
-                    Catatan Modifikasi User: {extra_action_note_t1 if extra_action_note_t1 else 'Bebas'}
+                    Catatan Modifikasi: {user_custom_instruction}
                     ATURAN MUTLAK DEEPSEEK:
-                    1. Pastikan warna, elemen visual, dan kostum MENGGUNAKAN HASIL MODIFIKASI USER (Bukan visual asli dari video original).
+                    1. Pastikan warna, elemen visual, background, dan kostum TAMPIL SANGAT UNIK DAN KREATIF.
                     2. Objek fisik yang dipegang TIDAK BOLEH MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
@@ -262,10 +267,10 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     </div>
     """, unsafe_allow_html=True)
 
-    # --- INPUT PENYESUAIAN ADEGAN PER SCENE (SELALU ADA DI SETIAP SCENE) ---
+    # --- INPUT PENYESUAIAN ADEGAN PER SCENE (OPSIONAL / AUTO AI) ---
     custom_scene_note = st.text_area(
-        f"💡 Penyesuaian/Penambahan Adegan Khusus Khusus Scene {scene_number} (Opsional):", 
-        placeholder=f"Tuliskan penyesuaian khusus jika ingin ada aksi/objek tambahan spesifik di scene {scene_number}...",
+        f"💡 Penyesuaian/Penambahan Adegan Khusus Scene {scene_number} (Opsional / Biarkan AI Berkreasi):", 
+        placeholder=f"Kosongkan jika ingin AI yang menentukan penyesuaian scene {scene_number}, atau isi manual jika ingin ubah aksi/background khusus...",
         key=f"custom_note_scene_{scene_number}"
     )
 
@@ -291,10 +296,12 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         prompt_contents.append(client_gemini.files.upload(file=temp_p))
                         prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, pakaian, dan SEMUA OBJEK yang dipegang WAJIB 100% KONSISTEN Tanpa Berubah/Hilang.")
 
+                    scene_note_text = custom_scene_note.strip() if custom_scene_note.strip() else "KOSONG (AI bebas berkreasi memperkaya pencahayaan dan pergerakan adegan secara optimal)"
+
                     prompt_spec = f"""
                     Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
                     Adegan Target Dasar: {curr_scene['description']}.
-                    Catatan Penyesuaian Tambahan Scene {scene_number}: {custom_scene_note if custom_scene_note else 'Ikuti rancangan dasar scene.'}
+                    Catatan Modifikasi Tambahan Scene {scene_number}: {scene_note_text}
                     Audio/VO Target: {curr_scene['audio_fx_and_vo']}.
                     Visual Style Target: {st.session_state.style_pilihan}.
                     Anchor Subjek & Objek Terkunci: {st.session_state.character_anchor}.
