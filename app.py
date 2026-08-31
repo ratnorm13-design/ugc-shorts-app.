@@ -91,7 +91,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1 ---
 if st.session_state.step == 1:
-    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -327,14 +327,22 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         Script Adegan: {st.session_state.current_story_context}
 
                         Rancang PAKET SEO KHUSUS YOUTUBE SHORTS (Bilingual Vertical Stack: English di atas, Indonesia di bawah).
+                        
+                        ATURAN PENULISAN TAGS KHUSUS:
+                        TIDAK BOLEH MEMAKAI TANDA KUTIP DUA (") ATAU TANDA KUTIP SATU (') SAMA SEKALI PADA BAGIAN SEO TAGS / KEYWORDS. 
+                        Tuliskan murni kata kunci yang dipisahkan koma saja agar user bisa langsung menyalinnya tanpa edit.
+
                         Sediakan:
                         - 3 Judul Shorts Bilingual (Clickbait Positif / High CTR)
                         - Deskripsi Shorts Bilingual
                         - 12-15 Hashtags Shorts Viral (Global + Indonesia)
-                        - 15-20 Tags SEO / Keywords
+                        - 15-20 Tags SEO / Keywords (TANPA TANDA KUTIP SAMA SEKALI)
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
-                        st.session_state.seo_package = seo_res.text
+                        
+                        # Sanitasi tambahan untuk menjamin 100% bebas dari tanda kutip
+                        clean_seo = seo_res.text.replace('"', '').replace("'", "")
+                        st.session_state.seo_package = clean_seo
 
                     st.session_state.step += 1
                     st.rerun()
