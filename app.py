@@ -54,10 +54,10 @@ if openrouter_key:
 
 # --- FAST HELPER FUNCTIONS ---
 def safe_gemini_generate(client, contents, config=None):
-    # Menggunakan model resmi gemini-1.5-flash
+    # Menggunakan model gemini-3.6-flash
     if config:
-        return client.models.generate_content(model='gemini-1.5-flash', contents=contents, config=config)
-    return client.models.generate_content(model='gemini-1.5-flash', contents=contents)
+        return client.models.generate_content(model='gemini-3.6-flash', contents=contents, config=config)
+    return client.models.generate_content(model='gemini-3.6-flash', contents=contents)
 
 def call_deepseek_fast(prompt_text, api_key):
     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
@@ -85,7 +85,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1 ---
 if st.session_state.step == 1:
-    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
