@@ -31,8 +31,8 @@ st.markdown("""
 # --- HEADER ---
 st.markdown("""
 <div class="main-header">
-    <div class="main-title">🎬 GOOGLE FLOW AI ENGINE (UNIQUE MODIFIER & OBJECT LOCK)</div>
-    <div class="sub-title">STRICT OBJECT PERMANENCE | UNIQUE VISUAL OVERRIDE | YOUTUBE SHORTS BILINGUAL SEO</div>
+    <div class="main-title">🎬 UNIVERSAL GOOGLE FLOW ENGINE (ALL NICHE)</div>
+    <div class="sub-title">DYNAMIC PER-SCENE MODIFIER | STRICT OBJECT PERMANENCE | NO QUOTES SEO</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -91,7 +91,7 @@ if "step" not in st.session_state:
 
 # --- TAHAP 1 ---
 if st.session_state.step == 1:
-    st.markdown("### 🎛️ **PENGATURAN VISUAL & DURASI VIDEO**")
+    st.markdown("### ⚙️ **PENGATURAN VISUAL & DURASI VIDEO**")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -125,7 +125,7 @@ if st.session_state.step == 1:
     st.session_state.max_scenes = max_scenes
 
     st.markdown("---")
-    st.markdown("### 📥 **INPUT REFERENSI VIDEO ASLI**")
+    st.markdown("### 📥 **INPUT REFERENSI VIDEO ASLI (UNIVERSAL ALL-NICHE)**")
     
     input_mode = st.radio("Upload Sumber Video Asli:", ("📁 Upload Video Asli (.mp4)", "📁 Upload Screenshots Frame Utuh", "✍️ Teks Deskripsi Scene"))
     
@@ -146,8 +146,8 @@ if st.session_state.step == 1:
         user_topic = st.text_area("Deskripsi Adegan Video Asli:", placeholder="Tuliskan subjek dan adegan video asli di sini...")
         if user_topic: video_ready = True
 
-    extra_action_note = st.text_area("💡 Penyesuaian/Penambahan Adegan Khusus (WAJIB Diisi jika ingin ubah warna, baju, latar agar TIDAK PLAGIAT):", 
-        placeholder="Contoh: Ubah warna bulu kucing jadi putih dengan aksen hitam di atas kepala. Tambahkan air mata berlinang...")
+    extra_action_note_t1 = st.text_area("💡 Penyesuaian/Penambahan Modifikasi Utama (WAJIB Diisi agar Tidak Plagiat):", 
+        placeholder="Contoh: Ubah subjek/karakter, pakaian, warna, latar belakang, atau tambah efek visual khusus...")
 
     if st.button("🔒 PROSES AUTO-LOCK IDENTITY & MODIFIED OBJECT PERMANENCE"):
         if not gemini_key or not openrouter_key:
@@ -169,14 +169,14 @@ if st.session_state.step == 1:
                         contents_list.append(client_gemini.files.upload(file=video_path))
 
                     lock_prompt = f"""
-                    Analisis video/gambar referensi ini.
+                    Analisis video/gambar referensi ini secara universal (segala niche).
                     
                     ⚠️ INSTRUKSI OVERRIDE MODIFIKASI KHUSUS DARI USER (ANTI-PLAGIAT):
-                    "{extra_action_note if extra_action_note else 'Tidak ada modifikasi khusus, gunakan detail unik opsional.'}"
+                    "{extra_action_note_t1 if extra_action_note_t1 else 'Tidak ada modifikasi khusus, gunakan detail unik opsional.'}"
                     
                     ATURAN WAJIB (PRIORITAS UTAMA):
-                    1. Jika terdapat 'INSTRUKSI OVERRIDE MODIFIKASI' di atas (seperti perubahan warna bulu, jenis pakaian, aksesoris, atau latar belakang), kamu WAJIB MENGGANTI detail visual asli dari video dengan instruksi modifikasi tersebut! JANGAN gunakan detail warna/visual asli jika user meminta perubahan.
-                    2. Ambil HANYA alur gerakan dasar dan ekspresi dari video asli agar tidak terjadi pelanggaran hak cipta visual.
+                    1. Jika terdapat 'INSTRUKSI OVERRIDE MODIFIKASI' di atas (seperti perubahan subjek, warna, pakaian, aksesoris, objek bawaan, atau latar), kamu WAJIB MENGGANTI detail visual asli dari video dengan instruksi modifikasi tersebut! JANGAN gunakan detail visual asli jika user meminta perubahan.
+                    2. Ambil HANYA alur gerakan dasar dan tempo dari video asli agar terhindar dari klaim hak cipta.
                     3. Kunci detail fisik baru hasil modifikasi tersebut ke dalam CHARACTER_ANCHOR.
 
                     Rancang persis {max_scenes} SCENE berkesinambungan. Seluruh objek fisik hasil modifikasi WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT ATAU MENGHILANG di scene manapun!
@@ -194,7 +194,7 @@ if st.session_state.step == 1:
                     Tingkatkan kualitas narasi dan sinematik berdasarkan analisis Gemini:
                     {gemini_analysis}
 
-                    Catatan Modifikasi User: {extra_action_note if extra_action_note else 'Bebas'}
+                    Catatan Modifikasi User: {extra_action_note_t1 if extra_action_note_t1 else 'Bebas'}
                     ATURAN MUTLAK DEEPSEEK:
                     1. Pastikan warna, elemen visual, dan kostum MENGGUNAKAN HASIL MODIFIKASI USER (Bukan visual asli dari video original).
                     2. Objek fisik yang dipegang TIDAK BOLEH MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
@@ -262,6 +262,13 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     </div>
     """, unsafe_allow_html=True)
 
+    # --- INPUT PENYESUAIAN ADEGAN PER SCENE (SELALU ADA DI SETIAP SCENE) ---
+    custom_scene_note = st.text_area(
+        f"💡 Penyesuaian/Penambahan Adegan Khusus Khusus Scene {scene_number} (Opsional):", 
+        placeholder=f"Tuliskan penyesuaian khusus jika ingin ada aksi/objek tambahan spesifik di scene {scene_number}...",
+        key=f"custom_note_scene_{scene_number}"
+    )
+
     last_frame_file = None
     if scene_number > 1:
         st.markdown(f"### 📸 **Upload Screenshot Frame Scene {scene_number-1}**")
@@ -274,7 +281,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner("⚡ Meracik prompt visual & pengunci objek mutlak..."):
+            with st.spinner(f"⚡ Meracik prompt visual & pengunci objek Scene {scene_number}..."):
                 try:
                     prompt_contents = []
                     
@@ -286,7 +293,8 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
                     prompt_spec = f"""
                     Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
-                    Adegan Target: {curr_scene['description']}.
+                    Adegan Target Dasar: {curr_scene['description']}.
+                    Catatan Penyesuaian Tambahan Scene {scene_number}: {custom_scene_note if custom_scene_note else 'Ikuti rancangan dasar scene.'}
                     Audio/VO Target: {curr_scene['audio_fx_and_vo']}.
                     Visual Style Target: {st.session_state.style_pilihan}.
                     Anchor Subjek & Objek Terkunci: {st.session_state.character_anchor}.
@@ -358,26 +366,3 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
             st.session_state.current_story_context = ""
             st.session_state.seo_package = ""
             st.rerun()
-
-    if st.session_state.current_story_context:
-        st.markdown("---")
-        st.subheader("📜 Live Output Master Feed")
-        st.text_area("Hasil Script & Prompt Feed:", value=st.session_state.current_story_context, height=250)
-
-else:
-    st.balloons()
-    st.success("🎉 **PROMPT MASTER & PAKET YOUTUBE SHORTS SEO SELESAI!**")
-    
-    st.markdown("### 🎬 **1. MASTER PROMPT GOOGLE FLOW**")
-    st.text_area("Master Video & Audio Prompt:", value=st.session_state.current_story_context, height=350)
-    
-    st.markdown("### 🔴 **2. PAKET SEO YOUTUBE SHORTS**")
-    st.text_area("Paket SEO Shorts:", value=st.session_state.seo_package, height=450)
-    
-    if st.button("🔄 RESTART PROYEK BARU"):
-        st.session_state.step = 1
-        st.session_state.master_storyboard = []
-        st.session_state.character_anchor = ""
-        st.session_state.current_story_context = ""
-        st.session_state.seo_package = ""
-        st.rerun()
