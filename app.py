@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL GOOGLE FLOW GENERATOR (SEO/AEO/GEO/AIO)", 
+    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -268,6 +268,11 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     </div>
     """, unsafe_allow_html=True)
 
+    # --- TAMPILKAN HASIL TERKUMPUL SECARA REAL-TIME ---
+    if st.session_state.current_story_context:
+        st.markdown("### 📜 **HASIL PROMPT SCENE SEBELUMNYA:**")
+        st.text_area("Live Master Feed:", value=st.session_state.current_story_context, height=180, disabled=True)
+
     # --- INPUT PENYESUAIAN ADEGAN PER SCENE ---
     custom_scene_note = st.text_area(
         f"💡 Penyesuaian/Penambahan Adegan Khusus Scene {scene_number} (Opsional / Biarkan AI Berkreasi):", 
@@ -357,7 +362,6 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
                         
-                        # Sanitasi menjamin 100% bebas dari tanda kutip di bagian tags
                         clean_seo = seo_res.text.replace('"', '').replace("'", "")
                         st.session_state.seo_package = clean_seo
 
@@ -367,8 +371,4 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                 except Exception as e:
                     st.error(f"Error Prompt Generation: {e}")
 
-    with col2:
-        if st.button("🔄 RESET PROYEK"):
-            st.session_state.step = 1
-            st.session_state.master_storyboard = []
-            st.session_state.charac
+ 
