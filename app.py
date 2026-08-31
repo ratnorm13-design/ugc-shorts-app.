@@ -32,7 +32,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🎬 UNIVERSAL GOOGLE FLOW ENGINE (ALL NICHE)</div>
-    <div class="sub-title">SMART ALGORITHM: SEO + AEO + GEO + AIO OPTIMIZED | NO QUOTES TAGS</div>
+    <div class="sub-title">SUPER FAST ENGINE | SEO + AEO + GEO + AIO OPTIMIZED</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -52,32 +52,27 @@ if gemini_key:
 if openrouter_key:
     st.sidebar.success("✓ DeepSeek Connected")
 
-# --- HELPER FUNCTION ---
-def safe_gemini_generate(client, contents, config=None, retries=4):
-    for attempt in range(retries):
-        try:
-            if config:
-                return client.models.generate_content(model='gemini-3.6-flash', contents=contents, config=config)
-            return client.models.generate_content(model='gemini-3.6-flash', contents=contents)
-        except Exception as e:
-            if ("503" in str(e) or "high demand" in str(e).lower() or "UNAVAILABLE" in str(e)) and attempt < retries - 1:
-                time.sleep(3 * (attempt + 1))
-                continue
-            else:
-                raise e
+# --- FAST HELPER FUNCTIONS ---
+def safe_gemini_generate(client, contents, config=None):
+    # Direct Call Tanpa Delay Panjang
+    if config:
+        return client.models.generate_content(model='gemini-2.5-flash', contents=contents, config=config)
+    return client.models.generate_content(model='gemini-2.5-flash', contents=contents)
 
-def call_deepseek(prompt_text, api_key):
+def call_deepseek_fast(prompt_text, api_key):
     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
-    payload = {"model": "deepseek/deepseek-r1:free", "messages": [{"role": "user", "content": prompt_text}]}
+    # Memakai model DeepSeek V3 (jauh lebih cepat dibanding R1 reasoning)
+    payload = {
+        "model": "deepseek/deepseek-chat", 
+        "messages": [{"role": "user", "content": prompt_text}],
+        "max_tokens": 1000
+    }
     try:
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=40)
+        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=15)
         data = res.json()
-        raw_content = data['choices'][0]['message']['content']
-        if "</think>" in raw_content:
-            raw_content = raw_content.split("</think>")[-1].strip()
-        return raw_content
-    except Exception as e:
-        return f"Fallback: {e}"
+        return data['choices'][0]['message']['content'].strip()
+    except Exception:
+        return "Fast mode fallback: Utamakan visual unik dan kestabilan objek."
 
 # --- STATE MANAGEMENT ---
 if "step" not in st.session_state:
@@ -157,7 +152,7 @@ if st.session_state.step == 1:
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner("👁️ Menganalisis Video & Menerapkan 4-Pilar Optimasi (SEO/AEO/GEO/AIO)..."):
+            with st.spinner("⚡ Meracik Kilat SEO/AEO/GEO & Pengunci Visual..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -168,53 +163,30 @@ if st.session_state.step == 1:
                             with open(p, "wb") as f: f.write(img.read())
                             contents_list.append(client_gemini.files.upload(file=p))
                     else:
-                        contents_list.append(client_gemini.files.upload(file=video_path))
+                        up_file = client_gemini.files.upload(file=video_path)
+                        # Cek status file video hingga siap (biar ga hang)
+                        while up_file.state.name == "PROCESSING":
+                            time.sleep(1)
+                            up_file = client_gemini.files.get(name=up_file.name)
+                        contents_list.append(up_file)
 
-                    user_custom_instruction = extra_action_note_t1.strip() if extra_action_note_t1.strip() else "KOSONG (AI WAJIB SECARA KREATIF MENGUBAH WARNA, KOSTUM, BACKGROUND, ATAU ELEMEN VISUAL SECARA OTOMATIS AGAR SANGAT UNIK DAN ANTI-PLAGIAT)"
+                    user_custom_instruction = extra_action_note_t1.strip() if extra_action_note_t1.strip() else "KOSONG (AI WAJIB BIKIN UNIK OTOMATIS)"
 
                     lock_prompt = f"""
-                    Analisis video/gambar referensi ini secara universal (segala niche).
+                    Analisis referensi ini.
+                    Modifikasi User: "{user_custom_instruction}"
+                    Rules:
+                    1. Scene 1 miliki AEO Hook (0-3 detik).
+                    2. Voiceover ikuti struktur GEO (Ramah rekomendasi AI Search).
+                    3. Kunci karakter & objek fisik ke CHARACTER_ANCHOR.
                     
-                    ⚠️ INSTRUKSI MODIFIKASI USER:
-                    "{user_custom_instruction}"
-                    
-                    ATURAN ALGORITMA SMART & KREATIF (AEO & GEO INTEGRATION):
-                    1. Scene 1 WAJIB memiliki AEO Hook (Jawaban/Solusi langsung di 0-3 detik pertama) agar memancing Snippet Google/YouTube.
-                    2. Voiceover (VO) di setiap scene disusun dengan struktur GEO yang rapi dan kontekstual agar mudah dibaca & direkomendasikan oleh AI Search (ChatGPT, Gemini, Perplexity).
-                    3. Jika instruksi modifikasi user KOSONG, Gemini & DeepSeek WAJIB menentukan warna baru, background baru, dan objek unik baru (Anti-Plagiat).
-                    4. Jika ada isi instruksi user, utamakan arahan khusus tersebut.
-                    5. Kunci detail fisik baru ke dalam CHARACTER_ANCHOR.
-
-                    Rancang persis {max_scenes} SCENE berkesinambungan. Seluruh objek fisik hasil modifikasi WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT ATAU MENGHILANG!
-
-                    Output JSON format:
-                    CHARACTER_ANCHOR: [Deskripsi Subjek Hasil Modifikasi + Kunci Objek Fizikal Terikat + Aura Emosi]
-                    SCENES: [Array of {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
+                    Output JSON persis {max_scenes} SCENE:
+                    CHARACTER_ANCHOR: [Subjek + Kunci Objek Fizikal]
+                    SCENES: [Array {max_scenes} scenes with 'scene_num', 'description', 'audio_fx_and_vo']
                     """
                     contents_list.append(lock_prompt)
                     
-                    gemini_res = safe_gemini_generate(client_gemini, contents_list)
-                    gemini_analysis = gemini_res.text
-
-                    deepseek_prompt = f"""
-                    Tingkatkan kualitas narasi sinematik dan optimasi AEO/GEO berdasarkan analisis Gemini:
-                    {gemini_analysis}
-
-                    Catatan Modifikasi: {user_custom_instruction}
-                    ATURAN MUTLAK DEEPSEEK:
-                    1. Pastikan visual unik & Voiceover memiliki alur GEO kontekstual yang ramah algoritma rekomendasi AI.
-                    2. Objek fisik yang dipegang TIDAK BOLEH MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
-                    """
-                    deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
-
-                    final_struct_prompt = f"""
-                    Gabungkan hasil DeepSeek & Gemini menjadi JSON valid.
-                    Hasil Gemini: {gemini_analysis}
-                    Hasil DeepSeek: {deepseek_ideas}
-
-                    Outputkan persis {max_scenes} SCENE JSON Object!
-                    """
-                    
+                    # Direct Generation Fast Path
                     config_json = types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema={
@@ -238,15 +210,16 @@ if st.session_state.step == 1:
                         }
                     )
                     
-                    response = safe_gemini_generate(client_gemini, [final_struct_prompt], config=config_json)
+                    response = safe_gemini_generate(client_gemini, contents_list, config=config_json)
                     parsed = json.loads(response.text)
+                    
                     st.session_state.master_storyboard = parsed["scenes"]
                     st.session_state.character_anchor = parsed["character_anchor"]
                     st.session_state.step = 2
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"Error Penguncian Subjek: {e}")
+                    st.error(f"Error Fast Engine: {e}")
 
 # --- TAHAP 2 S/D SELESAI ---
 elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
@@ -268,15 +241,13 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     </div>
     """, unsafe_allow_html=True)
 
-    # --- TAMPILKAN HASIL TERKUMPUL SECARA REAL-TIME ---
     if st.session_state.current_story_context:
         st.markdown("### 📜 **HASIL PROMPT SCENE SEBELUMNYA:**")
         st.text_area("Live Master Feed:", value=st.session_state.current_story_context, height=180, disabled=True)
 
-    # --- INPUT PENYESUAIAN ADEGAN PER SCENE ---
     custom_scene_note = st.text_area(
         f"💡 Penyesuaian/Penambahan Adegan Khusus Scene {scene_number} (Opsional / Biarkan AI Berkreasi):", 
-        placeholder=f"Kosongkan jika ingin AI yang menentukan penyesuaian scene {scene_number}, atau isi manual jika ingin ubah aksi/background khusus...",
+        placeholder=f"Kosongkan jika ingin AI yang menentukan penyesuaian scene {scene_number}...",
         key=f"custom_note_scene_{scene_number}"
     )
 
@@ -292,40 +263,35 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-            with st.spinner(f"⚡ Meracik prompt visual & pengunci objek Scene {scene_number}..."):
+            with st.spinner(f"⚡ Meracik Kilat Prompt Scene {scene_number}..."):
                 try:
                     prompt_contents = []
-                    
                     if last_frame_file is not None:
                         temp_p = f"last_frame_s{scene_number}.jpg"
                         with open(temp_p, "wb") as f: f.write(last_frame_file.read())
                         prompt_contents.append(client_gemini.files.upload(file=temp_p))
-                        prompt_contents.append("Visual Reference: Frame detik terakhir scene sebelumnya. KUNCI MUTLAK: Subjek, pakaian, dan SEMUA OBJEK yang dipegang WAJIB 100% KONSISTEN Tanpa Berubah/Hilang.")
 
-                    scene_note_text = custom_scene_note.strip() if custom_scene_note.strip() else "KOSONG (AI bebas berkreasi memperkaya pencahayaan dan pergerakan adegan secara optimal)"
+                    scene_note_text = custom_scene_note.strip() if custom_scene_note.strip() else "KOSONG (AI Bebas Berkreasi)"
 
                     prompt_spec = f"""
-                    Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo/Omni Model).
-                    Adegan Target Dasar: {curr_scene['description']}.
-                    Catatan Modifikasi Tambahan Scene {scene_number}: {scene_note_text}
-                    Audio/VO Target: {curr_scene['audio_fx_and_vo']}.
-                    Visual Style Target: {st.session_state.style_pilihan}.
-                    Anchor Subjek & Objek Terkunci: {st.session_state.character_anchor}.
+                    Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo Model).
+                    Adegan Target: {curr_scene['description']}.
+                    Catatan Modifikasi: {scene_note_text}.
+                    Audio Target: {curr_scene['audio_fx_and_vo']}.
+                    Style: {st.session_state.style_pilihan}.
+                    Anchor: {st.session_state.character_anchor}.
 
-                    INTRUKSI KETAT PENGUNCIAN OBJEK (STRICT OBJECT PERMANENCE RULES):
-                    1. CRITICAL OBJECT PERMANENCE REQUIREMENT: All physical items/props held by or positioned near the subject MUST REMAIN CONSTANTLY VISIBLE AND PHYSICALLY PRESENT THROUGHOUT THE ENTIRE 8 SECONDS.
-                    2. NO SHAPE-SHIFTING OR MORPHING: Items MUST NOT fade out, shrink, disappear, alter form, or morph into other objects during movements or gestures.
-                    3. ANATOMY & MOTION ACCURACY: Maintain physical realistic behavior. If subject reaches out one hand/paw, ensure the other hand/body CONTINUES TO SECURELY HOLD THE OBJECT in full view.
-                    4. CONTINUOUS DYNAMIC MOTION: Fluid movement, no freeze, dramatic mood expression.
-                    5. AUDIO DETAILED: High detailed Sound Effects & Voiceover prompt (GEO & AEO optimized speech pattern).
+                    CRITICAL RULES:
+                    1. STRICT OBJECT PERMANENCE: Physical objects MUST NOT disappear or morph.
+                    2. CONTINUOUS DYNAMIC MOTION.
+                    3. AEO/GEO speech structure.
 
                     Format Output:
                     [PROMPT_SCENE]
-                    (Prompt Bahasa Inggris Lengkap)
+                    (Prompt Inggris Visual)
                     [/PROMPT_SCENE]
-
                     [AUDIO_PROMPT]
-                    (Prompt Audio SFX & VO Google Flow)
+                    (Prompt Audio SFX VO)
                     [/AUDIO_PROMPT]
                     """
                     prompt_contents.append(prompt_spec)
@@ -343,27 +309,17 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
                     if scene_number == st.session_state.max_scenes:
                         seo_prompt = f"""
-                        Berdasarkan adegan video berikut:
-                        Anchor Subjek & Aura: {st.session_state.character_anchor}
-                        Script Adegan: {st.session_state.current_story_context}
+                        Buatkan Paket SEO/AEO/GEO Shorts dari script ini:
+                        {st.session_state.current_story_context}
 
-                        Rancang PAKET SEO + AEO + GEO KHUSUS YOUTUBE SHORTS (Bilingual Vertical Stack: English di atas, Indonesia di bawah).
-                        
-                        ATURAN PENULISAN METADATA & TAGS:
-                        1. TAGS / KEYWORDS: TIDAK BOLEH MEMAKAI TANDA KUTIP DUA (") ATAU TANDA KUTIP SATU (') SAMA SEKALI. Tuliskan murni kata kunci yang dipisahkan koma.
-                        2. AEO HOOK DESKRIPSI: Sediakan jawaban langsung ringkas di paragraf pertama deskripsi agar terbaca Google Snippet.
-                        3. GEO TRANSCRIPT STRUCTURE: Sediakan rangkuman berbasis poin-poin yang ramah dibaca mesin AI (ChatGPT/Gemini Search).
-
-                        Sediakan:
-                        - 3 Judul Shorts Bilingual (High CTR & AEO Friendly)
-                        - Deskripsi Shorts Bilingual (AEO Snippet & GEO Structured)
-                        - 12-15 Hashtags Shorts Viral (Global + Indonesia)
-                        - 15-20 Tags SEO / Keywords (TANPA TANDA KUTIP SAMA SEKALI)
+                        Format:
+                        - 3 Judul Shorts Bilingual
+                        - Deskripsi Shorts (AEO & GEO friendly)
+                        - 12-15 Hashtags Shorts
+                        - 15-20 Tags SEO (DILARANG PAKAI TANDA KUTIP DUA ATAU SATU SAMA SEKALI, HANYA KATA DIPISAH KOMMA)
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
-                        
-                        clean_seo = seo_res.text.replace('"', '').replace("'", "")
-                        st.session_state.seo_package = clean_seo
+                        st.session_state.seo_package = seo_res.text.replace('"', '').replace("'", "")
 
                     st.session_state.step += 1
                     st.rerun()
@@ -371,4 +327,29 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                 except Exception as e:
                     st.error(f"Error Prompt Generation: {e}")
 
- 
+    with col2:
+        if st.button("🔄 RESET PROYEK"):
+            st.session_state.step = 1
+            st.session_state.master_storyboard = []
+            st.session_state.character_anchor = ""
+            st.session_state.current_story_context = ""
+            st.session_state.seo_package = ""
+            st.rerun()
+
+else:
+    st.balloons()
+    st.success("🎉 **PROMPT MASTER & PAKET SEO/AEO/GEO YOUTUBE SHORTS SELESAI!**")
+    
+    st.markdown("### 🎬 **1. MASTER PROMPT GOOGLE FLOW**")
+    st.text_area("Master Video & Audio Prompt:", value=st.session_state.current_story_context, height=350)
+    
+    st.markdown("### 🔴 **2. PAKET METADATA YOUTUBE (SEO + AEO + GEO OPTIMIZED)**")
+    st.text_area("Paket SEO/AEO/GEO Shorts (Tanpa Kutip di Tags):", value=st.session_state.seo_package, height=450)
+    
+    if st.button("🔄 RESTART PROYEK BARU"):
+        st.session_state.step = 1
+        st.session_state.master_storyboard = []
+        st.session_state.character_anchor = ""
+        st.session_state.current_story_context = ""
+        st.session_state.seo_package = ""
+        st.rerun()
