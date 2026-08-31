@@ -7,7 +7,7 @@ from google.genai import types
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="UNIVERSAL GOOGLE FLOW GENERATOR", 
+    page_title="UNIVERSAL GOOGLE FLOW GENERATOR (SEO/AEO/GEO/AIO)", 
     page_icon="🎬", 
     layout="centered"
 )
@@ -32,7 +32,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <div class="main-title">🎬 UNIVERSAL GOOGLE FLOW ENGINE (ALL NICHE)</div>
-    <div class="sub-title">DYNAMIC PER-SCENE MODIFIER | STRICT OBJECT PERMANENCE | NO QUOTES SEO</div>
+    <div class="sub-title">SMART ALGORITHM: SEO + AEO + GEO + AIO OPTIMIZED | NO QUOTES TAGS</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -151,13 +151,13 @@ if st.session_state.step == 1:
         placeholder="Kosongkan jika ingin AI menentukan warna/latar/objek unik secara otomatis, ATAU isi sendiri jika ada keinginan khusus..."
     )
 
-    if st.button("🔒 PROSES AUTO-LOCK IDENTITY & MODIFIED OBJECT PERMANENCE"):
+    if st.button("🔒 PROSES AUTO-LOCK IDENTITY & SMART ALGORITHM ENGINE"):
         if not gemini_key or not openrouter_key:
             st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
         elif not video_ready:
             st.error("⚠️ Upload file atau masukkan teks referensi video asli!")
         else:
-            with st.spinner("👁️ Menganalisis Video & Menerapkan Modifikasi Visual..."):
+            with st.spinner("👁️ Menganalisis Video & Menerapkan 4-Pilar Optimasi (SEO/AEO/GEO/AIO)..."):
                 try:
                     contents_list = []
                     if input_mode == "✍️ Teks Deskripsi Scene":
@@ -178,13 +178,14 @@ if st.session_state.step == 1:
                     ⚠️ INSTRUKSI MODIFIKASI USER:
                     "{user_custom_instruction}"
                     
-                    ATURAN KREATIF:
-                    1. Jika instruksi user KOSONG, Gemini & DeepSeek WAJIB bekerja sama menentukan warna baru, background baru, dan objek unik baru agar hasil video tidak persis meniru video asli (Anti-Plagiat).
-                    2. Jika instruksi user ADA ISI-NYA, prioritas utama adalah mengikuti arahan khusus tersebut.
-                    3. Ambil HANYA alur gerakan dasar dan tempo dari video asli.
-                    4. Kunci detail fisik baru hasil racikan ini ke dalam CHARACTER_ANCHOR.
+                    ATURAN ALGORITMA SMART & KREATIF (AEO & GEO INTEGRATION):
+                    1. Scene 1 WAJIB memiliki AEO Hook (Jawaban/Solusi langsung di 0-3 detik pertama) agar memancing Snippet Google/YouTube.
+                    2. Voiceover (VO) di setiap scene disusun dengan struktur GEO yang rapi dan kontekstual agar mudah dibaca & direkomendasikan oleh AI Search (ChatGPT, Gemini, Perplexity).
+                    3. Jika instruksi modifikasi user KOSONG, Gemini & DeepSeek WAJIB menentukan warna baru, background baru, dan objek unik baru (Anti-Plagiat).
+                    4. Jika ada isi instruksi user, utamakan arahan khusus tersebut.
+                    5. Kunci detail fisik baru ke dalam CHARACTER_ANCHOR.
 
-                    Rancang persis {max_scenes} SCENE berkesinambungan. Seluruh objek fisik hasil modifikasi WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT ATAU MENGHILANG di scene manapun!
+                    Rancang persis {max_scenes} SCENE berkesinambungan. Seluruh objek fisik hasil modifikasi WAJIB TETAP ADA dan TIDAK BOLEH MENYUSUT ATAU MENGHILANG!
 
                     Output JSON format:
                     CHARACTER_ANCHOR: [Deskripsi Subjek Hasil Modifikasi + Kunci Objek Fizikal Terikat + Aura Emosi]
@@ -196,12 +197,12 @@ if st.session_state.step == 1:
                     gemini_analysis = gemini_res.text
 
                     deepseek_prompt = f"""
-                    Tingkatkan kualitas narasi dan sinematik berdasarkan analisis Gemini:
+                    Tingkatkan kualitas narasi sinematik dan optimasi AEO/GEO berdasarkan analisis Gemini:
                     {gemini_analysis}
 
                     Catatan Modifikasi: {user_custom_instruction}
                     ATURAN MUTLAK DEEPSEEK:
-                    1. Pastikan warna, elemen visual, background, dan kostum TAMPIL SANGAT UNIK DAN KREATIF.
+                    1. Pastikan visual unik & Voiceover memiliki alur GEO kontekstual yang ramah algoritma rekomendasi AI.
                     2. Objek fisik yang dipegang TIDAK BOLEH MENYUSUT ATAU MENGHILANG saat gerakan dilakukan!
                     """
                     deepseek_ideas = call_deepseek(deepseek_prompt, openrouter_key)
@@ -263,11 +264,11 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
         <b>🎯 Visual Motion & Expression:</b> {curr_scene['description']}
     </div>
     <div class="audio-card">
-        <b>🔊 High-Detail Audio & Voiceover Prompt:</b><br><i>"{curr_scene['audio_fx_and_vo']}"</i>
+        <b>🔊 High-Detail Audio & Voiceover Prompt (GEO/AEO Structured):</b><br><i>"{curr_scene['audio_fx_and_vo']}"</i>
     </div>
     """, unsafe_allow_html=True)
 
-    # --- INPUT PENYESUAIAN ADEGAN PER SCENE (OPSIONAL / AUTO AI) ---
+    # --- INPUT PENYESUAIAN ADEGAN PER SCENE ---
     custom_scene_note = st.text_area(
         f"💡 Penyesuaian/Penambahan Adegan Khusus Scene {scene_number} (Opsional / Biarkan AI Berkreasi):", 
         placeholder=f"Kosongkan jika ingin AI yang menentukan penyesuaian scene {scene_number}, atau isi manual jika ingin ubah aksi/background khusus...",
@@ -311,7 +312,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                     2. NO SHAPE-SHIFTING OR MORPHING: Items MUST NOT fade out, shrink, disappear, alter form, or morph into other objects during movements or gestures.
                     3. ANATOMY & MOTION ACCURACY: Maintain physical realistic behavior. If subject reaches out one hand/paw, ensure the other hand/body CONTINUES TO SECURELY HOLD THE OBJECT in full view.
                     4. CONTINUOUS DYNAMIC MOTION: Fluid movement, no freeze, dramatic mood expression.
-                    5. AUDIO DETAILED: High detailed Sound Effects & Voiceover prompt.
+                    5. AUDIO DETAILED: High detailed Sound Effects & Voiceover prompt (GEO & AEO optimized speech pattern).
 
                     Format Output:
                     [PROMPT_SCENE]
@@ -341,21 +342,22 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
                         Anchor Subjek & Aura: {st.session_state.character_anchor}
                         Script Adegan: {st.session_state.current_story_context}
 
-                        Rancang PAKET SEO KHUSUS YOUTUBE SHORTS (Bilingual Vertical Stack: English di atas, Indonesia di bawah).
+                        Rancang PAKET SEO + AEO + GEO KHUSUS YOUTUBE SHORTS (Bilingual Vertical Stack: English di atas, Indonesia di bawah).
                         
-                        ATURAN PENULISAN TAGS KHUSUS:
-                        TIDAK BOLEH MEMAKAI TANDA KUTIP DUA (") ATAU TANDA KUTIP SATU (') SAMA SEKALI PADA BAGIAN SEO TAGS / KEYWORDS. 
-                        Tuliskan murni kata kunci yang dipisahkan koma saja agar user bisa langsung menyalinnya tanpa edit.
+                        ATURAN PENULISAN METADATA & TAGS:
+                        1. TAGS / KEYWORDS: TIDAK BOLEH MEMAKAI TANDA KUTIP DUA (") ATAU TANDA KUTIP SATU (') SAMA SEKALI. Tuliskan murni kata kunci yang dipisahkan koma.
+                        2. AEO HOOK DESKRIPSI: Sediakan jawaban langsung ringkas di paragraf pertama deskripsi agar terbaca Google Snippet.
+                        3. GEO TRANSCRIPT STRUCTURE: Sediakan rangkuman berbasis poin-poin yang ramah dibaca mesin AI (ChatGPT/Gemini Search).
 
                         Sediakan:
-                        - 3 Judul Shorts Bilingual (Clickbait Positif / High CTR)
-                        - Deskripsi Shorts Bilingual
+                        - 3 Judul Shorts Bilingual (High CTR & AEO Friendly)
+                        - Deskripsi Shorts Bilingual (AEO Snippet & GEO Structured)
                         - 12-15 Hashtags Shorts Viral (Global + Indonesia)
                         - 15-20 Tags SEO / Keywords (TANPA TANDA KUTIP SAMA SEKALI)
                         """
                         seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
                         
-                        # Sanitasi tambahan untuk menjamin 100% bebas dari tanda kutip
+                        # Sanitasi menjamin 100% bebas dari tanda kutip di bagian tags
                         clean_seo = seo_res.text.replace('"', '').replace("'", "")
                         st.session_state.seo_package = clean_seo
 
@@ -369,7 +371,4 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
         if st.button("🔄 RESET PROYEK"):
             st.session_state.step = 1
             st.session_state.master_storyboard = []
-            st.session_state.character_anchor = ""
-            st.session_state.current_story_context = ""
-            st.session_state.seo_package = ""
-            st.rerun()
+            st.session_state.charac
