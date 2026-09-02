@@ -66,9 +66,8 @@ if openrouter_key:
   st.sidebar.success("✓ DeepSeek Connected")
 
 
-# --- HELPER FUNCTIONS DENGAN AUTO-RETRY & DELAY ANTI-LIMIT ---
+# --- HELPER FUNCTIONS ---
 def safe_gemini_generate(client, contents, config=None, retries=3):
-  """Fungsi fleksibel yang dilengkapi dengan penanganan limit (retry/delay)"""
   for attempt in range(retries):
     try:
       if config:
@@ -141,12 +140,13 @@ if st.session_state.step == 1:
       "### 📥 **INPUT REFERENSI VIDEO ASLI (UNIVERSAL ALL-NICHE)**"
   )
 
-  # --- PENAMBAHAN OPSI '📜 Teks Transkrip Video' DI SINI ---
+  # Pilihan input diperbarui
   input_mode = st.radio(
       "Pilih Format Input Referensi:",
       (
-          "📜 Teks Transkrip Video",
-          "📁 Upload Video Asli (.mp4)",
+          "🎥 + 📜 Video MP4 + Transkrip Teks (Sangat Direkomendasikan)",
+          "📜 Hanya Teks Transkrip Video",
+          "📁 Hanya Upload Video Asli (.mp4)",
           "📁 Upload Screenshots Frame Utuh",
           "✍️ Teks Deskripsi Scene / Ringkasan",
       ),
@@ -154,27 +154,51 @@ if st.session_state.step == 1:
 
   video_ready = False
   user_topic = ""
+  uploaded_video_file = None
   multi_frames = []
   video_path = "temp_orig_video.mp4"
 
-  if input_mode == "📜 Teks Transkrip Video":
+  if (
+      input_mode
+      == "🎥 + 📜 Video MP4 + Transkrip Teks (Sangat Direkomendasikan)"
+  ):
+    uploaded_video_file = st.file_uploader(
+        "Upload Video Asli (.mp4):", type=["mp4", "mov", "avi"]
+    )
     user_topic = st.text_area(
         "Paste Transkrip Video di Sini:",
-        placeholder=(
-            "Paste seluruh teks transkrip dari YouTube di sini... (AI akan"
-            " otomatis merombak visualnya agar 100% beda & bebas plagiat)"
-        ),
+        placeholder="Tempelkan transkrip teks pendukung di sini...",
+        height=150,
+    )
+    if uploaded_video_file and user_topic.strip():
+      with open(video_path, "wb") as f:
+        f.write(uploaded_video_file.read())
+      video_ready = True
+    elif uploaded_video_file or user_topic.strip():
+      # Boleh salah satu terisi
+      if uploaded_video_file:
+        with open(video_path, "wb") as f:
+          f.write(uploaded_video_file.read())
+      video_ready = True
+
+  elif input_mode == "📜 Hanya Teks Transkrip Video":
+    user_topic = st.text_area(
+        "Paste Transkrip Video di Sini:",
+        placeholder="Paste seluruh teks transkrip dari YouTube di sini...",
         height=200,
     )
     if user_topic.strip():
       video_ready = True
-  elif input_mode == "✍️ Teks Deskripsi Scene / Ringkasan":
-    user_topic = st.text_area(
-        "Deskripsi Adegan Video Asli:",
-        placeholder="Tuliskan subjek dan adegan video asli di sini...",
+
+  elif input_mode == "📁 Hanya Upload Video Asli (.mp4)":
+    uploaded_video_file = st.file_uploader(
+        "Upload Video Asli (.mp4):", type=["mp4", "mov", "avi"]
     )
-    if user_topic.strip():
+    if uploaded_video_file:
+      with open(video_path, "wb") as f:
+        f.write(uploaded_video_file.read())
       video_ready = True
+
   elif input_mode == "📁 Upload Screenshots Frame Utuh":
     multi_frames = st.file_uploader(
         "Upload Screenshots Frame Video Asli:",
@@ -183,13 +207,13 @@ if st.session_state.step == 1:
     )
     if multi_frames:
       video_ready = True
-  else:
-    uploaded_video = st.file_uploader(
-        "Upload Video Asli (.mp4):", type=["mp4", "mov", "avi"]
+
+  elif input_mode == "✍️ Teks Deskripsi Scene / Ringkasan":
+    user_topic = st.text_area(
+        "Deskripsi Adegan Video Asli:",
+        placeholder="Tuliskan subjek dan adegan video asli di sini...",
     )
-    if uploaded_video:
-      with open(video_path, "wb") as f:
-        f.write(uploaded_video.read())
+    if user_topic.strip():
       video_ready = True
 
   extra_action_note_t1 = st.text_area(
@@ -205,28 +229,33 @@ if st.session_state.step == 1:
     if not gemini_key or not openrouter_key:
       st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
     elif not video_ready:
-      st.error("⚠️ Masukkan transkrip/file/deskripsi referensi video!")
+      st.error("⚠️ Masukkan input referensi sesuai pilihan mode di atas!")
     else:
-      with st.spinner("⚡ Meracik Kilat SEO/AEO/GEO & Pengunci Visual..."):
+      with st.spinner(
+          "⚡ Memproses Video + Transkrip (Menganalisis Visual & Narasi)..."
+      ):
         try:
           contents_list = []
-          if input_mode in [
-              "📜 Teks Transkrip Video",
-              "✍️ Teks Deskripsi Scene / Ringkasan",
-          ]:
-            contents_list.append(f"Transcript / Story Context:\n{user_topic}")
-          elif input_mode == "📁 Upload Screenshots Frame Utuh":
-            for idx, img in enumerate(multi_frames):
-              p = f"temp_frame_{idx}.jpg"
-              with open(p, "wb") as f:
-                f.write(img.read())
-              contents_list.append(client_gemini.files.upload(file=p))
-          else:
+
+          # 1. Jika ada file video, upload ke Gemini API
+          if uploaded_video_file is not None:
             up_file = client_gemini.files.upload(file=video_path)
             while up_file.state.name == "PROCESSING":
               time.sleep(1)
               up_file = client_gemini.files.get(name=up_file.name)
             contents_list.append(up_file)
+
+          # 2. Jika ada frames screenshot
+          if input_mode == "📁 Upload Screenshots Frame Utuh":
+            for idx, img in enumerate(multi_frames):
+              p = f"temp_frame_{idx}.jpg"
+              with open(p, "wb") as f:
+                f.write(img.read())
+              contents_list.append(client_gemini.files.upload(file=p))
+
+          # 3. Jika ada teks transkrip/deskripsi
+          if user_topic.strip():
+            contents_list.append(f"TRANSKRIP / TEKS REFERENSI:\n{user_topic}")
 
           user_custom_instruction = (
               extra_action_note_t1.strip()
@@ -235,7 +264,8 @@ if st.session_state.step == 1:
           )
 
           lock_prompt = f"""
-                    Analisis referensi / transkrip ini.
+                    Analisis referensi video MP4 dan/atau transkrip teks yang diberikan.
+                    Gunakan visual dari video untuk memahami gerakan/layout, dan gunakan transkrip teks untuk memahami detail narasi/audio.
                     Modifikasi User: "{user_custom_instruction}"
                     
                     RULES UTAMA (ANTI-PLAGIAT):
@@ -430,10 +460,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
             ).replace("'", "")
 
           st.session_state.step += 1
-
-          # Delay 3 detik agar aman dari Rate Limit Free Tier
           time.sleep(3)
-
           st.rerun()
 
         except Exception as e:
