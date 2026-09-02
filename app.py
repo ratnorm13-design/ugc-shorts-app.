@@ -2,8 +2,6 @@ import json
 import time
 from google import genai
 from google.genai import types
-from google.genai.errors import APIError
-import requests
 import streamlit as st
 
 # --- PAGE CONFIG ---
@@ -49,7 +47,7 @@ gemini_key = st.sidebar.text_input(
     "Gemini API Key:", type="password", placeholder="Paste Gemini Key..."
 )
 openrouter_key = st.sidebar.text_input(
-    "OpenRouter Key (DeepSeek):",
+    "OpenRouter Key (Opsional):",
     type="password",
     placeholder="Paste OpenRouter Key...",
 )
@@ -62,25 +60,34 @@ if gemini_key:
   except Exception as e:
     st.sidebar.error(f"Gemini Error: {e}")
 
-if openrouter_key:
-  st.sidebar.success("✓ DeepSeek Connected")
 
-
-# --- HELPER FUNCTIONS ---
-def safe_gemini_generate(client, contents, config=None, retries=3):
+# --- HELPER FUNCTION: SAFE CALL WITH AUTO RETRY (MEMAKAI GEMINI-3.6-FLASH & HANDLER 503) ---
+def safe_gemini_generate(client, contents, config=None, retries=5):
+  model_name = "gemini-3.6-flash"
   for attempt in range(retries):
     try:
       if config:
         return client.models.generate_content(
-            model="gemini-3.6-flash", contents=contents, config=config
+            model=model_name, contents=contents, config=config
         )
       return client.models.generate_content(
-          model="gemini-3.6-flash", contents=contents
+          model=model_name, contents=contents
       )
-    except APIError as e:
-      if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+    except Exception as e:
+      err_str = str(e)
+      if (
+          "503" in err_str
+          or "429" in err_str
+          or "UNAVAILABLE" in err_str
+          or "RESOURCE_EXHAUSTED" in err_str
+      ):
         if attempt < retries - 1:
-          time.sleep(5 * (attempt + 1))
+          wait_time = (attempt + 1) * 4
+          st.toast(
+              f"⚠️ Server sibuk (503). Mencoba lagi dalam {wait_time}s..."
+              f" ({attempt+1}/{retries})"
+          )
+          time.sleep(wait_time)
           continue
       raise e
 
@@ -104,10 +111,10 @@ if st.session_state.step == 1:
     style_pilihan = st.selectbox(
         "Gaya Visual Target Google Flow:",
         options=[
-            "Original / Auto-Detect from Source Video",
+            "3D Animation Style (Pixar / Cocomelon / Unreal Engine 5)",
             "Photorealistic 8K Cinematic (Real Life)",
-            "3D Animation Style (Pixar / Unreal Engine 5)",
-            "2D Anime / Manga Style",
+            "Original / Auto-Detect from Source Video",
+            "2D Anime / Cute Kids Style",
             "Cyberpunk / Sci-Fi Mood",
             "Dark Action Thriller Cinematic",
         ],
@@ -137,15 +144,14 @@ if st.session_state.step == 1:
 
   st.markdown("---")
   st.markdown(
-      "### 📥 **INPUT REFERENSI VIDEO ASLI (UNIVERSAL ALL-NICHE)**"
+      "### 📥 **INPUT REFERENSI VIDEO ASLI / LIRIK LAGU (UNIVERSAL ALL-NICHE)**"
   )
 
-  # Pilihan input diperbarui
   input_mode = st.radio(
       "Pilih Format Input Referensi:",
       (
-          "🎥 + 📜 Video MP4 + Transkrip Teks (Sangat Direkomendasikan)",
-          "📜 Hanya Teks Transkrip Video",
+          "🎥 + 📜 Video MP4 + Transkrip/Lirik (Sangat Direkomendasikan)",
+          "📜 Hanya Teks Transkrip / Lirik Lagu",
           "📁 Hanya Upload Video Asli (.mp4)",
           "📁 Upload Screenshots Frame Utuh",
           "✍️ Teks Deskripsi Scene / Ringkasan",
@@ -160,31 +166,28 @@ if st.session_state.step == 1:
 
   if (
       input_mode
-      == "🎥 + 📜 Video MP4 + Transkrip Teks (Sangat Direkomendasikan)"
+      == "🎥 + 📜 Video MP4 + Transkrip/Lirik (Sangat Direkomendasikan)"
   ):
     uploaded_video_file = st.file_uploader(
         "Upload Video Asli (.mp4):", type=["mp4", "mov", "avi"]
     )
     user_topic = st.text_area(
-        "Paste Transkrip Video di Sini:",
-        placeholder="Tempelkan transkrip teks pendukung di sini...",
+        "Paste Transkrip / Lirik Lagu di Sini:",
+        placeholder=(
+            "Paste teks transkrip YouTube atau lirik lagu anak di sini..."
+        ),
         height=150,
     )
-    if uploaded_video_file and user_topic.strip():
-      with open(video_path, "wb") as f:
-        f.write(uploaded_video_file.read())
-      video_ready = True
-    elif uploaded_video_file or user_topic.strip():
-      # Boleh salah satu terisi
+    if uploaded_video_file or user_topic.strip():
       if uploaded_video_file:
         with open(video_path, "wb") as f:
           f.write(uploaded_video_file.read())
       video_ready = True
 
-  elif input_mode == "📜 Hanya Teks Transkrip Video":
+  elif input_mode == "📜 Hanya Teks Transkrip / Lirik Lagu":
     user_topic = st.text_area(
-        "Paste Transkrip Video di Sini:",
-        placeholder="Paste seluruh teks transkrip dari YouTube di sini...",
+        "Paste Transkrip / Lirik Lagu di Sini:",
+        placeholder="Paste seluruh teks transkrip atau lirik di sini...",
         height=200,
     )
     if user_topic.strip():
@@ -211,33 +214,31 @@ if st.session_state.step == 1:
   elif input_mode == "✍️ Teks Deskripsi Scene / Ringkasan":
     user_topic = st.text_area(
         "Deskripsi Adegan Video Asli:",
-        placeholder="Tuliskan subjek dan adegan video asli di sini...",
+        placeholder="Tuliskan subjek dan adegan video di sini...",
     )
     if user_topic.strip():
       video_ready = True
 
   extra_action_note_t1 = st.text_area(
-      "💡 Penyesuaian/Penambahan Modifikasi Utama (Opsional / Biarkan AI"
-      " Berkreasi Otomatis):",
+      "💡 Penyesuaian/Penambahan Modifikasi Utama (Opsional):",
       placeholder=(
-          "Contoh: Ubah latar tempat ke kota masa depan dan buat karakter utama"
-          " berupa robot, tapi ikuti alur narasi dari transkrip."
+          "Contoh: Buat karakter anak kecil lucu baju merah gaya 3D Cocomelon,"
+          " warna cerah, adegan gembira."
       ),
   )
 
   if st.button("🔒 PROSES AUTO-LOCK IDENTITY & SMART ALGORITHM ENGINE"):
-    if not gemini_key or not openrouter_key:
-      st.error("⚠️ Masukkan Gemini & OpenRouter Key di sidebar!")
+    if not gemini_key:
+      st.error("⚠️ Masukkan Gemini API Key di sidebar!")
     elif not video_ready:
-      st.error("⚠️ Masukkan input referensi sesuai pilihan mode di atas!")
+      st.error("⚠️ Masukkan input referensi terlebih dahulu!")
     else:
       with st.spinner(
-          "⚡ Memproses Video + Transkrip (Menganalisis Visual & Narasi)..."
+          "⚡ Memproses Input (Menganalisis Visual, Lirik & Narasi)..."
       ):
         try:
           contents_list = []
 
-          # 1. Jika ada file video, upload ke Gemini API
           if uploaded_video_file is not None:
             up_file = client_gemini.files.upload(file=video_path)
             while up_file.state.name == "PROCESSING":
@@ -245,7 +246,6 @@ if st.session_state.step == 1:
               up_file = client_gemini.files.get(name=up_file.name)
             contents_list.append(up_file)
 
-          # 2. Jika ada frames screenshot
           if input_mode == "📁 Upload Screenshots Frame Utuh":
             for idx, img in enumerate(multi_frames):
               p = f"temp_frame_{idx}.jpg"
@@ -253,9 +253,8 @@ if st.session_state.step == 1:
                 f.write(img.read())
               contents_list.append(client_gemini.files.upload(file=p))
 
-          # 3. Jika ada teks transkrip/deskripsi
           if user_topic.strip():
-            contents_list.append(f"TRANSKRIP / TEKS REFERENSI:\n{user_topic}")
+            contents_list.append(f"TRANSKRIP / LIRIK REFERENSI:\n{user_topic}")
 
           user_custom_instruction = (
               extra_action_note_t1.strip()
@@ -264,18 +263,17 @@ if st.session_state.step == 1:
           )
 
           lock_prompt = f"""
-                    Analisis referensi video MP4 dan/atau transkrip teks yang diberikan.
-                    Gunakan visual dari video untuk memahami gerakan/layout, dan gunakan transkrip teks untuk memahami detail narasi/audio.
+                    Analisis referensi video MP4 dan/atau transkrip/lirik yang diberikan.
                     Modifikasi User: "{user_custom_instruction}"
+                    Gaya Visual: {style_pilihan}
                     
-                    RULES UTAMA (ANTI-PLAGIAT):
-                    1. Re-imagine visual & karakter agar BERBEDA TOTAL dari video asli, tetapi pertahankan esensi/alur narasinya.
-                    2. Kunci karakter & objek fisik unik ke CHARACTER_ANCHOR.
-                    3. Scene 1 miliki AEO Hook (0-3 detik).
-                    4. Voiceover ikuti struktur GEO (Ramah rekomendasi AI Search).
+                    RULES UTAMA:
+                    1. Re-imagine visual & karakter agar unik, menarik, dan konsisten.
+                    2. Kunci karakter utama & ciri fisik fisiknya ke CHARACTER_ANCHOR.
+                    3. Buat pembagian {max_scenes} adegan berdurasi 8 detik per scene.
                     
                     Output JSON persis {max_scenes} SCENE:
-                    CHARACTER_ANCHOR: [Subjek Unik Baru + Kunci Objek Fizikal]
+                    CHARACTER_ANCHOR: [Deskripsi detail subjek utama, pakaian, warna, style]
                     SCENES: [Array {max_scenes} scenes dengan 'scene_num', 'description', 'audio_fx_and_vo']
                     """
           contents_list.append(lock_prompt)
@@ -333,13 +331,13 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
   st.markdown(
       f"""
     <div class="brainstorm-card">
-        <b>🔒 AUTO IDENTITY & MODIFIED OBJECT LOCK ANCHOR:</b><br>{st.session_state.character_anchor}
+        <b>🔒 CHARACTER & ANCHOR LOCK:</b><br>{st.session_state.character_anchor}
     </div>
     <div class="story-card">
-        <b>🎯 Visual Motion & Expression:</b> {curr_scene['description']}
+        <b>🎯 Visual Motion:</b> {curr_scene['description']}
     </div>
     <div class="audio-card">
-        <b>🔊 High-Detail Audio & Voiceover Prompt (GEO/AEO Structured):</b><br><i>"{curr_scene['audio_fx_and_vo']}"</i>
+        <b>🔊 Audio / Voiceover / Lirik Scene:</b><br><i>"{curr_scene['audio_fx_and_vo']}"</i>
     </div>
     """,
       unsafe_allow_html=True,
@@ -350,24 +348,20 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
     st.text_area(
         "Live Master Feed:",
         value=st.session_state.current_story_context,
-        height=180,
+        height=150,
         disabled=True,
     )
 
   custom_scene_note = st.text_area(
-      f"💡 Penyesuaian/Penambahan Adegan Khusus Scene {scene_number} (Opsional"
-      " / Biarkan AI Berkreasi):",
-      placeholder=(
-          "Kosongkan jika ingin AI yang menentukan penyesuaian scene"
-          f" {scene_number}..."
-      ),
+      f"💡 Penyesuaian Scene {scene_number} (Opsional):",
+      placeholder="Catatan tambahan khusus scene ini jika ada...",
       key=f"custom_note_scene_{scene_number}",
   )
 
   last_frame_file = None
   if scene_number > 1:
     st.markdown(
-        f"### 📸 **Upload Screenshot Frame Scene {scene_number-1}**"
+        f"### 📸 **Upload Screenshot Frame Scene {scene_number-1} (Opsional)**"
     )
     last_frame_file = st.file_uploader(
         "Upload screenshot detik terakhir scene sebelumnya:",
@@ -378,7 +372,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
   col1, col2 = st.columns(2)
   with col1:
     if st.button(f"🚀 GENERATE PROMPT SCENE {scene_number}"):
-      with st.spinner(f"⚡ Meracik Kilat Prompt Scene {scene_number}..."):
+      with st.spinner(f"⚡ Meracik Prompt Scene {scene_number}..."):
         try:
           prompt_contents = []
           if last_frame_file is not None:
@@ -390,28 +384,27 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
           scene_note_text = (
               custom_scene_note.strip()
               if custom_scene_note.strip()
-              else "KOSONG (AI Bebas Berkreasi)"
+              else "KOSONG"
           )
 
           prompt_spec = f"""
-                    Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI (Veo Model).
+                    Buat prompt video 8 detik Bahasa Inggris untuk Google Flow AI / Veo Model.
                     Adegan Target: {curr_scene['description']}.
                     Catatan Modifikasi: {scene_note_text}.
                     Audio Target: {curr_scene['audio_fx_and_vo']}.
-                    Style: {st.session_state.style_pilihan}.
-                    Anchor: {st.session_state.character_anchor}.
+                    Style Visual: {st.session_state.style_pilihan}.
+                    Character Anchor: {st.session_state.character_anchor}.
 
-                    CRITICAL RULES:
-                    1. STRICT OBJECT PERMANENCE: Physical objects MUST NOT disappear or morph.
-                    2. CONTINUOUS DYNAMIC MOTION.
-                    3. AEO/GEO speech structure.
-
+                    CRITICAL RULES FOR PROMPT:
+                    1. Direct video description with camera movements and lighting.
+                    2. Maintain subject consistency.
+                    
                     Format Output:
                     [PROMPT_SCENE]
                     (Prompt Inggris Visual)
                     [/PROMPT_SCENE]
                     [AUDIO_PROMPT]
-                    (Prompt Audio SFX VO)
+                    (Prompt Audio/Lirik/SFX)
                     [/AUDIO_PROMPT]
                     """
           prompt_contents.append(prompt_spec)
@@ -445,14 +438,14 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
           if scene_number == st.session_state.max_scenes:
             seo_prompt = f"""
-                        Buatkan Paket SEO/AEO/GEO YouTube dari script long-form ini:
+                        Buatkan Paket SEO/AEO YouTube dari script/prompt video ini:
                         {st.session_state.current_story_context}
 
                         Format:
                         - 3 Judul Video Bilingual (High CTR)
-                        - Deskripsi Lengkap Video (AEO & GEO friendly)
+                        - Deskripsi Lengkap Video
                         - 12-15 Hashtags Relevant
-                        - 15-20 Tags SEO (DILARANG PAKAI TANDA KUTIP DUA ATAU SATU SAMA SEKALI, HANYA KATA DIPISAH KOMMA)
+                        - 15-20 Tags SEO (DILARANG PAKAI TANDA KUTIP, KATA DIPISAH KOMMA)
                         """
             seo_res = safe_gemini_generate(client_gemini, [seo_prompt])
             st.session_state.seo_package = seo_res.text.replace(
@@ -460,7 +453,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
             ).replace("'", "")
 
           st.session_state.step += 1
-          time.sleep(3)
+          time.sleep(2)
           st.rerun()
 
         except Exception as e:
@@ -477,7 +470,7 @@ elif 2 <= st.session_state.step <= (st.session_state.max_scenes + 1):
 
 else:
   st.balloons()
-  st.success("🎉 **PROMPT MASTER & PAKET SEO/AEO/GEO YOUTUBE SELESAI!**")
+  st.success("🎉 **PROMPT MASTER & PAKET SEO YOUTUBE SELESAI!**")
 
   st.markdown("### 🎬 **1. MASTER PROMPT GOOGLE FLOW (ALL SCENES)**")
   st.text_area(
@@ -486,13 +479,9 @@ else:
       height=350,
   )
 
-  st.markdown(
-      "### 🔴 **2. PAKET METADATA YOUTUBE (SEO + AEO + GEO OPTIMIZED)**"
-  )
+  st.markdown("### 🔴 **2. PAKET METADATA YOUTUBE (SEO OPTIMIZED)**")
   st.text_area(
-      "Paket SEO/AEO/GEO Video (Tanpa Kutip di Tags):",
-      value=st.session_state.seo_package,
-      height=450,
+      "Paket SEO Video:", value=st.session_state.seo_package, height=350
   )
 
   if st.button("🔄 RESTART PROYEK BARU"):
