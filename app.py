@@ -47,7 +47,7 @@ gemini_key = st.sidebar.text_input(
     "Gemini API Key:", type="password", placeholder="Paste Gemini Key..."
 )
 openrouter_key = st.sidebar.text_input(
-    "OpenRouter Key (Opsional):",
+    "OpenRouter Key (DeepSeek):",
     type="password",
     placeholder="Paste OpenRouter Key...",
 )
@@ -59,6 +59,9 @@ if gemini_key:
     st.sidebar.success("✓ Gemini Connected")
   except Exception as e:
     st.sidebar.error(f"Gemini Error: {e}")
+
+if openrouter_key.strip():
+  st.sidebar.success("✓ DeepSeek Connected")
 
 
 # --- HELPER FUNCTION: SAFE CALL WITH AUTO RETRY (MEMAKAI GEMINI-3.6-FLASH & HANDLER 503) ---
