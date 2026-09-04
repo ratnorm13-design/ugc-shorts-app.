@@ -2189,7 +2189,7 @@ Return ONLY valid JSON:
             key="seo_hashtags"
         )
 
-                st.markdown("### 🖼️ THUMBNAIL")
+        st.markdown("### 🖼️ THUMBNAIL")
 
         thumb_col1, thumb_col2 = st.columns(2)
 
