@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 
 # ============================================================
-# PAGE CONFIG & CSS STYLING
+# KONFIGURASI HALAMAN & CSS STYLING
 # ============================================================
 st.set_page_config(
     page_title="UGC Remix Studio",
@@ -14,54 +14,91 @@ st.set_page_config(
 )
 
 MODEL_NAME = "gemini-3.6-flash"
+
 DURATIONS = {
-    "8 seconds": 1,
-    "16 seconds": 2,
-    "24 seconds": 3,
-    "32 seconds": 4,
-    "40 seconds": 5,
-    "48 seconds": 6,
-    "56 seconds": 7,
-    "1 minute": 8,
-    "1.5 minutes": 12,
-    "2 minutes": 15,
-    "2.5 minutes": 19,
-    "3 minutes": 23,
+    "8 detik": 1,
+    "16 detik": 2,
+    "24 detik": 3,
+    "32 detik": 4,
+    "40 detik": 5,
+    "48 detik": 6,
+    "56 detik": 7,
+    "1 menit": 8,
+    "1.5 menit": 12,
+    "2 menit": 15,
+    "2.5 menit": 19,
+    "3 menit": 23,
 }
 
 st.markdown("""
 <style>
-.stApp { background-color: #0d1117; color: #f0f6fc; }
+/* Tampilan Kontras Tinggi & Jelas */
+.stApp { background-color: #0e1117; color: #ffffff; }
 .block-container { max-width: 1400px; padding-top: 2rem; }
-.hero { padding: 32px; border-radius: 16px; background: linear-gradient(135deg, #1f293d 0%, #111827 100%); border: 1px solid #3b82f6; margin-bottom: 25px; }
-.hero h1 { color: #ffffff !important; font-size: 38px; font-weight: 800; margin-bottom: 10px; }
-.hero p { color: #e2e8f0 !important; font-size: 16px; line-height: 1.6; }
-.card, .metric-card, .concept-card, .selected-card { background: #161b22; border: 1px solid #30363d; border-radius: 14px; padding: 20px; margin-bottom: 16px; color: #f0f6fc; }
-.card h3, .metric-card h3, .concept-card h2, .selected-card h2 { color: #ffffff !important; margin-top: 0; }
-.muted { color: #cbd5e1 !important; font-size: 14px; line-height: 1.6; }
-.badge, .eyebrow, .metric-label, .concept-number { display: inline-block; padding: 6px 14px; border-radius: 20px; background: #2563eb; color: #ffffff !important; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
-.workflow { min-height: 120px; background: #161b22; border: 1px solid #3b82f6; border-radius: 12px; padding: 16px; }
-.workflow-number { color: #60a5fa; font-weight: 800; font-size: 14px; }
-.workflow-title { color: #ffffff !important; font-weight: 700; font-size: 16px; margin-top: 6px; }
-.workflow-text { color: #cbd5e1 !important; font-size: 13px; margin-top: 6px; line-height: 1.4; }
-.concept-section { margin-top: 12px; font-size: 14px; color: #e2e8f0; }
-.concept-section strong { color: #60a5fa; display: block; margin-bottom: 2px; }
-div[data-baseweb="select"] > div { background-color: #1f2937 !important; color: #ffffff !important; }
-.stTextArea textarea, .stTextInput input { background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }
-label { color: #f3f4f6 !important; font-weight: 600 !important; }
+
+/* Banner Utama */
+.hero { 
+    padding: 28px; 
+    border-radius: 12px; 
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+    border: 1px solid #38bdf8; 
+    margin-bottom: 20px; 
+}
+.hero h1 { color: #ffffff !important; font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+.hero p { color: #f1f5f9 !important; font-size: 15px; line-height: 1.5; }
+
+/* Kartu & Container */
+.card, .metric-card, .concept-card, .selected-card { 
+    background: #1e293b; 
+    border: 1px solid #475569; 
+    border-radius: 10px; 
+    padding: 18px; 
+    margin-bottom: 14px; 
+    color: #ffffff; 
+}
+.card h3, .metric-card h3, .concept-card h2, .selected-card h2 { color: #38bdf8 !important; margin-top: 0; }
+
+/* Label & Badge Kontras Tinggi */
+.badge, .eyebrow, .metric-label, .concept-number { 
+    display: inline-block; 
+    padding: 4px 12px; 
+    border-radius: 6px; 
+    background: #0284c7; 
+    color: #ffffff !important; 
+    font-size: 12px; 
+    font-weight: 700; 
+    margin-bottom: 10px; 
+}
+
+/* Langkah Workflow */
+.workflow { 
+    min-height: 110px; 
+    background: #1e293b; 
+    border: 1px solid #38bdf8; 
+    border-radius: 10px; 
+    padding: 14px; 
+}
+.workflow-number { color: #38bdf8; font-weight: 800; font-size: 14px; }
+.workflow-title { color: #ffffff !important; font-weight: 700; font-size: 15px; margin-top: 4px; }
+.workflow-text { color: #e2e8f0 !important; font-size: 12px; margin-top: 4px; line-height: 1.4; }
+
+/* Form Input & Teks Jelas */
+div[data-baseweb="select"] > div { background-color: #0f172a !important; color: #ffffff !important; border: 1px solid #64748b !important; }
+.stTextArea textarea, .stTextInput input { background-color: #0f172a !important; color: #ffffff !important; border: 1px solid #64748b !important; }
+label { color: #ffffff !important; font-weight: 600 !important; font-size: 14px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# SESSION STATE INITIALIZATION & HELPERS
+# INISIALISASI SESSION STATE & HELPER
 # ============================================================
 def init_session_state():
     defaults = {
         "page": "home", "api_key": "", "analysis": None, "concepts": [],
         "selected_concept": None, "selected_concept_index": 0, "storyboard": None,
         "current_scene": 1, "scene_prompts": {}, "scene_screenshots": {},
-        "seo_package": None, "content_type": "General", "visual_style": "Realistic cinematic",
-        "aspect_ratio": "9:16 — Shorts / Reels / TikTok", "duration": "8 seconds",
+        "seo_package": None, "content_type": "Umum", "visual_style": "Sinematik Realistis",
+        "aspect_ratio": "9:16 — Shorts / Reels / TikTok", "duration": "8 detik",
         "scene_count": 1, "custom_instruction": "",
     }
     for key, value in defaults.items():
@@ -90,14 +127,14 @@ def clean_json(text):
     return None
 
 def generate_ai(client, prompt, json_mode=False, temperature=0.7, max_output_tokens=8000):
-    if client is None: raise ValueError("Gemini API key belum dimasukkan.")
+    if client is None: raise ValueError("Kunci API Gemini belum dimasukkan.")
     config = types.GenerateContentConfig(temperature=temperature, max_output_tokens=max_output_tokens)
     if json_mode: config.response_mime_type = "application/json"
     response = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=config)
     if not response or not response.text: raise ValueError("Gemini tidak memberikan respon.")
     if json_mode:
         result = clean_json(response.text)
-        if result is None: raise ValueError("JSON tidak valid.")
+        if result is None: raise ValueError("Format JSON tidak valid.")
         return result
     return response.text
 
@@ -111,34 +148,34 @@ def reset_project():
     st.session_state.page = "home"
 
 # ============================================================
-# SIDEBAR NAVIGATION
+# NAVIGASI SIDEBAR
 # ============================================================
 with st.sidebar:
-    st.markdown('<div style="font-size:22px;font-weight:800;color:#ffffff;">🎬 UGC Remix Studio</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:22px;font-weight:800;color:#38bdf8;">🎬 UGC Remix Studio</div>', unsafe_allow_html=True)
     st.divider()
-    st.session_state.api_key = st.text_input("Gemini API Key", value=st.session_state.api_key, type="password")
+    st.session_state.api_key = st.text_input("Kunci API Gemini (API Key)", value=st.session_state.api_key, type="password")
     st.divider()
-    if st.button("🏠 Home", use_container_width=True): st.session_state.page = "home"; st.rerun()
+    if st.button("🏠 Beranda", use_container_width=True): st.session_state.page = "home"; st.rerun()
     if st.button("🧠 AI Remix", use_container_width=True): st.session_state.page = "remix"; st.rerun()
-    if st.button("🎞️ Storyboard", use_container_width=True): st.session_state.page = "storyboard"; st.rerun()
-    if st.button("🎬 Scene Generator", use_container_width=True): st.session_state.page = "scenes"; st.rerun()
-    if st.button("🚀 Finish & SEO", use_container_width=True): st.session_state.page = "seo"; st.rerun()
+    if st.button("🎞️ Papan Cerita (Storyboard)", use_container_width=True): st.session_state.page = "storyboard"; st.rerun()
+    if st.button("🎬 Pembuat Adegan (Scene)", use_container_width=True): st.session_state.page = "scenes"; st.rerun()
+    if st.button("🚀 Selesai & Paket SEO", use_container_width=True): st.session_state.page = "seo"; st.rerun()
     st.divider()
-    if st.button("🗑️ Reset Project", use_container_width=True): reset_project(); st.rerun()
+    if st.button("🗑️ Reset / Hapus Proyek", use_container_width=True): reset_project(); st.rerun()
         # ============================================================
-# PAGE 1: HOME
+# HALAMAN 1: BERANDA
 # ============================================================
 def render_home():
-    st.markdown('<div class="hero"><div class="badge">V2 • UNIVERSAL CONTENT ENGINE</div><h1>Turn Any Reference Into An Original Video</h1><p>Upload a reference video, screenshots, or describe an idea. AI analyzes the entertainment structure, creates original remix concepts, builds the storyboard, and prepares scene-by-scene prompts for Google Flow / Veo.</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="badge">V2 • MESIN KONTEN UNIVERSAL</div><h1>Ubah Referensi Apa Pun Menjadi Video Orisinal</h1><p>Unggah video referensi, tangkapan layar, atau tuliskan ide. AI akan menganalisis struktur hiburan, membuat konsep remix orisinal, menyusun papan cerita (storyboard), dan menyiapkan prompt per adegan untuk Google Flow / Veo.</p></div>', unsafe_allow_html=True)
 
-    st.markdown("### ⚡ Workflow")
+    st.markdown("### ⚡ Alur Kerja")
     cols = st.columns(5)
     workflow = [
-        ("01", "Reference", "Video, screenshot, or text."),
-        ("02", "Analyze", "Understand hook and story."),
-        ("03", "Auto Remix", "Create 3 original concepts."),
-        ("04", "Storyboard", "Build all scenes."),
-        ("05", "Flow Prompt", "Generate prompts for Flow/Veo.")
+        ("01", "Referensi", "Video, gambar, atau teks."),
+        ("02", "Analisis", "Pahami hook dan cerita."),
+        ("03", "Auto Remix", "Buat 3 konsep orisinal."),
+        ("04", "Storyboard", "Susun semua adegan."),
+        ("05", "Prompt Flow", "Hasil prompt Flow/Veo.")
     ]
     for col, item in zip(cols, workflow):
         number, title, description = item
@@ -146,45 +183,45 @@ def render_home():
             st.markdown(f'<div class="workflow"><div class="workflow-number">{number}</div><div class="workflow-title">{title}</div><div class="workflow-text">{description}</div></div>', unsafe_allow_html=True)
 
     st.write("")
-    st.markdown("### 🎥 Reference")
+    st.markdown("### 🎥 Sumber Referensi")
 
-    reference_type = st.radio("Pilih sumber reference", ["Video", "Screenshots", "Text / Idea"], horizontal=True)
+    reference_type = st.radio("Pilih bentuk referensi", ["Video", "Tangkapan Layar (Gambar)", "Teks / Ide"], horizontal=True)
     video_file = None
     image_files = []
     reference_text = ""
 
     if reference_type == "Video":
-        video_file = st.file_uploader("Upload reference video", type=["mp4", "mov", "webm", "avi", "mkv"])
-    elif reference_type == "Screenshots":
-        image_files = st.file_uploader("Upload screenshots", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True)
+        video_file = st.file_uploader("Unggah video referensi", type=["mp4", "mov", "webm", "avi", "mkv"])
+    elif reference_type == "Tangkapan Layar (Gambar)":
+        image_files = st.file_uploader("Unggah tangkapan layar", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True)
     else:
-        reference_text = st.text_area("Jelaskan reference / ide kamu", height=140, placeholder="Contoh: Seorang karakter mencoba membuka kotak misterius...")
+        reference_text = st.text_area("Jelaskan referensi atau ide kamu", height=140, placeholder="Contoh: Seorang karakter mencoba membuka kotak misterius di tengah hutan...")
 
-    st.markdown("### 🎨 Creative Settings")
+    st.markdown("### 🎨 Pengaturan Kreatif")
     col1, col2 = st.columns(2)
     with col1:
-        st.session_state.visual_style = st.selectbox("Visual Style", ["Realistic cinematic", "Stylized 3D animation", "Cute cartoon", "Photorealistic comedy", "Cinematic live action", "Anime-inspired original", "Dark cinematic", "Fast viral social video"])
+        st.session_state.visual_style = st.selectbox("Gaya Visual", ["Sinematik Realistis", "Animasi 3D", "Kartun Lucu", "Komedi Fotorealistis", "Aksi Langsung Sinematik", "Gaya Anime Orisinal", "Sinematik Gelap", "Video Viral Cepat"])
     with col2:
-        st.session_state.aspect_ratio = st.selectbox("Aspect Ratio", ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long Form", "1:1 — Square"])
+        st.session_state.aspect_ratio = st.selectbox("Rasio Layar", ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long Form", "1:1 — Persegi / Square"])
 
-    st.session_state.duration = st.selectbox("Video Duration", list(DURATIONS.keys()))
+    st.session_state.duration = st.selectbox("Durasi Video", list(DURATIONS.keys()))
     st.session_state.scene_count = DURATIONS[st.session_state.duration]
-    st.info(f"⏱️ {st.session_state.duration} = {st.session_state.scene_count} scene (sekitar 8 detik per scene)")
+    st.info(f"⏱️ {st.session_state.duration} = {st.session_state.scene_count} adegan/scene (sekitar 8 detik per scene)")
 
-    st.session_state.custom_instruction = st.text_area("User Creative Instruction", height=100, placeholder="Contoh: Buat lebih lucu, pacing cepat, ending punya twist...")
+    st.session_state.custom_instruction = st.text_area("Instruksi Kreatif Tambahan", height=100, placeholder="Contoh: Buat lebih lucu, tempo cepat, ending ada kejutan/twist...")
 
     st.write("")
-    if st.button("🚀 ANALYZE + AUTO REMIX", type="primary", use_container_width=True):
+    if st.button("🚀 ANALISIS + AUTO REMIX", type="primary", use_container_width=True):
         if not st.session_state.api_key:
-            st.error("Masukkan Gemini API Key terlebih dahulu di sidebar.")
+            st.error("Masukkan Kunci API Gemini terlebih dahulu di menu samping (sidebar).")
             return
 
         client = get_client(st.session_state.api_key)
         if client is None:
-            st.error("Gemini API key tidak valid.")
+            st.error("Kunci API Gemini tidak valid.")
             return
 
-        reference_description = reference_text if reference_type == "Text / Idea" else "User uploaded media reference"
+        reference_description = reference_text if reference_type == "Teks / Ide" else "Referensi media diunggah oleh pengguna"
 
         prompt = f"""
 You are a universal AI video creative director. Analyze the reference and create three ORIGINAL remix concepts.
@@ -202,63 +239,63 @@ Return ONLY valid JSON:
 }}
 """
         try:
-            with st.spinner("🧠 AI menganalisis..."):
+            with st.spinner("🧠 AI sedang menganalisis ide..."):
                 result = generate_ai(client, prompt, json_mode=True)
             st.session_state.analysis = result.get("analysis", {})
             st.session_state.concepts = result.get("concepts", [])
-            st.session_state.content_type = st.session_state.analysis.get("content_type", "General")
+            st.session_state.content_type = st.session_state.analysis.get("content_type", "Umum")
             st.session_state.page = "remix"
             st.rerun()
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Terjadi kesalahan: {e}")
 
 # ============================================================
-# PAGE 2: AI REMIX
+# HALAMAN 2: AI REMIX
 # ============================================================
 def render_remix():
-    st.markdown('<div class="hero"><div class="eyebrow">STEP 02 • AI REMIX ENGINE</div><h1>Choose Your Remix</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="eyebrow">LANGKAH 02 • MESIN AI REMIX</div><h1>Pilih Konsep Remix Kamu</h1></div>', unsafe_allow_html=True)
     analysis = st.session_state.get("analysis")
     concepts = st.session_state.get("concepts", [])
 
     if not analysis or not concepts:
-        st.warning("Belum ada hasil analisis.")
-        if st.button("← BACK TO HOME"): st.session_state.page = "home"; st.rerun()
+        st.warning("Belum ada hasil analisis. Silakan masukkan ide di Beranda.")
+        if st.button("← KEMBALI KE BERANDA"): st.session_state.page = "home"; st.rerun()
         return
 
     cols = st.columns(min(3, len(concepts)))
     for idx, concept in enumerate(concepts[:3]):
         with cols[idx]:
-            st.markdown(f'<div class="concept-card"><div class="concept-number">CONCEPT {idx + 1}</div><h2>{concept.get("title", "")}</h2><p>{concept.get("concept", "")}</p></div>', unsafe_allow_html=True)
-            if st.button(f"USE CONCEPT {idx + 1}", key=f"use_concept_{idx}", use_container_width=True, type="primary"):
+            st.markdown(f'<div class="concept-card"><div class="concept-number">KONSEP {idx + 1}</div><h2>{concept.get("title", "")}</h2><p>{concept.get("concept", "")}</p></div>', unsafe_allow_html=True)
+            if st.button(f"PAKAI KONSEP {idx + 1}", key=f"use_concept_{idx}", use_container_width=True, type="primary"):
                 st.session_state.selected_concept = concept
                 st.session_state.selected_concept_index = idx
                 st.session_state.storyboard = None
                 st.session_state.page = "storyboard"
                 st.rerun()
                 # ============================================================
-# PAGE 3: STORYBOARD
+# HALAMAN 3: PAPAN CERITA (STORYBOARD)
 # ============================================================
 def render_storyboard():
-    st.markdown('<div class="hero"><div class="eyebrow">STEP 03 • STORYBOARD</div><h1>Build The Story</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="eyebrow">LANGKAH 03 • STORYBOARD</div><h1>Susun Alur Cerita</h1></div>', unsafe_allow_html=True)
 
     selected = st.session_state.get("selected_concept")
     if not selected:
         st.warning("Belum ada konsep yang dipilih.")
-        if st.button("← GO TO AI REMIX"):
+        if st.button("← KEMBALI KE AI REMIX"):
             st.session_state.page = "remix"
             st.rerun()
         return
 
     scene_count = int(st.session_state.get("scene_count", 1))
-    duration_label = st.session_state.get("duration", "8 seconds")
+    duration_label = st.session_state.get("duration", "8 detik")
 
-    st.markdown(f'<div class="selected-card"><h2>{selected.get("title", "Untitled")}</h2><p>{selected.get("concept", "")}</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="selected-card"><h2>{selected.get("title", "Tanpa Judul")}</h2><p>{selected.get("concept", "")}</p></div>', unsafe_allow_html=True)
 
     if not st.session_state.get("storyboard"):
-        if st.button("⚡ GENERATE STORYBOARD", type="primary", use_container_width=True):
+        if st.button("⚡ BUAT PAPAN CERITA (STORYBOARD)", type="primary", use_container_width=True):
             client = get_client(st.session_state.api_key)
             if client is None:
-                st.error("Masukkan Gemini API Key terlebih dahulu.")
+                st.error("Masukkan Kunci API Gemini terlebih dahulu.")
                 return
 
             storyboard_prompt = f"""
@@ -282,7 +319,7 @@ Create EXACTLY {scene_count} scenes. Return ONLY valid JSON:
   ]
 }}
 """
-            with st.spinner(f"Building {scene_count}-scene storyboard..."):
+            with st.spinner(f"Menyusun {scene_count} adegan papan cerita..."):
                 try:
                     result = generate_ai(client, storyboard_prompt, json_mode=True, max_output_tokens=12000)
                     if result and "storyboard" in result:
@@ -290,36 +327,36 @@ Create EXACTLY {scene_count} scenes. Return ONLY valid JSON:
                         st.session_state.current_scene = 1
                         st.session_state.scene_prompts = {}
                         st.session_state.scene_screenshots = {}
-                        st.success("Storyboard berhasil dibuat!")
+                        st.success("Papan cerita berhasil dibuat!")
                         st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Terjadi kesalahan: {e}")
 
     storyboard = st.session_state.get("storyboard")
     if storyboard:
         for scene in storyboard:
             sn = scene.get("scene_number", "?")
-            with st.expander(f"SCENE {sn} • {scene.get('timecode', '')}", expanded=(sn == 1)):
+            with st.expander(f"ADEGAN / SCENE {sn} • {scene.get('timecode', '')}", expanded=(sn == 1)):
                 st.write(f"**Visual:** {scene.get('visual', '')}")
-                st.write(f"**Action:** {scene.get('action', '')}")
-                st.write(f"**Camera:** {scene.get('camera', '')}")
+                st.write(f"**Aksi (Action):** {scene.get('action', '')}")
+                st.write(f"**Kamera:** {scene.get('camera', '')}")
 
         st.markdown("---")
-        if st.button("CONTINUE TO SCENE GENERATOR →", type="primary", use_container_width=True):
+        if st.button("LANJUT KE PEMBUAT ADEGAN (SCENE GENERATOR) →", type="primary", use_container_width=True):
             st.session_state.current_scene = 1
             st.session_state.page = "scenes"
             st.rerun()
 
 # ============================================================
-# PAGE 4: SCENE GENERATOR
+# HALAMAN 4: PEMBUAT ADEGAN (SCENE GENERATOR)
 # ============================================================
 def render_scenes():
-    st.markdown('<div class="hero"><div class="eyebrow">STEP 04 • FLOW / VEO PROMPT ENGINE</div><h1>Generate Your Scenes</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="eyebrow">LANGKAH 04 • PROMPT GOOGLE FLOW / VEO</div><h1>Buat Prompt Adegan Video</h1></div>', unsafe_allow_html=True)
 
     storyboard = st.session_state.get("storyboard", [])
     if not storyboard:
-        st.warning("Storyboard belum tersedia.")
-        if st.button("← BACK TO STORYBOARD"):
+        st.warning("Papan cerita belum tersedia.")
+        if st.button("← KEMBALI KE STORYBOARD"):
             st.session_state.page = "storyboard"
             st.rerun()
         return
@@ -340,34 +377,34 @@ def render_scenes():
                 st.rerun()
 
     scene = storyboard[current_scene - 1]
-    st.markdown(f"### 🎬 SCENE {current_scene}")
+    st.markdown(f"### 🎬 ADEGAN / SCENE {current_scene}")
     st.write(f"**Visual:** {scene.get('visual', '')}")
-    st.write(f"**Action:** {scene.get('action', '')}")
+    st.write(f"**Aksi:** {scene.get('action', '')}")
 
     existing_prompt = st.session_state.get("scene_prompts", {}).get(current_scene)
     if existing_prompt:
-        st.success("Prompt scene ini berhasil dibuat!")
-        st.text_area("Copy prompt ini ke Google Flow:", value=existing_prompt, height=180)
+        st.success("Prompt Bahasa Inggris untuk Google Flow berhasil dibuat!")
+        st.text_area("Salin prompt ini ke Google Flow / Veo:", value=existing_prompt, height=180)
 
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("🔄 REGENERATE PROMPT", use_container_width=True):
+            if st.button("🔄 BUAT ULANG PROMPT", use_container_width=True):
                 del st.session_state.scene_prompts[current_scene]
                 st.rerun()
         with c2:
             if current_scene < total_scenes:
-                if st.button("NEXT SCENE →", type="primary", use_container_width=True):
+                if st.button("ADEGAN SELANJUTNYA →", type="primary", use_container_width=True):
                     st.session_state.current_scene += 1
                     st.rerun()
             else:
-                if st.button("FINISH & SEO →", type="primary", use_container_width=True):
+                if st.button("SELESAI & PAKET SEO →", type="primary", use_container_width=True):
                     st.session_state.page = "seo"
                     st.rerun()
     else:
-        if st.button(f"⚡ GENERATE SCENE {current_scene} PROMPT", type="primary", use_container_width=True):
+        if st.button(f"⚡ GENERATE PROMPT FLOW UNTUK SCENE {current_scene}", type="primary", use_container_width=True):
             client = get_client(st.session_state.api_key)
             if client is None:
-                st.error("Masukkan Gemini API Key terlebih dahulu.")
+                st.error("Masukkan Kunci API Gemini terlebih dahulu.")
                 return
 
             flow_prompt = f"""
@@ -377,26 +414,26 @@ Visual: {scene.get('visual', '')} | Action: {scene.get('action', '')} | Camera: 
 
 Write ONE detailed paragraph in English. Output ONLY the raw prompt text.
 """
-            with st.spinner("Generating Flow prompt..."):
+            with st.spinner("Membuat prompt Google Flow (Bahasa Inggris)..."):
                 try:
                     prompt_res = generate_ai(client, flow_prompt, json_mode=False)
                     st.session_state.scene_prompts[current_scene] = prompt_res.strip()
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Terjadi kesalahan: {e}")
 
 # ============================================================
-# PAGE 5: FINISH & SEO
+# HALAMAN 5: SELESAI & PAKET SEO
 # ============================================================
 def render_seo():
-    st.markdown('<div class="hero"><div class="eyebrow">STEP 05 • PUBLISHING</div><h1>SEO & Publishing Pack</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="eyebrow">LANGKAH 05 • PUBLIKASI</div><h1>Paket SEO & Publikasi</h1></div>', unsafe_allow_html=True)
     selected = st.session_state.get("selected_concept", {})
 
     if not st.session_state.get("seo_package"):
-        if st.button("🚀 GENERATE SEO PACKAGE", type="primary", use_container_width=True):
+        if st.button("🚀 BUAT PAKET SEO KONTEN", type="primary", use_container_width=True):
             client = get_client(st.session_state.api_key)
             if client is None:
-                st.error("Masukkan Gemini API Key terlebih dahulu.")
+                st.error("Masukkan Kunci API Gemini terlebih dahulu.")
                 return
 
             seo_prompt = f"""
@@ -413,33 +450,33 @@ Return ONLY valid JSON:
   "pinned_comment": "Comment"
 }}
 """
-            with st.spinner("Generating SEO package..."):
+            with st.spinner("Menyusun judul, deskripsi, dan tag SEO..."):
                 try:
                     st.session_state.seo_package = generate_ai(client, seo_prompt, json_mode=True)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Terjadi kesalahan: {e}")
 
     seo = st.session_state.get("seo_package")
     if seo:
-        st.markdown("### 🏆 TITLES")
+        st.markdown("### 🏆 REKOMENDASI JUDUL")
         for idx, title in enumerate(seo.get("titles", []), start=1):
-            st.text_input(f"Title {idx}", value=title, key=f"title_{idx}")
+            st.text_input(f"Opsi Judul {idx}", value=title, key=f"title_{idx}")
 
-        st.markdown("### 📝 DESCRIPTION")
-        st.text_area("Description", value=seo.get("description", ""), height=120)
+        st.markdown("### 📝 DESKRIPSI VIDEO")
+        st.text_area("Deskripsi", value=seo.get("description", ""), height=120)
 
-        st.markdown("### 🔍 HASHTAGS")
-        st.text_input("Hashtags", value=" ".join(seo.get("hashtags", [])))
+        st.markdown("### 🔍 HASHTAG")
+        st.text_input("Hashtag", value=" ".join(seo.get("hashtags", [])))
 
         st.markdown("---")
-        st.success("🎉 Project Complete!")
-        if st.button("🆕 NEW PROJECT", type="primary", use_container_width=True):
+        st.success("🎉 Proyek Selesai!")
+        if st.button("🆕 BUAT PROYEK BARU", type="primary", use_container_width=True):
             reset_project()
             st.rerun()
 
 # ============================================================
-# MAIN ROUTER
+# ROUTER UTAMA
 # ============================================================
 page_map = {
     "home": render_home,
