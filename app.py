@@ -87,6 +87,37 @@ def client():
 def ask(c, prompt, parts=None):
     content = [prompt] + (parts or [])
 
+    last_error = None
+
+    for attempt in range(3):
+        try:
+            r = c.models.generate_content(
+                model=MODEL,
+                contents=content,
+                config=types.GenerateContentConfig(
+                    temperature=0.8
+                )
+            )
+
+            return r.text or ''
+
+        except Exception as e:
+            last_error = e
+
+            if '503' in str(e) or 'UNAVAILABLE' in str(e):
+                import time
+                time.sleep(3 * (attempt + 1))
+                continue
+
+            raise e
+
+    raise RuntimeError(
+        f'Gemini sedang sibuk setelah 3 percobaan. '
+        f'Coba tekan tombol lagi beberapa saat kemudian.\n\n'
+        f'Error: {last_error}'
+    )
+    content = [prompt] + (parts or [])
+
     r = c.models.generate_content(
         model=MODEL,
         contents=content,
