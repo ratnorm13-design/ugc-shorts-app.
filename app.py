@@ -668,29 +668,33 @@ def render_home():
 
         if reference_type == "Video":
 
-            st.session_state.reference_video = st.file_uploader(
-                "Upload reference video",
-                type=[
-                    "mp4",
-                    "mov",
-                    "webm",
-                    "mkv"
-                ],
-                key="reference_video"
-            )
+            video = st.file_uploader(
+    "Upload reference video",
+    type=[
+        "mp4",
+        "mov",
+        "webm"
+    ],
+    key="reference_video_widget"
+)
+
+st.session_state.reference_video = video
 
         elif reference_type == "Screenshots":
 
-            st.session_state.reference_screenshots = st.file_uploader(
-                "Upload screenshots",
-                type=[
-                    "png",
-                    "jpg",
-                    "jpeg",
-                    "webp"
-                ],
-                accept_multiple_files=True,
-                key="reference_screenshots"
+            screenshots = st.file_uploader(
+    "Upload screenshots",
+    type=[
+        "png",
+        "jpg",
+        "jpeg",
+        "webp"
+    ],
+    accept_multiple_files=True,
+    key="reference_screenshots_widget"
+)
+
+st.session_state.reference_screenshots = screenshots
             )
 
         else:
