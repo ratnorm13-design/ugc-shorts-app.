@@ -354,24 +354,31 @@ or unrelated animal.
 Remix the story execution instead.
 
 
-ORIGINALITY:
+ORIGINALITY_RULES = """
+ORIGINALITY RULES:
 
-Preserve the high-level hook,
-cause/effect, emotional goal,
-escalation, payoff and pacing.
-
-But substantially change the execution.
-
-Change setting, secondary details,
-props, action details, camera,
-lighting, dialogue wording and
-sound design.
-
-Do not copy brands, logos,
-watermarks, exact dialogue,
-exact shots, distinctive costumes,
-or recognizable creator/studio identity.
-
+- Keep the same main subject/type as the reference.
+- Keep the same core scene sequence.
+- Keep the same key actions.
+- Keep the same cause-and-effect.
+- Keep the same timing and comedic setup.
+- Keep the main comedic action because it is what makes the reference funny.
+- Do NOT change the main comedic action just to make the result different.
+- Make the result original mainly through visual execution.
+- Change suitable secondary details such as environment details,
+  colors, wardrobe, props, camera movement, lens feel, lighting,
+  composition, textures, facial expressions, sound design,
+  and other visual details.
+- Create a fresher and funnier ending/payoff.
+- The ending can add an unexpected harmless reaction,
+  funny expression, exaggerated movement, or comedic twist.
+- Keep the main subject consistent across every scene.
+- Do not introduce random unrelated characters or objects.
+- Do not copy recognizable characters, brands, logos,
+  exact dialogue, exact shots, or distinctive creator/studio style.
+- Preserve the original entertainment logic while making
+  the visual execution sufficiently distinct.
+"""
 
 SAFETY:
 
