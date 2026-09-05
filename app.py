@@ -681,33 +681,30 @@ def render_home():
 st.session_state.reference_video = video
 
         elif reference_type == "Screenshots":
+        screenshots = st.file_uploader(
+            "Upload screenshots",
+            type=[
+                "png",
+                "jpg",
+                "jpeg",
+                "webp"
+            ],
+            accept_multiple_files=True,
+            key="reference_screenshots_widget"
+        )
 
-            screenshots = st.file_uploader(
-    "Upload screenshots",
-    type=[
-        "png",
-        "jpg",
-        "jpeg",
-        "webp"
-    ],
-    accept_multiple_files=True,
-    key="reference_screenshots_widget"
-)
+        st.session_state.reference_screenshots = screenshots
 
-st.session_state.reference_screenshots = screenshots
-            )
-
-        else:
-
-            st.session_state.reference_text = st.text_area(
-                "Describe your reference / idea",
-                height=180,
-                placeholder=(
-                    "Contoh: seekor kucing melakukan aksi lucu "
-                    "dengan sebuah telur..."
-                ),
-                key="reference_text"
-            )
+    else:
+        st.session_state.reference_text = st.text_area(
+            "Describe your reference / idea",
+            height=180,
+            placeholder=(
+                "Contoh: seekor kucing melakukan sesuatu "
+                "dengan sebuah telur..."
+            ),
+            key="reference_text"
+        )
 
     with col2:
 
