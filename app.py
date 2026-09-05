@@ -335,7 +335,87 @@ def run_analysis():
         return
 
     ref_type = st.session_state.reference_type
-    prompt = f""" You are the creative director of an original-content video production system. Analyze the supplied reference and create exactly 3 ORIGINAL remix concepts. IMPORTANT: - The reference only supplies high-level entertainment logic. - Preserve useful structure such as hook, cause/effect, emotional goal, escalation, payoff, and pacing logic. - Do NOT copy recognizable characters, brands, exact dialogue, distinctive costumes, exact shots, exact locations, logos, watermarks, or a creator/studio's distinctive style. - Substantially transform the execution. - Make each concept independently usable for any duration from 8 seconds to 3 minutes. - Keep the result suitable for mainstream YouTube unless the user explicitly asks otherwise. - The app will later turn the chosen concept into 1–23 scenes and Flow/Veo prompts. Settings: Reference type: {ref_type} Visual style: {st.session_state.visual_style} Aspect ratio: {st.session_state.aspect_ratio} Duration: {st.session_state.duration} Scene count: {scene_count()} Creative instruction: {st.session_state.custom_instruction} Return ONLY valid JSON: {{ "analysis": {{ "source_summary": "...", "niche": "...", "hook": "...", "cause_effect": "...", "emotional_goal": "...", "pacing_logic": "...", "payoff": "...", "key_visual_mechanics": ["...", "..."], "transformation_notes": ["...", "..."] }}, "concepts": [ {{ "title": "...", "one_line_pitch": "...", "niche": "...", "hook": "...", "story_arc": "...", "main_subjects": ["..."], "setting": "...", "visual_direction": "...", "comedy_or_drama_engine": "...", "ending_payoff": "...", "why_it_is_original": "..." }}, {{ "title": "...", "one_line_pitch": "...", "niche": "...", "hook": "...", "story_arc": "...", "main_subjects": ["..."], "setting": "...", "visual_direction": "...", "comedy_or_drama_engine": "...", "ending_payoff": "...", "why_it_is_original": "..." }}, {{ "title": "...", "one_line_pitch": "...", "niche": "...", "hook": "...", "story_arc": "...", "main_subjects": ["..."], "setting": "...", "visual_direction": "...", "comedy_or_drama_engine": "...", "ending_payoff": "...", "why_it_is_original": "..." }} ] }} """
+    prompt = f"""
+You are the creative director of an original-content video production system.
+
+Analyze the supplied reference and create exactly 3 ORIGINAL remix concepts.
+
+IMPORTANT:
+- The reference only supplies high-level entertainment logic.
+- Preserve useful structure such as hook, cause/effect, emotional goal,
+  escalation, payoff, and pacing logic.
+- Do NOT copy recognizable characters, brands, exact dialogue, distinctive
+  costumes, exact shots, exact locations, logos, watermarks, or a creator/studio's
+  distinctive style.
+- Substantially transform the execution.
+- Make each concept independently usable for any duration from 8 seconds to 3 minutes.
+- Keep the result suitable for mainstream YouTube unless the user explicitly asks otherwise.
+- The app will later turn the chosen concept into 1–23 scenes and Flow/Veo prompts.
+
+Settings:
+Reference type: {ref_type}
+Visual style: {st.session_state.visual_style}
+Aspect ratio: {st.session_state.aspect_ratio}
+Duration: {st.session_state.duration}
+Scene count: {scene_count()}
+Creative instruction: {st.session_state.custom_instruction}
+
+Return ONLY valid JSON:
+{{
+  "analysis": {{
+    "source_summary": "...",
+    "niche": "...",
+    "hook": "...",
+    "cause_effect": "...",
+    "emotional_goal": "...",
+    "pacing_logic": "...",
+    "payoff": "...",
+    "key_visual_mechanics": ["...", "..."],
+    "transformation_notes": ["...", "..."]
+  }},
+  "concepts": [
+    {{
+      "title": "...",
+      "one_line_pitch": "...",
+      "niche": "...",
+      "hook": "...",
+      "story_arc": "...",
+      "main_subjects": ["..."],
+      "setting": "...",
+      "visual_direction": "...",
+      "comedy_or_drama_engine": "...",
+      "ending_payoff": "...",
+      "why_it_is_original": "..."
+    }},
+    {{
+      "title": "...",
+      "one_line_pitch": "...",
+      "niche": "...",
+      "hook": "...",
+      "story_arc": "...",
+      "main_subjects": ["..."],
+      "setting": "...",
+      "visual_direction": "...",
+      "comedy_or_drama_engine": "...",
+      "ending_payoff": "...",
+      "why_it_is_original": "..."
+    }},
+    {{
+      "title": "...",
+      "one_line_pitch": "...",
+      "niche": "...",
+      "hook": "...",
+      "story_arc": "...",
+      "main_subjects": ["..."],
+      "setting": "...",
+      "visual_direction": "...",
+      "comedy_or_drama_engine": "...",
+      "ending_payoff": "...",
+      "why_it_is_original": "..."
+    }}
+  ]
+}}
+"""
 
     parts = []
 
@@ -436,7 +516,49 @@ def run_storyboard():
     concept = selected_concept()
     n = scene_count()
 
-    prompt = f""" Create a production storyboard for this ORIGINAL video concept. The final video has exactly {n} scenes, about 8 seconds per scene. Duration: {st.session_state.duration} Aspect ratio: {st.session_state.aspect_ratio} Visual style: {st.session_state.visual_style} Concept: {concept_text(concept)} Creative instruction: {st.session_state.custom_instruction} Requirements: - Exactly {n} scenes. Number them 1 through {n}. - Every scene must have a clear purpose. - Scene 1 must contain the strongest hook. - Maintain logical cause/effect and escalating progression. - Every scene must be visually producible. - Keep recurring subjects visually consistent. - Define continuity details that the next scene can inherit. - Do not copy the original reference's exact characters, shots, dialogue, location, or distinctive design. - Make the final scene deliver a clear payoff. Return ONLY valid JSON: {{ "scenes": [ {{ "scene": 1, "time": "00:00-00:08", "purpose": "...", "visual": "...", "action": "...", "camera": "...", "continuity": "...", "audio": "...", "transition": "..." }} ] }} """
+    prompt = f"""
+Create a production storyboard for this ORIGINAL video concept.
+
+The final video has exactly {n} scenes, about 8 seconds per scene.
+Duration: {st.session_state.duration}
+Aspect ratio: {st.session_state.aspect_ratio}
+Visual style: {st.session_state.visual_style}
+
+Concept:
+{concept_text(concept)}
+
+Creative instruction:
+{st.session_state.custom_instruction}
+
+Requirements:
+- Exactly {n} scenes. Number them 1 through {n}.
+- Every scene must have a clear purpose.
+- Scene 1 must contain the strongest hook.
+- Maintain logical cause/effect and escalating progression.
+- Every scene must be visually producible.
+- Keep recurring subjects visually consistent.
+- Define continuity details that the next scene can inherit.
+- Do not copy the original reference's exact characters, shots, dialogue,
+  location, or distinctive design.
+- Make the final scene deliver a clear payoff.
+
+Return ONLY valid JSON:
+{{
+  "scenes": [
+    {{
+      "scene": 1,
+      "time": "00:00-00:08",
+      "purpose": "...",
+      "visual": "...",
+      "action": "...",
+      "camera": "...",
+      "continuity": "...",
+      "audio": "...",
+      "transition": "..."
+    }}
+  ]
+}}
+"""
 
     with st.spinner(f"Building {n}-scene storyboard..."):
         try:
@@ -472,16 +594,21 @@ def render_storyboard():
     )
 
     n = scene_count()
-    st.write(f"**Duration:** {st.session_state.duration} • **Scenes:** {n}")
+    st.write(f"**Duration:** {st.session_state.duration}  •  **Scenes:** {n}")
 
     if not st.session_state.storyboard:
-        if st.button("🧩 GENERATE STORYBOARD", type="primary", use_container_width=True):
+        if st.button(
+            "🧩 GENERATE STORYBOARD",
+            type="primary",
+            use_container_width=True
+        ):
             run_storyboard()
         return
 
     for scene in st.session_state.storyboard:
         with st.expander(
-            f"Scene {scene['scene']} • {scene.get('time', '')} • {scene.get('purpose', '')}"
+            f"Scene {scene['scene']} • {scene.get('time', '')} • "
+            f"{scene.get('purpose', '')}"
         ):
             st.write("**Visual:**", scene.get("visual", ""))
             st.write("**Action:**", scene.get("action", ""))
@@ -490,7 +617,11 @@ def render_storyboard():
             st.write("**Audio:**", scene.get("audio", ""))
             st.write("**Transition:**", scene.get("transition", ""))
 
-    if st.button("🎥 CONTINUE TO SCENE PROMPTS", type="primary", use_container_width=True):
+    if st.button(
+        "🎥 CONTINUE TO SCENE PROMPTS",
+        type="primary",
+        use_container_width=True
+    ):
         go("scenes")
 
 
@@ -501,12 +632,19 @@ def render_storyboard():
 def previous_scene_info(index):
     if index <= 1:
         return "This is Scene 1. No previous scene."
+
     prev = st.session_state.storyboard[index - 2]
-    return json.dumps(prev, ensure_ascii=False, indent=2)
+
+    return json.dumps(
+        prev,
+        ensure_ascii=False,
+        indent=2
+    )
 
 
 def generate_scene_prompt(scene_number):
     client = get_client()
+
     if not client:
         return
 
@@ -514,54 +652,158 @@ def generate_scene_prompt(scene_number):
     scene = scenes[scene_number - 1]
     concept = selected_concept()
 
-    previous_frame = st.session_state.scene_frames.get(scene_number - 1)
+    previous_frame = st.session_state.scene_frames.get(
+        scene_number - 1
+    )
 
-    prompt = f""" You are writing one production-ready Google Flow / Veo video prompt. Create the prompt for Scene {scene_number} of {len(scenes)}. Project: Concept: {concept.get('title', '')} Visual style: {st.session_state.visual_style} Aspect ratio: {st.session_state.aspect_ratio} Total duration: {st.session_state.duration} Current storyboard scene: {json.dumps(scene, ensure_ascii=False, indent=2)} Previous scene: {previous_scene_info(scene_number)} Previous scene last-frame image is supplied when available. Use it ONLY to preserve visual continuity: subject identity, wardrobe, prop placement, environment, lighting direction, camera geography, and motion state. Do not copy unrelated details from any reference. Originality rules: - Do not reproduce copyrighted characters, brands, logos, exact dialogue, exact shots, distinctive costumes, or recognizable creator/studio style. - Preserve story logic while using original execution. - Keep recurring characters/subjects consistent across scenes. - Do not introduce random new characters or props without narrative reason. Write ONE detailed paragraph only. No JSON. No headings. No bullet points. Include: subject appearance, environment, exact action, facial/body performance, camera framing and movement, lens/depth of field, lighting, color mood, physics/motion, sound effects/ambience, dialogue only if needed, and a clean transition-ready ending. The prompt must be directly usable in Google Flow/Veo. """
+    prompt = f"""
+You are writing one production-ready Google Flow / Veo video prompt.
+
+Create the prompt for Scene {scene_number} of {len(scenes)}.
+
+Project:
+Concept: {concept.get('title', '')}
+Visual style: {st.session_state.visual_style}
+Aspect ratio: {st.session_state.aspect_ratio}
+Total duration: {st.session_state.duration}
+
+Current storyboard scene:
+{json.dumps(scene, ensure_ascii=False, indent=2)}
+
+Previous scene:
+{previous_scene_info(scene_number)}
+
+Previous scene last-frame image is supplied when available.
+Use it ONLY to preserve visual continuity: subject identity, wardrobe,
+prop placement, environment, lighting direction, camera geography, and
+motion state. Do not copy unrelated details from any reference.
+
+Originality rules:
+- Do not reproduce copyrighted characters, brands, logos, exact dialogue,
+  exact shots, distinctive costumes, or recognizable creator/studio style.
+- Preserve story logic while using original execution.
+- Keep recurring characters/subjects consistent across scenes.
+- Do not introduce random new characters or props without narrative reason.
+
+Write ONE detailed paragraph only. No JSON. No headings. No bullet points.
+
+Include:
+subject appearance, environment, exact action, facial/body performance,
+camera framing and movement, lens/depth of field, lighting, color mood,
+physics/motion, sound effects/ambience, dialogue only if needed,
+and a clean transition-ready ending.
+
+The prompt must be directly usable in Google Flow/Veo.
+"""
 
     parts = []
-    if previous_frame:
-        parts.extend(file_part(client, previous_frame))
 
-    with st.spinner(f"Generating Flow/Veo prompt for Scene {scene_number}..."):
+    if previous_frame:
+        parts.extend(
+            file_part(
+                client,
+                previous_frame
+            )
+        )
+
+    with st.spinner(
+        f"Generating Flow/Veo prompt for Scene {scene_number}..."
+    ):
         try:
-            result = text_response(client, prompt, parts).strip()
+            result = text_response(
+                client,
+                prompt,
+                parts
+            ).strip()
+
             if not result:
-                raise ValueError("AI mengembalikan prompt kosong.")
-            st.session_state.scene_prompts[scene_number] = result
+                raise ValueError(
+                    "AI mengembalikan prompt kosong."
+                )
+
+            st.session_state.scene_prompts[
+                scene_number
+            ] = result
+
         except Exception as e:
-            st.error(f"Gagal membuat prompt scene: {e}")
+            st.error(
+                f"Gagal membuat prompt scene: {e}"
+            )
 
 
 def render_scenes():
     st.title("🎥 Scene-by-Scene Flow/Veo Prompts")
 
     scenes = st.session_state.storyboard
+
     if not scenes:
-        st.info("Storyboard belum dibuat.")
+        st.info(
+            "Storyboard belum dibuat."
+        )
         return
 
     n = len(scenes)
-    current = max(1, min(st.session_state.current_scene, n))
+
+    current = max(
+        1,
+        min(
+            st.session_state.current_scene,
+            n
+        )
+    )
+
     st.session_state.current_scene = current
 
-    st.progress(current / n)
-    st.write(f"**Scene {current} / {n}**")
+    st.progress(
+        current / n
+    )
 
-    scene = scenes[current]
+    st.write(
+        f"**Scene {current} / {n}**"
+    )
+
+    scene = scenes[current - 1]
 
     st.subheader(
         f"Scene {current} • {scene.get('time', '')}"
     )
 
-    st.write("**Purpose:**", scene.get("purpose", ""))
-    st.write("**Visual:**", scene.get("visual", ""))
-    st.write("**Action:**", scene.get("action", ""))
-    st.write("**Camera:**", scene.get("camera", ""))
-    st.write("**Continuity:**", scene.get("continuity", ""))
-    st.write("**Audio:**", scene.get("audio", ""))
+    st.write(
+        "**Purpose:**",
+        scene.get("purpose", "")
+    )
+
+    st.write(
+        "**Visual:**",
+        scene.get("visual", "")
+    )
+
+    st.write(
+        "**Action:**",
+        scene.get("action", "")
+    )
+
+    st.write(
+        "**Camera:**",
+        scene.get("camera", "")
+    )
+
+    st.write(
+        "**Continuity:**",
+        scene.get("continuity", "")
+    )
+
+    st.write(
+        "**Audio:**",
+        scene.get("audio", "")
+    )
 
     if current > 1:
-        st.subheader("🖼️ Continuity Frame")
+
+        st.subheader(
+            "🖼️ Continuity Frame"
+        )
+
         st.caption(
             "Setelah membuat video Scene sebelumnya di Flow/Veo, "
             "upload screenshot frame terakhirnya di sini."
@@ -569,30 +811,52 @@ def render_scenes():
 
         frame = st.file_uploader(
             f"Upload last frame Scene {current - 1}",
-            type=["png", "jpg", "jpeg", "webp"],
+            type=[
+                "png",
+                "jpg",
+                "jpeg",
+                "webp"
+            ],
             key=f"frame_upload_{current}",
         )
 
         if frame:
-            st.session_state.scene_frames[current - 1] = frame
-            st.success(f"Last frame Scene {current - 1} tersimpan.")
+
+            st.session_state.scene_frames[
+                current - 1
+            ] = frame
+
+            st.success(
+                f"Last frame Scene {current - 1} tersimpan."
+            )
 
     st.divider()
 
     if current not in st.session_state.scene_prompts:
+
         if st.button(
             f"✨ GENERATE PROMPT SCENE {current}",
             type="primary",
             use_container_width=True,
         ):
-            generate_scene_prompt(current)
+
+            generate_scene_prompt(
+                current
+            )
+
             st.rerun()
+
     else:
-        st.subheader("📋 Flow / Veo Prompt")
+
+        st.subheader(
+            "📋 Flow / Veo Prompt"
+        )
 
         st.text_area(
             "Prompt — copy this into Google Flow/Veo",
-            value=st.session_state.scene_prompts[current],
+            value=st.session_state.scene_prompts[
+                current
+            ],
             height=360,
             key=f"prompt_view_{current}",
         )
@@ -601,39 +865,80 @@ def render_scenes():
             "🔄 REGENERATE THIS PROMPT",
             use_container_width=True,
         ):
-            del st.session_state.scene_prompts[current]
-            generate_scene_prompt(current)
+
+            del st.session_state.scene_prompts[
+                current
+            ]
+
+            generate_scene_prompt(
+                current
+            )
+
             st.rerun()
 
         c1, c2 = st.columns(2)
 
         with c1:
+
             if current > 1:
-                if st.button("⬅️ PREVIOUS SCENE", use_container_width=True):
-                    st.session_state.current_scene = current - 1
+
+                if st.button(
+                    "⬅️ PREVIOUS SCENE",
+                    use_container_width=True
+                ):
+
+                    st.session_state.current_scene = (
+                        current - 1
+                    )
+
                     st.rerun()
 
         with c2:
+
             if current < n:
-                if st.button("NEXT SCENE ➡️", type="primary", use_container_width=True):
-                    st.session_state.current_scene = current + 1
+
+                if st.button(
+                    "NEXT SCENE ➡️",
+                    type="primary",
+                    use_container_width=True
+                ):
+
+                    st.session_state.current_scene = (
+                        current + 1
+                    )
+
                     st.rerun()
+
             else:
-                if st.button("🔎 FINISH → SEO", type="primary", use_container_width=True):
+
+                if st.button(
+                    "🔎 FINISH → SEO",
+                    type="primary",
+                    use_container_width=True
+                ):
+
                     go("seo")
 
     st.divider()
 
-    # Direct scene selector makes long projects easier to navigate.
-    choices = list(range(1, n + 1))
+    choices = list(
+        range(
+            1,
+            n + 1
+        )
+    )
+
     selected = st.selectbox(
         "Jump to scene",
         choices,
         index=current - 1,
         key="scene_jump",
     )
+
     if selected != current:
+
         st.session_state.current_scene = selected
+
         st.rerun()
 
 
@@ -642,60 +947,145 @@ def render_scenes():
 # ============================================================
 
 def run_seo():
+
     client = get_client()
+
     if not client:
         return
 
     concept = selected_concept()
-    prompts_done = len(st.session_state.scene_prompts)
-    n = len(st.session_state.storyboard)
 
-    prompt = f""" Create a YouTube SEO package for this ORIGINAL video. Concept: {concept_text(concept)} Duration: {st.session_state.duration} Aspect ratio: {st.session_state.aspect_ratio} Scenes: {n} Completed Flow/Veo prompts: {prompts_done}/{n} Return ONLY valid JSON: {{ "titles": ["...", "...", "..."], "description": "...", "keywords": ["...", "..."], "hashtags": ["...", "..."], "thumbnail_text": "...", "thumbnail_concept": "...", "pinned_comment": "...", "cta": "..." }} Rules: - Titles should be clickable but honest. - Description should describe the actual original concept. - Keywords should be relevant and natural. - Do not mention or imply that the video is a copy of a reference. - Avoid copyrighted character/brand names unless they are genuinely part of the user's own original concept. """
+    prompts_done = len(
+        st.session_state.scene_prompts
+    )
 
-    with st.spinner("Generating YouTube SEO package..."):
+    n = len(
+        st.session_state.storyboard
+    )
+
+    prompt = f"""
+Create a YouTube SEO package for this ORIGINAL video.
+
+Concept:
+{concept_text(concept)}
+
+Duration: {st.session_state.duration}
+Aspect ratio: {st.session_state.aspect_ratio}
+Scenes: {n}
+Completed Flow/Veo prompts: {prompts_done}/{n}
+
+Return ONLY valid JSON:
+{{
+  "titles": ["...", "...", "..."],
+  "description": "...",
+  "keywords": ["...", "..."],
+  "hashtags": ["...", "..."],
+  "thumbnail_text": "...",
+  "thumbnail_concept": "...",
+  "pinned_comment": "...",
+  "cta": "..."
+}}
+
+Rules:
+- Titles should be clickable but honest.
+- Description should describe the actual original concept.
+- Keywords should be relevant and natural.
+- Do not mention or imply that the video is a copy of a reference.
+- Avoid copyrighted character/brand names unless they are genuinely part
+  of the user's own original concept.
+"""
+
+    with st.spinner(
+        "Generating YouTube SEO package..."
+    ):
+
         try:
-            st.session_state.seo = extract_json(text_response(client, prompt))
+
+            st.session_state.seo = extract_json(
+                text_response(
+                    client,
+                    prompt
+                )
+            )
+
         except Exception as e:
-            st.error(f"Gagal membuat SEO: {e}")
+
+            st.error(
+                f"Gagal membuat SEO: {e}"
+            )
 
 
 def render_seo():
-    st.title("🔎 YouTube SEO")
+
+    st.title(
+        "🔎 YouTube SEO"
+    )
 
     if not selected_concept():
-        st.info("Pilih konsep dulu.")
+
+        st.info(
+            "Pilih konsep dulu."
+        )
+
         return
 
-    n = len(st.session_state.storyboard)
-    done = len(st.session_state.scene_prompts)
+    n = len(
+        st.session_state.storyboard
+    )
+
+    done = len(
+        st.session_state.scene_prompts
+    )
 
     if n and done < n:
+
         st.warning(
             f"Baru {done}/{n} scene prompt selesai. "
             "SEO tetap bisa dibuat, tetapi lebih baik selesaikan semua scene."
         )
 
     if not st.session_state.seo:
-        if st.button("🚀 GENERATE SEO PACKAGE", type="primary", use_container_width=True):
+
+        if st.button(
+            "🚀 GENERATE SEO PACKAGE",
+            type="primary",
+            use_container_width=True
+        ):
+
             run_seo()
+
             st.rerun()
+
         return
 
     seo = st.session_state.seo
 
-    titles = seo.get("titles", [])
-    st.subheader("🎯 Titles")
+    titles = seo.get(
+        "titles",
+        []
+    )
+
+    st.subheader(
+        "🎯 Titles"
+    )
+
     for i, title in enumerate(titles):
+
         st.text_input(
             f"Title {i + 1}",
             value=str(title),
             key=f"seo_title_{i}",
         )
 
-    st.subheader("📝 Description")
+    st.subheader(
+        "📝 Description"
+    )
+
     st.text_area(
         "Description",
-        value=safe_text(seo.get("description")),
+        value=safe_text(
+            seo.get("description")
+        ),
         height=220,
         key="seo_description",
     )
@@ -703,64 +1093,181 @@ def render_seo():
     c1, c2 = st.columns(2)
 
     with c1:
-        st.subheader("🔑 Keywords")
+
+        st.subheader(
+            "🔑 Keywords"
+        )
+
         st.text_area(
             "Keywords",
-            value=", ".join(str(x) for x in seo.get("keywords", [])),
+            value=", ".join(
+                str(x)
+                for x in seo.get(
+                    "keywords",
+                    []
+                )
+            ),
             height=120,
             key="seo_keywords",
         )
 
     with c2:
-        st.subheader("#️⃣ Hashtags")
+
+        st.subheader(
+            "#️⃣ Hashtags"
+        )
+
         st.text_area(
             "Hashtags",
-            value=" ".join(str(x) for x in seo.get("hashtags", [])),
+            value=" ".join(
+                str(x)
+                for x in seo.get(
+                    "hashtags",
+                    []
+                )
+            ),
             height=120,
             key="seo_hashtags",
         )
 
-    st.subheader("🖼️ Thumbnail")
+    st.subheader(
+        "🖼️ Thumbnail"
+    )
+
     st.text_input(
         "Thumbnail Text",
-        value=safe_text(seo.get("thumbnail_text")),
+        value=safe_text(
+            seo.get("thumbnail_text")
+        ),
         key="thumbnail_text",
     )
+
     st.text_area(
         "Thumbnail Concept",
-        value=safe_text(seo.get("thumbnail_concept")),
+        value=safe_text(
+            seo.get("thumbnail_concept")
+        ),
         height=120,
         key="thumbnail_concept",
     )
 
-    st.subheader("💬 Pinned Comment")
+    st.subheader(
+        "💬 Pinned Comment"
+    )
+
     st.text_area(
         "Pinned Comment",
-        value=safe_text(seo.get("pinned_comment")),
+        value=safe_text(
+            seo.get("pinned_comment")
+        ),
         height=120,
         key="pinned_comment",
     )
 
-    st.subheader("📣 CTA")
+    st.subheader(
+        "📣 CTA"
+    )
+
     st.text_area(
         "Call To Action",
-        value=safe_text(seo.get("cta")),
+        value=safe_text(
+            seo.get("cta")
+        ),
         height=100,
         key="seo_cta",
     )
 
-    st.success("🎉 Project workflow selesai.")
+    st.success(
+        "🎉 Project workflow selesai."
+    )
 
     c1, c2 = st.columns(2)
 
     with c1:
-        if st.button("🎥 BACK TO SCENES", use_container_width=True):
+
+        if st.button(
+            "🎥 BACK TO SCENES",
+            use_container_width=True
+        ):
+
             go("scenes")
 
     with c2:
-        if st.button("🆕 NEW PROJECT", type="primary", use_container_width=True):
+
+        if st.button(
+            "🆕 NEW PROJECT",
+            type="primary",
+            use_container_width=True
+        ):
+
             reset_project()
+
             st.rerun()
+
+
+# ============================================================
+# UPLOAD MIME TYPE FIX
+# ============================================================
+
+def upload_to_gemini(client, uploaded_file):
+
+    if uploaded_file is None:
+        return None
+
+    try:
+
+        mime_type = getattr(
+            uploaded_file,
+            "type",
+            None
+        )
+
+        if not mime_type:
+
+            name = uploaded_file.name.lower()
+
+            if name.endswith(".mp4"):
+                mime_type = "video/mp4"
+
+            elif name.endswith(".mov"):
+                mime_type = "video/quicktime"
+
+            elif name.endswith(".webm"):
+                mime_type = "video/webm"
+
+            elif name.endswith(".avi"):
+                mime_type = "video/x-msvideo"
+
+            elif name.endswith(".mkv"):
+                mime_type = "video/x-matroska"
+
+            elif name.endswith(".png"):
+                mime_type = "image/png"
+
+            elif (
+                name.endswith(".jpg")
+                or name.endswith(".jpeg")
+            ):
+                mime_type = "image/jpeg"
+
+            elif name.endswith(".webp"):
+                mime_type = "image/webp"
+
+        return client.files.upload(
+            file=uploaded_file,
+            config={
+                "display_name": uploaded_file.name,
+                "mime_type": mime_type,
+            },
+        )
+
+    except Exception as e:
+
+        st.warning(
+            f"File tidak bisa dikirim ke Gemini: {e}"
+        )
+
+        return None
 
 
 # ============================================================
@@ -768,12 +1275,21 @@ def render_seo():
 # ============================================================
 
 if st.session_state.page == "home":
+
     render_home()
+
 elif st.session_state.page == "concepts":
+
     render_concepts()
+
 elif st.session_state.page == "storyboard":
+
     render_storyboard()
+
 elif st.session_state.page == "scenes":
+
     render_scenes()
+
 elif st.session_state.page == "seo":
+
     render_seo()
