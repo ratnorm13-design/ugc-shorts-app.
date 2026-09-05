@@ -605,7 +605,7 @@ def concepts():
         )
 
         return
-            st.write(
+    st.write(
         'Pilih salah satu konsep untuk dibuatkan storyboard.'
     )
 
