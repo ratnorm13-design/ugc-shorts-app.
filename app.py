@@ -69,6 +69,7 @@ DEFAULTS = {
     "aspect_ratio": "9:16 â€” Shorts / Reels / TikTok",
     "duration": "8 seconds",
     "custom_instruction": "",
+    "subject_lock": "cute realistic fluffy gray tabby kitten",
     "analysis": {},
     "concepts": [],
     "selected_concept": None,
@@ -179,6 +180,7 @@ def file_part(client, uploaded_file):
 
 
 def scene_count():
+    # One scene = approximately 8 seconds. Keep this mapping authoritative.
     return DURATION_SCENES[st.session_state.duration]
 
 
@@ -316,6 +318,17 @@ def render_home():
             placeholder="Contoh: lebih lucu, lebih cepat, family-friendly, ending lebih kuat...",
         )
 
+    st.subheader("ðŸ”’ Main Subject Lock")
+    st.text_input(
+        "Subjek utama wajib tetap",
+        key="subject_lock",
+        help="Subjek ini tidak boleh diganti oleh AI di konsep, storyboard, atau prompt Flow/Veo.",
+    )
+    st.caption(
+        "Untuk Tale Of Paw, biarkan default: cute realistic fluffy gray tabby kitten. "
+        "AI boleh mengubah execution, tetapi spesies/subjek utama tetap."
+    )
+
     count = scene_count()
     st.info(
         f"Durasi {st.session_state.duration} = {count} scene. "
@@ -327,7 +340,7 @@ def render_home():
         "Aktifkan originality + transformation guard",
         value=True,
         key="originality_guard",
-)
+    )
 
     st.write(
         "AI akan mempertahankan hook, cause/effect, emotional goal, payoff, "
@@ -338,6 +351,73 @@ def render_home():
 
     if st.button("ðŸš€ ANALYZE + AUTO REMIX", type="primary", use_container_width=True):
         run_analysis()
+
+
+# ============================================================
+# SUBJECT LOCK VALIDATION
+# ============================================================
+
+def subject_lock_valid(concepts):
+    """Reject concepts that clearly replace the locked main subject."""
+    lock = st.session_state.subject_lock.strip().lower()
+    if not lock:
+        return True
+
+    # Tale Of Paw default: explicitly reject common substitutions.
+    forbidden = [
+        "dog", "puppy", "golden retriever", "hedgehog", "rabbit", "bunny",
+        "fox", "wolf", "bear", "robot", "human", "person", "hamster",
+        "mouse", "rat", "bird", "parrot", "monkey", "horse", "deer"
+    ]
+
+    if "kitten" in lock or "cat" in lock:
+        for concept in concepts:
+            blob = json.dumps(concept, ensure_ascii=False).lower()
+            # A concept is invalid if a clearly different animal is presented
+            # as the main subject.
+            if any(word in blob for word in forbidden):
+                return False
+
+            main_subjects = concept.get("main_subjects", [])
+            if not isinstance(main_subjects, list):
+                return False
+            ms = " ".join(str(x).lower() for x in main_subjects)
+            if "kitten" not in ms and "cat" not in ms:
+                return False
+
+    return True
+
+# ============================================================
+
+def subject_lock_valid(concepts):
+    """Reject concepts that clearly replace the locked main subject."""
+    lock = st.session_state.subject_lock.strip().lower()
+    if not lock:
+        return True
+
+    # Tale Of Paw default: explicitly reject common substitutions.
+    forbidden = [
+        "dog", "puppy", "golden retriever", "hedgehog", "rabbit", "bunny",
+        "fox", "wolf", "bear", "robot", "human", "person", "hamster",
+        "mouse", "rat", "bird", "parrot", "monkey", "horse", "deer"
+    ]
+
+    if "kitten" in lock or "cat" in lock:
+        for concept in concepts:
+            blob = json.dumps(concept, ensure_ascii=False).lower()
+            # A concept is invalid if a clearly different animal is presented
+            # as the main subject.
+            if any(word in blob for word in forbidden):
+                return False
+
+            main_subjects = concept.get("main_subjects", [])
+            if not isinstance(main_subjects, list):
+                return False
+            ms = " ".join(str(x).lower() for x in main_subjects)
+            if "kitten" not in ms and "cat" not in ms:
+                return False
+
+    return True
 
 
 # ============================================================
@@ -357,17 +437,28 @@ Analisis reference yang diberikan dan buat tepat 3 konsep remix ORIGINAL.
 
 WAJIB: seluruh nilai output analysis dan seluruh isi 3 konsep harus Bahasa Indonesia. Hanya nama field JSON yang boleh tetap menggunakan key Bahasa Inggris.
 
-IMPORTANT:
+IMPORTANT — SUBJECT LOCK:
+- The main subject is LOCKED to: {st.session_state.subject_lock}
+- ALL 3 concepts MUST use this exact subject as the main protagonist.
+- NEVER replace the main subject with a dog, hedgehog, rabbit, fox, robot,
+  human, or any other animal/entity.
+- If the reference contains another animal, transform the story around the
+  LOCKED subject instead of changing the locked subject.
+- The same locked subject must remain consistent throughout every scene later.
+- You may change the subject's minor visual details only when they do not
+  change species/identity. Do not change the species.
+
+ORIGINALITY:
 - The reference only supplies high-level entertainment logic.
 - Preserve useful structure such as hook, cause/effect, emotional goal,
   escalation, payoff, and pacing logic.
 - Do NOT copy recognizable characters, brands, exact dialogue, distinctive
   costumes, exact shots, exact locations, logos, watermarks, or a creator/studio's
   distinctive style.
-- Substantially transform the execution.
+- Substantially transform the execution while keeping the locked main subject.
 - Make each concept independently usable for any duration from 8 seconds to 3 minutes.
 - Keep the result suitable for mainstream YouTube unless the user explicitly asks otherwise.
-- The app will later turn the chosen concept into 1â€“23 scenes and Flow/Veo prompts.
+- The app will later turn the chosen concept into 1–23 scenes and Flow/Veo prompts.
 
 Settings:
 Reference type: {ref_type}
@@ -375,6 +466,7 @@ Visual style: {st.session_state.visual_style}
 Aspect ratio: {st.session_state.aspect_ratio}
 Duration: {st.session_state.duration}
 Scene count: {scene_count()}
+Locked main subject: {st.session_state.subject_lock}
 Creative instruction: {st.session_state.custom_instruction}
 
 Kembalikan HANYA JSON valid. Semua nilai teks wajib Bahasa Indonesia:
@@ -463,6 +555,12 @@ Kembalikan HANYA JSON valid. Semua nilai teks wajib Bahasa Indonesia:
             if len(concepts) != 3:
                 raise ValueError("AI tidak mengembalikan tepat 3 konsep.")
 
+            if not subject_lock_valid(concepts):
+                raise ValueError(
+                    "Subject Lock dilanggar: AI mengganti subjek utama. "
+                    "Jalankan Analyze + Auto Remix lagi dengan Subject Lock tetap aktif."
+                )
+
             st.session_state.analysis = data.get("analysis", {})
             st.session_state.concepts = concepts
             st.session_state.selected_concept = None
@@ -477,7 +575,7 @@ Kembalikan HANYA JSON valid. Semua nilai teks wajib Bahasa Indonesia:
 
 
 def render_concepts():
-    st.title("ðŸ’¡ AI Analysis + Auto Remix")
+    st.title("💡 AI Analysis + Auto Remix")
 
     if not st.session_state.concepts:
         st.info("Belum ada konsep. Mulai dari Home.")
@@ -485,7 +583,7 @@ def render_concepts():
 
     analysis = st.session_state.analysis
 
-    with st.expander("ðŸ§  Reference Analysis", expanded=True):
+    with st.expander("🧠 Reference Analysis", expanded=True):
         st.write("**Niche:**", safe_text(analysis.get("niche")))
         st.write("**Hook:**", safe_text(analysis.get("hook")))
         st.write("**Cause / Effect:**", safe_text(analysis.get("cause_effect")))
@@ -494,6 +592,10 @@ def render_concepts():
         st.write("**Payoff:**", safe_text(analysis.get("payoff")))
 
     st.subheader("Choose 1 of 3 Original Concepts")
+    st.info(
+        f"🔒 Main Subject terkunci: **{st.session_state.subject_lock}**. "
+        "Ketiga konsep dan seluruh scene wajib mempertahankan subjek ini."
+    )
 
     cols = st.columns(3)
 
@@ -542,6 +644,7 @@ Video final memiliki TEPAT {n} scene, sekitar 8 detik per scene.
 Duration: {st.session_state.duration}
 Aspect ratio: {st.session_state.aspect_ratio}
 Visual style: {st.session_state.visual_style}
+LOCKED MAIN SUBJECT: {st.session_state.subject_lock}
 
 Concept:
 {concept_text(concept)}
@@ -550,6 +653,11 @@ Creative instruction:
 {st.session_state.custom_instruction}
 
 ATURAN WAJIB:
+- MAIN SUBJECT LOCK: "{st.session_state.subject_lock}".
+- Semua scene HARUS memakai subjek utama yang sama. Jangan mengganti spesies,
+  identitas, atau protagonis utama.
+- Jangan tiba-tiba mengubah kitten menjadi dog, hedgehog, rabbit, fox, robot,
+  human, atau subjek lain.
 - Jumlah scene HARUS tepat {n}. Jangan kurang dan jangan lebih.
 - Nomor scene HARUS 1 sampai {n}.
 - Setiap scene sekitar 8 detik.
@@ -603,7 +711,7 @@ Kembalikan HANYA JSON valid. Nilai semua field harus Bahasa Indonesia:
 
 
 def render_storyboard():
-    st.title("ðŸ§© Storyboard")
+    st.title("🧩 Storyboard")
 
     concept = selected_concept()
     if not concept:
@@ -616,16 +724,16 @@ def render_storyboard():
     )
 
     n = scene_count()
-    st.write(f"**Durasi:** {st.session_state.duration}  â€¢  **Jumlah Scene:** {n}")
+    st.write(f"**Durasi:** {st.session_state.duration}  •  **Jumlah Scene:** {n}")
 
     if not st.session_state.storyboard:
-        if st.button("ðŸ§© GENERATE STORYBOARD", type="primary", use_container_width=True):
+        if st.button("🧩 GENERATE STORYBOARD", type="primary", use_container_width=True):
             run_storyboard()
         return
 
     for scene in st.session_state.storyboard:
         with st.expander(
-            f"Scene {scene['scene']} â€¢ {scene.get('time', '')} â€¢ {scene.get('purpose', '')}"
+            f"Scene {scene['scene']} • {scene.get('time', '')} • {scene.get('purpose', '')}"
         ):
             st.write("**Visual:**", scene.get("visual", ""))
             st.write("**Action:**", scene.get("action", ""))
@@ -634,10 +742,9 @@ def render_storyboard():
             st.write("**Audio:**", scene.get("audio", ""))
             st.write("**Transition:**", scene.get("transition", ""))
 
-    if st.button("ðŸŽ¥ LANJUT KE PROMPT SCENE", type="primary", use_container_width=True):
+    if st.button("🎥 LANJUT KE PROMPT SCENE", type="primary", use_container_width=True):
         go("scenes")
-
-
+    
 # ============================================================
 # SCENE PROMPTS
 # ============================================================
@@ -657,6 +764,7 @@ def generate_scene_prompt(scene_number):
     scenes = st.session_state.storyboard
     scene = scenes[scene_number - 1]
     concept = selected_concept()
+
     previous_frame = st.session_state.scene_frames.get(scene_number - 1)
 
     prompt = f"""
@@ -666,6 +774,7 @@ Create the prompt for Scene {scene_number} of {len(scenes)}.
 
 Project:
 Concept: {concept.get('title', '')}
+LOCKED MAIN SUBJECT: {st.session_state.subject_lock}
 Visual style: {st.session_state.visual_style}
 Aspect ratio: {st.session_state.aspect_ratio}
 Total duration: {st.session_state.duration}
@@ -685,7 +794,10 @@ Originality rules:
 - Do not reproduce copyrighted characters, brands, logos, exact dialogue,
   exact shots, distinctive costumes, or recognizable creator/studio style.
 - Preserve story logic while using original execution.
-- Keep recurring characters/subjects consistent across scenes.
+- The LOCKED MAIN SUBJECT MUST REMAIN "{st.session_state.subject_lock}".
+- Never replace the locked kitten with another animal, human, robot, or other entity.
+- Keep the same subject identity, fur pattern, proportions, and recognizable
+  appearance consistent across scenes.
 - Do not introduce random new characters or props without narrative reason.
 
 Write ONE detailed paragraph only. No JSON. No headings. No bullet points.
@@ -730,6 +842,11 @@ def render_scenes():
 
     st.subheader(
         f"Scene {current} 鈥� {scene.get('time', '')}"
+    )
+
+    st.info(
+        f"馃敀 Subject Lock: **{st.session_state.subject_lock}** 鈥� "
+        "jangan diganti di scene ini."
     )
 
     st.write("**Purpose:**", scene.get("purpose", ""))
