@@ -135,23 +135,38 @@ def text_response(client, prompt, parts=None):
     contents = [prompt]
     if parts:
         contents.extend(parts)
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            temperature=0.8,
-        ),
-    )
-    return response.text or ""
+    last_error = None
+    import time
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    temperature=0.8,
+                ),
+            )
+            return response.text or ""
+        except Exception as e:
+            last_error = e
+            if "503" in str(e) or "UNAVAILABLE" in str(e):
+                time.sleep(3 * (attempt + 1))
+                continue
+            raise
+    raise RuntimeError(f"Gemini sedang sibuk setelah 3 percobaan. Coba lagi beberapa saat kemudian. Error: {last_error}")
 
 
 def upload_to_gemini(client, uploaded_file):
     if uploaded_file is None:
         return None
     try:
+        mime = getattr(uploaded_file, "type", None)
+        config = {"display_name": uploaded_file.name}
+        if mime:
+            config["mime_type"] = mime
         return client.files.upload(
             file=uploaded_file,
-            config={"display_name": uploaded_file.name},
+            config=config,
         )
     except Exception as e:
         st.warning(f"File tidak bisa dikirim ke Gemini: {e}")
@@ -325,7 +340,8 @@ def render_home():
         run_analysis()
 
 
-# ============================================================
+#
+============================================================
 # ANALYSIS + REMIX
 # ============================================================
 
@@ -664,4 +680,311 @@ Previous scene:
 
 Previous scene last-frame image is supplied when available.
 Use it ONLY to preserve visual continuity: subject identity, wardrobe,
-prop placement, 
+prop placement, environment, lighting direction, camera geography, and
+motion state. Do not copy unrelated details from any reference.
+
+Originality rules:
+- Do not reproduce copyrighted characters, brands, logos, exact dialogue,
+  exact shots, distinctive costumes, or recognizable creator/studio style.
+- Preserve story logic while using original execution.
+- Keep recurring characters/subjects consistent across scenes.
+- Do not introduce random new characters or props without narrative reason.
+
+Write ONE detailed paragraph only. No JSON. No headings. No bullet points.
+Include:
+subject appearance, environment, exact action, facial/body performance,
+camera framing and movement, lens/depth of field, lighting, color mood,
+physics/motion, sound effects/ambience, dialogue only if needed,
+and a clean transition-ready ending.
+The prompt must be directly usable in Google Flow/Veo.
+"""
+
+    parts = []
+    if previous_frame:
+        parts.extend(file_part(client, previous_frame))
+
+    with st.spinner(f"Generating Flow/Veo prompt for Scene {scene_number}..."):
+        try:
+            result = text_response(client, prompt, parts).strip()
+            if not result:
+                raise ValueError("AI mengembalikan prompt kosong.")
+            st.session_state.scene_prompts[scene_number] = result
+        except Exception as e:
+            st.error(f"Gagal membuat prompt scene: {e}")
+
+
+def render_scenes():
+    st.title("🎥 Scene-by-Scene Flow/Veo Prompts")
+
+    scenes = st.session_state.storyboard
+    if not scenes:
+        st.info("Storyboard belum dibuat.")
+        return
+
+    n = len(scenes)
+    current = max(1, min(st.session_state.current_scene, n))
+    st.session_state.current_scene = current
+
+    st.progress(current / n)
+    st.write(f"**Scene {current} / {n}**")
+
+    scene = scenes[current - 1]
+
+    st.subheader(
+        f"Scene {current} • {scene.get('time', '')}"
+    )
+
+    st.write("**Purpose:**", scene.get("purpose", ""))
+    st.write("**Visual:**", scene.get("visual", ""))
+    st.write("**Action:**", scene.get("action", ""))
+    st.write("**Camera:**", scene.get("camera", ""))
+    st.write("**Continuity:**", scene.get("continuity", ""))
+    st.write("**Audio:**", scene.get("audio", ""))
+
+    if current > 1:
+        st.subheader("🖼️ Continuity Frame")
+        st.caption(
+            "Setelah membuat video Scene sebelumnya di Flow/Veo, "
+            "upload screenshot frame terakhirnya di sini."
+        )
+
+        frame = st.file_uploader(
+            f"Upload last frame Scene {current - 1}",
+            type=["png", "jpg", "jpeg", "webp"],
+            key=f"frame_upload_{current}",
+        )
+
+        if frame:
+            st.session_state.scene_frames[current - 1] = frame
+            st.success(f"Last frame Scene {current - 1} tersimpan.")
+
+    st.divider()
+
+    if current not in st.session_state.scene_prompts:
+        if st.button(
+            f"✨ GENERATE PROMPT SCENE {current}",
+            type="primary",
+            use_container_width=True,
+        ):
+            generate_scene_prompt(current)
+            st.rerun()
+    else:
+        st.subheader("📋 Flow / Veo Prompt")
+
+        st.text_area(
+            "Prompt — copy this into Google Flow/Veo",
+            value=st.session_state.scene_prompts[current],
+            height=360,
+            key=f"prompt_view_{current}",
+        )
+
+        if st.button(
+            "🔄 REGENERATE THIS PROMPT",
+            use_container_width=True,
+        ):
+            del st.session_state.scene_prompts[current]
+            generate_scene_prompt(current)
+            st.rerun()
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            if current > 1:
+                if st.button("⬅️ PREVIOUS SCENE", use_container_width=True):
+                    st.session_state.current_scene = current - 1
+                    st.rerun()
+
+        with c2:
+            if current < n:
+                if st.button("LANJUT KE SCENE BERIKUTNYA ➡️", type="primary", use_container_width=True):
+                    st.session_state.current_scene = current + 1
+                    st.rerun()
+            else:
+                if st.button("🔎 FINISH → SEO", type="primary", use_container_width=True):
+                    go("seo")
+
+    st.divider()
+
+    # Direct scene selector makes long projects easier to navigate.
+    choices = list(range(1, n + 1))
+    selected = st.selectbox(
+        "Jump to scene",
+        choices,
+        index=current - 1,
+        key="scene_jump",
+    )
+    if selected != current:
+        st.session_state.current_scene = selected
+        st.rerun()
+
+
+#
+============================================================
+# SEO
+# ============================================================
+
+def run_seo():
+    client = get_client()
+    if not client:
+        return
+
+    concept = selected_concept()
+    prompts_done = len(st.session_state.scene_prompts)
+    n = len(st.session_state.storyboard)
+
+    prompt = f"""
+Create a YouTube SEO package for this ORIGINAL video.
+
+Concept:
+{concept_text(concept)}
+
+Duration: {st.session_state.duration}
+Aspect ratio: {st.session_state.aspect_ratio}
+Scenes: {n}
+Completed Flow/Veo prompts: {prompts_done}/{n}
+
+Return ONLY valid JSON:
+{{
+  "titles": ["...", "...", "..."],
+  "description": "...",
+  "keywords": ["...", "..."],
+  "hashtags": ["...", "..."],
+  "thumbnail_text": "...",
+  "thumbnail_concept": "...",
+  "pinned_comment": "...",
+  "cta": "..."
+}}
+
+Rules:
+- Titles should be clickable but honest.
+- Description should describe the actual original concept.
+- Keywords should be relevant and natural.
+- Do not mention or imply that the video is a copy of a reference.
+- Avoid copyrighted character/brand names unless they are genuinely part of the user's own original concept.
+"""
+
+    with st.spinner("Generating YouTube SEO package..."):
+        try:
+            st.session_state.seo = extract_json(text_response(client, prompt))
+        except Exception as e:
+            st.error(f"Gagal membuat SEO: {e}")
+
+
+def render_seo():
+    st.title("🔎 YouTube SEO")
+
+    if not selected_concept():
+        st.info("Pilih konsep dulu.")
+        return
+
+    n = len(st.session_state.storyboard)
+    done = len(st.session_state.scene_prompts)
+
+    if n and done < n:
+        st.warning(
+            f"Baru {done}/{n} scene prompt selesai. "
+            "SEO tetap bisa dibuat, tetapi lebih baik selesaikan semua scene."
+        )
+
+    if not st.session_state.seo:
+        if st.button("🚀 GENERATE SEO PACKAGE", type="primary", use_container_width=True):
+            run_seo()
+            st.rerun()
+        return
+
+    seo = st.session_state.seo
+
+    titles = seo.get("titles", [])
+    st.subheader("🎯 Titles")
+    for i, title in enumerate(titles):
+        st.text_input(
+            f"Title {i + 1}",
+            value=str(title),
+            key=f"seo_title_{i}",
+        )
+
+    st.subheader("📝 Description")
+    st.text_area(
+        "Description",
+        value=safe_text(seo.get("description")),
+        height=220,
+        key="seo_description",
+    )
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        st.subheader("🔑 Keywords")
+        st.text_area(
+            "Keywords",
+            value=", ".join(str(x) for x in seo.get("keywords", [])),
+            height=120,
+            key="seo_keywords",
+        )
+
+    with c2:
+        st.subheader("#️⃣ Hashtags")
+        st.text_area(
+            "Hashtags",
+            value=" ".join(str(x) for x in seo.get("hashtags", [])),
+            height=120,
+            key="seo_hashtags",
+        )
+
+    st.subheader("🖼️ Thumbnail")
+    st.text_input(
+        "Thumbnail Text",
+        value=safe_text(seo.get("thumbnail_text")),
+        key="thumbnail_text",
+    )
+    st.text_area(
+        "Thumbnail Concept",
+        value=safe_text(seo.get("thumbnail_concept")),
+        height=120,
+        key="thumbnail_concept",
+    )
+
+    st.subheader("💬 Pinned Comment")
+    st.text_area(
+        "Pinned Comment",
+        value=safe_text(seo.get("pinned_comment")),
+        height=120,
+        key="pinned_comment",
+    )
+
+    st.subheader("📣 CTA")
+    st.text_area(
+        "Call To Action",
+        value=safe_text(seo.get("cta")),
+        height=100,
+        key="seo_cta",
+    )
+
+    st.success("🎉 Project workflow selesai.")
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        if st.button("🎥 BACK TO SCENES", use_container_width=True):
+            go("scenes")
+
+    with c2:
+        if st.button("🆕 NEW PROJECT", type="primary", use_container_width=True):
+            reset_project()
+            st.rerun()
+
+
+# ============================================================
+# ROUTER
+# ============================================================
+
+if st.session_state.page == "home":
+    render_home()
+elif st.session_state.page == "concepts":
+    render_concepts()
+elif st.session_state.page == "storyboard":
+    render_storyboard()
+elif st.session_state.page == "scenes":
+    render_scenes()
+elif st.session_state.page == "seo":
+    render_seo()
