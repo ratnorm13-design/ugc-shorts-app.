@@ -12,42 +12,50 @@ from google.genai import types
 # CONFIG
 # ============================================================
 
-MODEL = "gemini-3.6-flash"
+st.set_page_config(
+    page_title="UGC Remix Studio",
+    page_icon="🎬",
+    layout="wide",
+)
 
-DURATION_MAP = {
-    "8 detik": 1,
-    "16 detik": 2,
-    "24 detik": 3,
-    "32 detik": 4,
-    "40 detik": 5,
-    "48 detik": 6,
-    "56 detik": 7,
-    "1 menit": 8,
-    "1.5 menit": 12,
-    "2 menit": 15,
-    "2.5 menit": 19,
-    "3 menit": 23,
+MODEL_NAME = "gemini-3.6-flash"
+
+DURATION_SCENES = {
+    "8 seconds": 1,
+    "16 seconds": 2,
+    "24 seconds": 3,
+    "32 seconds": 4,
+    "40 seconds": 5,
+    "48 seconds": 6,
+    "56 seconds": 7,
+    "1 minute": 8,
+    "1.5 minutes": 12,
+    "2 minutes": 15,
+    "2.5 minutes": 19,
+    "3 minutes": 23,
 }
 
 STYLE_OPTIONS = [
-    "Realistic",
-    "3D Animation",
-    "Cartoon",
-    "Pixar-like 3D animation",
-    "Cinematic",
-    "Cute Kids Animation",
+    "Realistic cinematic",
+    "3D animation",
+    "2D animation",
+    "Stylized comedy",
+    "Cute family-friendly",
+    "Documentary / realistic",
+    "Action cinematic",
+    "Custom",
 ]
 
 ASPECT_OPTIONS = [
-    "9:16 Vertical",
-    "16:9 Horizontal",
-    "1:1 Square",
+    "9:16 — Shorts / Reels / TikTok",
+    "16:9 — YouTube",
+    "1:1 — Square",
 ]
 
 REFERENCE_OPTIONS = [
     "Video",
     "Screenshots",
-    "Text / Idea",
+    "Text / idea",
 ]
 
 
@@ -55,250 +63,93 @@ REFERENCE_OPTIONS = [
 # SESSION STATE
 # ============================================================
 
-DEFAULT_STATE = {
+DEFAULTS = {
     "page": "home",
-    "analysis": None,
+    "api_key": "",
+
+    "reference_type": "Video",
+    "reference_file": None,
+    "reference_files": [],
+    "reference_text": "",
+
+    "visual_style": "Realistic cinematic",
+    "aspect_ratio": "9:16 — Shorts / Reels / TikTok",
+    "duration": "8 seconds",
+    "custom_instruction": "",
+
+    "originality_guard": True,
+
+    "analysis": {},
     "concepts": [],
     "selected_concept": None,
+    "selected_concept_index": None,
+
     "storyboard": [],
     "scene_prompts": {},
     "scene_frames": {},
-    "seo": None,
+    "current_scene": 1,
+
+    "seo": {},
 }
 
-for key, value in DEFAULT_STATE.items():
+
+for key, value in DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
 
 # ============================================================
-# ORIGINALITY ENGINE
-# ============================================================
-
-ORIGINALITY_RULES = """
-ORIGINALITY RULES:
-
-- Keep the same main subject/type as the reference.
-- If the reference's main subject is a cat, keep the main subject a cat.
-- Do not randomly replace the main subject with a robot, human, different animal,
-  or unrelated creature.
-- Preserve the same core comedic scene sequence.
-- Preserve the important actions, cause-and-effect, timing, setup, and main joke.
-- Do not change the main comedic event merely to make the result different.
-- Make the result original mainly through execution details:
-  environment details, colors, wardrobe, props, composition, camera movement,
-  lens feel, lighting, textures, facial expressions, animation design,
-  sound design, and secondary visual details.
-- Do not copy recognizable characters, logos, brands, exact dialogue,
-  exact shots, or distinctive creator/studio style.
-- The final result should feel like an original production while preserving
-  the entertainment logic of the reference.
-- The ending/payoff may be made funnier with an additional harmless reaction,
-  funny expression, exaggerated movement, or small comedic twist.
-- Keep the main subject visually consistent across all scenes.
-"""
-
-
-# ============================================================
-# ACTION CONTINUITY ENGINE
-# ============================================================
-
-ACTION_CONTINUITY_RULES = """
-ACTION CONTINUITY RULES:
-
-Every important action must happen visibly and sequentially.
-
-Never skip, magically complete, or instantly transform an important action.
-
-Break important actions into natural physical stages such as:
-
-1. Preparation
-2. Approach / movement toward the object
-3. Physical contact
-4. Grip / interaction
-5. Manipulation or visible action
-6. Main action
-7. Visible result
-8. Reaction / comedic payoff
-
-The exact stages depend on the reference.
-
-Objects must not suddenly become:
-- opened
-- peeled
-- broken
-- moved
-- transformed
-- consumed
-- completed
-- activated
-- changed in appearance
-
-unless a visible action causes that change.
-
-Do NOT allow:
-- magical state changes
-- instant transformations
-- unexplained object movement
-- unexplained object disappearance
-- unexplained object appearance
-- sudden completed tasks
-- teleporting props
-- sudden changes of pose
-- sudden changes of environment
-
-If an action starts in one state, continue logically from that state.
-
-Example:
-
-If a character interacts with an unpeeled food item,
-the result must not suddenly show the food already peeled.
-
-The visible sequence should communicate:
-approach → touch → hold → perform the action → visible change → result.
-
-For physical comedy, preserve the original comedic timing while making
-every important cause-and-effect relationship visually understandable.
-
-If a complex action cannot naturally fit inside one scene,
-distribute the action across consecutive scenes while preserving continuity.
-
-Every scene must have a clear beginning state and ending state.
-
-The ending state of Scene N becomes the starting state of Scene N+1.
-"""
-
-
-# ============================================================
-# SAFETY
-# ============================================================
-
-SAFETY_RULES = """
-SAFETY RULES:
-
-If the reference contains a dangerous real-world action, do not reproduce
-instructions that teach or facilitate the dangerous action.
-
-Preserve the harmless narrative/comedic structure where possible, but replace
-only the dangerous element with a clearly fictional, toy-like, unplugged,
-non-functional, or otherwise harmless equivalent.
-
-Do not provide operational instructions for real weapons, explosives,
-live electricity, dangerous chemicals, or other hazardous activities.
-
-The scene should remain visually clear, comedic, and safe.
-"""
-
-
-# ============================================================
-# BASIC HELPERS
+# HELPERS
 # ============================================================
 
 def reset_project():
-    for key, value in DEFAULT_STATE.items():
-        st.session_state[key] = value
+    st.session_state.page = "home"
 
+    st.session_state.reference_file = None
+    st.session_state.reference_files = []
+    st.session_state.reference_text = ""
 
-def go(page: str):
-    st.session_state.page = page
-    st.rerun()
+    st.session_state.analysis = {}
+    st.session_state.concepts = []
+    st.session_state.selected_concept = None
+    st.session_state.selected_concept_index = None
 
+    st.session_state.storyboard = []
+    st.session_state.scene_prompts = {}
+    st.session_state.scene_frames = {}
+    st.session_state.current_scene = 1
 
-def scene_count(duration: str) -> int:
-    return DURATION_MAP.get(duration, 1)
+    st.session_state.seo = {}
 
-
-def selected_concept() -> dict:
-    idx = st.session_state.selected_concept
-
-    if idx is None:
-        return {}
-
-    concepts = st.session_state.concepts
-
-    if not concepts:
-        return {}
-
-    if idx < 0 or idx >= len(concepts):
-        return {}
-
-    return concepts[idx]
-
-
-def safe_text(value: Any) -> str:
-    if value is None:
-        return ""
-
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
-
-    return str(value)
-
-
-# ============================================================
-# GEMINI
-# ============================================================
 
 def get_client():
-    api_key = st.session_state.get("api_key", "")
+    key = st.session_state.api_key.strip()
 
-    if not api_key:
+    if not key:
+        st.error("Masukkan Gemini API Key di sidebar dulu.")
         return None
 
-    return genai.Client(api_key=api_key)
+    try:
+        return genai.Client(api_key=key)
+    except Exception as e:
+        st.error(f"Gagal membuat Gemini client: {e}")
+        return None
 
 
-def ask(client, prompt, parts=None):
-    content = [prompt] + (parts or [])
-
-    last_error = None
-
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(
-                model=MODEL,
-                contents=content,
-                config=types.GenerateContentConfig(
-                    temperature=0.8
-                )
-            )
-
-            return response.text or ""
-
-        except Exception as e:
-            last_error = e
-
-            if "503" in str(e) or "UNAVAILABLE" in str(e):
-                time.sleep(3 * (attempt + 1))
-                continue
-
-            raise e
-
-    raise RuntimeError(
-        "Gemini sedang sibuk setelah 3 percobaan.\n\n"
-        "Coba tekan tombol lagi beberapa saat kemudian.\n\n"
-        f"Error: {last_error}"
-    )
-
-
-# ============================================================
-# JSON EXTRACTION
-# ============================================================
-
-def extract_json(text: str):
+def extract_json(text: str) -> Any:
     text = text.strip()
 
     text = re.sub(
         r"^```(?:json)?\s*",
         "",
         text,
-        flags=re.IGNORECASE
+        flags=re.I,
     )
 
     text = re.sub(
         r"\s*```$",
         "",
-        text
+        text,
     )
 
     try:
@@ -306,461 +157,720 @@ def extract_json(text: str):
     except Exception:
         pass
 
-    match = re.search(
-        r"\{.*\}",
-        text,
-        flags=re.DOTALL
+    starts = [
+        text.find("{"),
+        text.find("["),
+    ]
+
+    starts = [
+        x for x in starts
+        if x >= 0
+    ]
+
+    if not starts:
+        raise ValueError(
+            "Respons AI tidak berisi JSON yang valid."
+        )
+
+    start = min(starts)
+
+    for end in range(
+        len(text),
+        start,
+        -1,
+    ):
+        candidate = text[start:end].strip()
+
+        try:
+            return json.loads(candidate)
+        except Exception:
+            continue
+
+    raise ValueError(
+        "Tidak bisa membaca JSON dari respons AI."
     )
 
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except Exception:
-            pass
 
-    match = re.search(
-        r"\[.*\]",
-        text,
-        flags=re.DOTALL
+def text_response(
+    client,
+    prompt,
+    parts=None,
+):
+    contents = [prompt]
+
+    if parts:
+        contents.extend(parts)
+
+    last_error = None
+
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    temperature=0.8,
+                ),
+            )
+
+            return response.text or ""
+
+        except Exception as e:
+            last_error = e
+
+            if (
+                "503" in str(e)
+                or "UNAVAILABLE" in str(e)
+            ):
+                time.sleep(
+                    3 * (attempt + 1)
+                )
+                continue
+
+            raise e
+
+    raise RuntimeError(
+        "Gemini sedang sibuk setelah 3 percobaan. "
+        "Coba tekan tombol lagi beberapa saat kemudian.\n\n"
+        f"Error: {last_error}"
     )
 
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except Exception:
-            pass
 
-    raise ValueError("Output AI bukan JSON yang valid.")
-
-
-# ============================================================
-# FILE UPLOAD
-# ============================================================
-
-def upload_file(client, uploaded_file):
-    if not uploaded_file:
+def upload_to_gemini(
+    client,
+    uploaded_file,
+):
+    if uploaded_file is None:
         return None
 
     try:
-        mime = getattr(
+        mime_type = getattr(
             uploaded_file,
             "type",
-            None
+            None,
         )
+
+        config = {
+            "display_name": uploaded_file.name,
+        }
+
+        if mime_type:
+            config["mime_type"] = mime_type
 
         return client.files.upload(
             file=uploaded_file,
-            config={
-                "display_name": uploaded_file.name,
-                "mime_type": mime,
-            }
+            config=config,
         )
 
     except Exception as e:
         st.warning(
-            f"Upload file gagal: {e}"
+            f"File tidak bisa dikirim ke Gemini: {e}"
         )
-
         return None
 
 
-def file_part(client, uploaded_file):
-    uploaded = upload_file(
+def file_part(
+    client,
+    uploaded_file,
+):
+    remote = upload_to_gemini(
         client,
-        uploaded_file
+        uploaded_file,
     )
 
-    if not uploaded:
+    if not remote:
         return []
 
-    return [
-        uploaded
+    try:
+        return [
+            types.Part.from_uri(
+                file_uri=remote.uri,
+                mime_type=remote.mime_type,
+            )
+        ]
+    except Exception:
+        return [remote]
+
+
+def scene_count():
+    return DURATION_SCENES[
+        st.session_state.duration
     ]
 
 
-# ============================================================
-# PREVIOUS SCENE INFO
-# ============================================================
+def selected_concept():
+    return (
+        st.session_state.selected_concept
+        or {}
+    )
 
-def previous_scene_info(scene_number: int) -> str:
-    scenes = st.session_state.storyboard
 
-    if scene_number <= 1:
-        return "No previous scene. This is Scene 1."
+def concept_text(concept):
+    return json.dumps(
+        concept,
+        ensure_ascii=False,
+        indent=2,
+    )
 
-    previous_index = scene_number - 2
 
-    if previous_index < 0:
-        return "No previous scene."
+def safe_text(value):
+    if value is None:
+        return ""
 
-    if previous_index >= len(scenes):
-        return "Previous scene information unavailable."
+    if isinstance(value, list):
+        return ", ".join(
+            str(x) for x in value
+        )
 
-    previous = scenes[previous_index]
+    return str(value)
 
-    return f"""
-Previous Scene #{scene_number - 1}
 
-Purpose:
-{safe_text(previous.get("purpose"))}
-
-Visual:
-{safe_text(previous.get("visual"))}
-
-Action:
-{safe_text(previous.get("action"))}
-
-Micro Actions:
-{safe_text(previous.get("micro_actions"))}
-
-Ending State:
-{safe_text(previous.get("ending_state"))}
-
-Continuity:
-{safe_text(previous.get("continuity"))}
-
-Camera:
-{safe_text(previous.get("camera"))}
-
-Audio:
-{safe_text(previous.get("audio"))}
-"""
+def go(page):
+    st.session_state.page = page
+    st.rerun()
 
 
 # ============================================================
-# ANALYZER
+# SIDEBAR
 # ============================================================
 
-def run_analysis():
-    client = get_client()
+with st.sidebar:
+    st.title("🎬 UGC Remix Studio")
 
-    if client is None:
-        st.error(
-            "Masukkan Gemini API Key terlebih dahulu."
-        )
-        return
+    st.caption(
+        "Reference → Remix → Storyboard → Flow/Veo Prompts"
+    )
 
-    reference_type = st.session_state.reference_type
-    duration = st.session_state.duration
-    style = st.session_state.style
-    aspect = st.session_state.aspect
-    instruction = st.session_state.creative_instruction
+    st.text_input(
+        "Gemini API Key",
+        type="password",
+        key="api_key",
+        placeholder="AIza...",
+    )
 
-    parts = []
+    st.divider()
 
-    reference_text = ""
+    if st.button(
+        "🏠 Home",
+        use_container_width=True,
+    ):
+        go("home")
 
-    if reference_type == "Video":
-        video = st.session_state.reference_video
-
-        if video:
-            parts.extend(
-                file_part(
-                    client,
-                    video
-                )
-            )
-
-        reference_text = """
-The uploaded reference is a video.
-Analyze its visual sequence, subjects, actions, timing,
-cause-and-effect, comedic beats, and important physical interactions.
-"""
-
-    elif reference_type == "Screenshots":
-        screenshots = st.session_state.reference_screenshots or []
-
-        for image in screenshots:
-            parts.extend(
-                file_part(
-                    client,
-                    image
-                )
-            )
-
-        reference_text = """
-The uploaded references are screenshots.
-Infer the scene order, visual continuity, important actions,
-subject identity, object states, and comedic progression.
-"""
-
-    else:
-        reference_text = f"""
-The user provided this text/idea:
-
-{st.session_state.reference_text}
-
-Treat it as the creative reference.
-"""
-
-    prompt = f"""
-You are an AI video concept analyzer.
-
-Analyze the user's reference and create exactly 3 original remix concepts.
-
-IMPORTANT:
-
-The reference determines the niche and the type of content.
-
-Do not randomly change the main subject.
-
-If the reference is about a cat, the concepts should remain about the cat.
-If the reference is about a specific type of object or character,
-preserve that main subject/type.
-
-Preserve the important comedic scene logic, core actions,
-cause-and-effect, and timing.
-
-Make the result original through visual execution and secondary details.
-
-{ORIGINALITY_RULES}
-
-{ACTION_CONTINUITY_RULES}
-
-{SAFETY_RULES}
-
-{reference_text}
-
-Target duration:
-{duration}
-
-Target scene count:
-{scene_count(duration)}
-
-Visual style:
-{style}
-
-Aspect ratio:
-{aspect}
-
-Additional creative instruction:
-{instruction}
-
-Return ONLY valid JSON.
-
-The JSON must have this structure:
-
-{{
-  "analysis": {{
-    "summary": "...",
-    "main_subject": "...",
-    "content_type": "...",
-    "core_story": "...",
-    "core_actions": [],
-    "action_sequence": [],
-    "micro_actions": [],
-    "comedic_beats": [],
-    "visual_identity": "...",
-    "continuity_requirements": []
-  }},
-  "concepts": [
-    {{
-      "title": "...",
-      "hook": "...",
-      "description": "...",
-      "main_subject": "...",
-      "core_scene_sequence": [],
-      "action_sequence": [],
-      "micro_actions": [],
-      "visual_execution": "...",
-      "ending_payoff": "...",
-      "originality_notes": "..."
-    }},
-    {{
-      "title": "...",
-      "hook": "...",
-      "description": "...",
-      "main_subject": "...",
-      "core_scene_sequence": [],
-      "action_sequence": [],
-      "micro_actions": [],
-      "visual_execution": "...",
-      "ending_payoff": "...",
-      "originality_notes": "..."
-    }},
-    {{
-      "title": "...",
-      "hook": "...",
-      "description": "...",
-      "main_subject": "...",
-      "core_scene_sequence": [],
-      "action_sequence": [],
-      "micro_actions": [],
-      "visual_execution": "...",
-      "ending_payoff": "...",
-      "originality_notes": "..."
-    }}
-  ]
-}}
-
-Analysis, concepts, and all JSON content must be written in Indonesian.
-"""
-
-    try:
-        raw = ask(
-            client,
-            prompt,
-            parts
-        )
-
-        data = extract_json(raw)
-
-        concepts = data.get(
-            "concepts",
-            []
-        )
-
-        if len(concepts) < 3:
-            raise ValueError(
-                "AI tidak menghasilkan 3 konsep."
-            )
-
-        st.session_state.analysis = data.get(
-            "analysis",
-            {}
-        )
-
-        st.session_state.concepts = concepts[:3]
-        st.session_state.selected_concept = None
-        st.session_state.storyboard = []
-        st.session_state.scene_prompts = {}
-        st.session_state.scene_frames = {}
-        st.session_state.seo = None
-
+    if st.button(
+        "💡 Concepts",
+        use_container_width=True,
+    ):
         go("concepts")
 
-    except Exception as e:
-        st.error(
-            f"Analisis gagal: {e}"
-        )
+    if st.button(
+        "🧩 Storyboard",
+        use_container_width=True,
+    ):
+        go("storyboard")
+
+    if st.button(
+        "🎥 Scene Prompts",
+        use_container_width=True,
+    ):
+        go("scenes")
+
+    if st.button(
+        "🔎 YouTube SEO",
+        use_container_width=True,
+    ):
+        go("seo")
+
+    st.divider()
+
+    if st.button(
+        "🆕 New Project",
+        use_container_width=True,
+    ):
+        reset_project()
+        st.rerun()
 
 
 # ============================================================
-# HOME PAGE
+# HOME
 # ============================================================
 
 def render_home():
 
     st.title(
-        "🎬 UGC Shorts AI Remix Engine"
+        "🎬 Turn Any Reference Into an Original Video Blueprint"
     )
 
-    st.caption(
-        "Reference → AI Analyzer → 3 Concepts → Storyboard → "
-        "Flow/Veo Prompts → SEO"
+    st.write(
+        "Upload a reference video, screenshots, "
+        "or an idea. AI analyzes the entertainment "
+        "logic, creates 3 original remix concepts, "
+        "then builds a scene-by-scene workflow "
+        "for Google Flow/Veo."
     )
 
-    st.divider()
+    st.subheader("1. Reference")
 
-    col1, col2 = st.columns(2)
+    reference_type = st.radio(
+        "Pilih sumber reference",
+        REFERENCE_OPTIONS,
+        horizontal=True,
+        key="reference_type",
+    )
 
-    with col1:
+    # --------------------------------------------------------
+    # VIDEO
+    # --------------------------------------------------------
 
-        st.subheader(
-            "1. Reference"
+    if reference_type == "Video":
+
+        video = st.file_uploader(
+            "Upload reference video",
+            type=[
+                "mp4",
+                "mov",
+                "webm",
+                "avi",
+                "mkv",
+            ],
+            key="reference_video_widget",
+            help=(
+                "Upload video yang ingin dianalisis."
+            ),
         )
 
-        reference_type = st.selectbox(
-            "Reference type",
-            REFERENCE_OPTIONS,
-            key="reference_type"
-        )
+        st.session_state.reference_file = video
+        st.session_state.reference_files = []
 
-        if reference_type == "Video":
+    # --------------------------------------------------------
+    # SCREENSHOTS
+    # --------------------------------------------------------
 
-            video = st.file_uploader(
-    "Upload reference video",
-    type=[
-        "mp4",
-        "mov",
-        "webm"
-    ],
-    key="reference_video_widget"
-)
+    elif reference_type == "Screenshots":
 
-st.session_state.reference_video = video
-
-        elif reference_type == "Screenshots":
         screenshots = st.file_uploader(
             "Upload screenshots",
             type=[
                 "png",
                 "jpg",
                 "jpeg",
-                "webp"
+                "webp",
             ],
             accept_multiple_files=True,
-            key="reference_screenshots_widget"
+            key="reference_screenshots_widget",
         )
 
-        st.session_state.reference_screenshots = screenshots
+        st.session_state.reference_files = screenshots
+        st.session_state.reference_file = None
+
+    # --------------------------------------------------------
+    # TEXT / IDEA
+    # --------------------------------------------------------
 
     else:
-        st.session_state.reference_text = st.text_area(
-            "Describe your reference / idea",
+
+        reference_text = st.text_area(
+            "Jelaskan reference / ide",
+            value=st.session_state.reference_text,
             height=180,
             placeholder=(
-                "Contoh: seekor kucing melakukan sesuatu "
-                "dengan sebuah telur..."
+                "Contoh: video komedi tentang "
+                "seekor kucing melakukan sesuatu "
+                "lalu terjadi kejutan lucu..."
             ),
-            key="reference_text"
+            key="reference_text_widget",
         )
 
-    with col2:
-
-        st.subheader(
-            "2. Video Settings"
+        st.session_state.reference_text = (
+            reference_text
         )
 
-        st.selectbox(
-            "Duration",
-            list(DURATION_MAP.keys()),
-            key="duration"
-        )
+        st.session_state.reference_file = None
+        st.session_state.reference_files = []
+
+    # --------------------------------------------------------
+    # CREATIVE SETTINGS
+    # --------------------------------------------------------
+
+    st.subheader("2. Creative Settings")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
 
         st.selectbox(
             "Visual Style",
             STYLE_OPTIONS,
-            key="style"
+            key="visual_style",
         )
 
         st.selectbox(
             "Aspect Ratio",
             ASPECT_OPTIONS,
-            key="aspect"
+            key="aspect_ratio",
+        )
+
+    with col2:
+
+        st.selectbox(
+            "Video Duration",
+            list(DURATION_SCENES.keys()),
+            key="duration",
         )
 
         st.text_area(
             "Creative Instruction",
-            height=120,
+            key="custom_instruction",
+            height=110,
             placeholder=(
-                "Contoh: buat ending lebih lucu, "
-                "ekspresi karakter lebih kocak..."
+                "Contoh: lebih lucu, lebih cepat, "
+                "family-friendly, ending lebih kuat..."
             ),
-            key="creative_instruction"
         )
 
-    st.divider()
-
-    st.subheader(
-        "3. AI Analyzer"
-    )
+    count = scene_count()
 
     st.info(
-        f"Durasi {st.session_state.duration} = "
-        f"{scene_count(st.session_state.duration)} scene "
-        f"(±8 detik per scene)."
+        f"Durasi {st.session_state.duration} "
+        f"= {count} scene. "
+        "Setiap scene dirancang sekitar 8 detik."
     )
 
+    # --------------------------------------------------------
+    # ORIGINALITY + SAFETY
+    # --------------------------------------------------------
+
+    st.subheader("3. Originality & Safety Guard")
+
+    st.checkbox(
+        "Aktifkan originality + transformation guard",
+        value=True,
+        key="originality_guard",
+    )
+
+    st.write(
+        "AI mempertahankan inti hiburan seperti "
+        "hook, cause/effect, timing, emotional goal, "
+        "dan payoff. Namun execution dibuat berbeda "
+        "melalui visual design, setting, wardrobe, "
+        "props, camera, lighting, dialogue, dan "
+        "sound design."
+    )
+
+    st.caption(
+        "Jika reference mengandung aksi berbahaya, "
+        "elemen berbahaya akan diubah menjadi versi "
+        "aman/fake/non-functional tanpa memberikan "
+        "instruksi melakukan aksi berbahaya."
+    )
+
+    # --------------------------------------------------------
+    # ANALYZE
+    # --------------------------------------------------------
+
     if st.button(
-        "🚀 ANALYZE & CREATE 3 CONCEPTS",
+        "🚀 ANALYZE + AUTO REMIX",
         type="primary",
-        use_container_width=True
+        use_container_width=True,
     ):
         run_analysis()
-    # ============================================================
-# PART 2/3
-# CONCEPTS + STORYBOARD
+
+
+# ============================================================
+# ANALYSIS + AUTO REMIX
+# ============================================================
+
+def run_analysis():
+
+    client = get_client()
+
+    if not client:
+        return
+
+    reference_type = (
+        st.session_state.reference_type
+    )
+
+    prompt = f"""
+You are the creative director of an
+original-content video production system.
+
+Analyze the supplied reference and create
+exactly 3 ORIGINAL remix concepts.
+
+IMPORTANT:
+
+- Preserve the main subject/type when it is
+  important to the reference. For example, if
+  the reference centers on a cat, keep the
+  main subject a cat rather than randomly
+  replacing it with a robot or unrelated creature.
+
+- Preserve the core comedic or dramatic
+  sequence when that sequence is what makes
+  the reference entertaining.
+
+- Preserve useful high-level structure:
+  hook, cause/effect, escalation, emotional
+  goal, payoff, timing, and pacing logic.
+
+- Do NOT copy recognizable characters,
+  brands, logos, watermarks, exact dialogue,
+  distinctive costumes, exact shots,
+  or distinctive creator/studio identity.
+
+- Do not reproduce copyrighted material
+  verbatim.
+
+- Make the final execution sufficiently
+  original through visual and production
+  details.
+
+- If the reference contains dangerous
+  activity, do NOT reproduce instructions
+  for performing it. Convert the dangerous
+  element into an obviously fake, unplugged,
+  toy, simulated, or otherwise harmless
+  version while keeping the narrative logic.
+
+- Keep the result family-friendly and suitable
+  for mainstream YouTube.
+
+- The chosen concept will later become
+  exactly 1–23 scenes depending on duration.
+
+Settings:
+
+Reference type:
+{reference_type}
+
+Visual style:
+{st.session_state.visual_style}
+
+Aspect ratio:
+{st.session_state.aspect_ratio}
+
+Duration:
+{st.session_state.duration}
+
+Scene count:
+{scene_count()}
+
+Creative instruction:
+{st.session_state.custom_instruction}
+
+Return ONLY valid JSON:
+
+{{
+  "analysis": {{
+    "source_summary": "...",
+    "niche": "...",
+    "main_subject": "...",
+    "hook": "...",
+    "cause_effect": "...",
+    "emotional_goal": "...",
+    "pacing_logic": "...",
+    "payoff": "...",
+    "key_visual_mechanics": [
+      "...",
+      "..."
+    ],
+    "transformation_notes": [
+      "...",
+      "..."
+    ]
+  }},
+
+  "concepts": [
+    {{
+      "title": "...",
+      "one_line_pitch": "...",
+      "niche": "...",
+      "main_subjects": ["..."],
+      "hook": "...",
+      "story_arc": "...",
+      "setting": "...",
+      "visual_direction": "...",
+      "comedy_or_drama_engine": "...",
+      "ending_payoff": "...",
+      "why_it_is_original": "..."
+    }},
+
+    {{
+      "title": "...",
+      "one_line_pitch": "...",
+      "niche": "...",
+      "main_subjects": ["..."],
+      "hook": "...",
+      "story_arc": "...",
+      "setting": "...",
+      "visual_direction": "...",
+      "comedy_or_drama_engine": "...",
+      "ending_payoff": "...",
+      "why_it_is_original": "..."
+    }},
+
+    {{
+      "title": "...",
+      "one_line_pitch": "...",
+      "niche": "...",
+      "main_subjects": ["..."],
+      "hook": "...",
+      "story_arc": "...",
+      "setting": "...",
+      "visual_direction": "...",
+      "comedy_or_drama_engine": "...",
+      "ending_payoff": "...",
+      "why_it_is_original": "..."
+    }}
+  ]
+}}
+"""
+
+    parts = []
+
+    # --------------------------------------------------------
+    # VIDEO REFERENCE
+    # --------------------------------------------------------
+
+    if (
+        reference_type == "Video"
+        and st.session_state.reference_file
+    ):
+        parts = file_part(
+            client,
+            st.session_state.reference_file,
+        )
+
+    # --------------------------------------------------------
+    # SCREENSHOT REFERENCES
+    # --------------------------------------------------------
+
+    elif reference_type == "Screenshots":
+
+        for uploaded_file in (
+            st.session_state.reference_files
+        ):
+            parts.extend(
+                file_part(
+                    client,
+                    uploaded_file,
+                )
+            )
+
+    # --------------------------------------------------------
+    # TEXT REFERENCE
+    # --------------------------------------------------------
+
+    elif reference_type == "Text / idea":
+
+        text = (
+            st.session_state.reference_text
+            .strip()
+        )
+
+        if text:
+            parts.append(
+                f"""
+USER REFERENCE TEXT:
+
+{text}
+"""
+            )
+
+    # --------------------------------------------------------
+    # VALIDATION
+    # --------------------------------------------------------
+
+    if (
+        reference_type == "Video"
+        and not parts
+    ):
+        st.warning(
+            "Upload reference video dulu."
+        )
+        return
+
+    if (
+        reference_type == "Screenshots"
+        and not parts
+    ):
+        st.warning(
+            "Upload minimal satu screenshot dulu."
+        )
+        return
+
+    if (
+        reference_type == "Text / idea"
+        and not st.session_state.reference_text.strip()
+    ):
+        st.warning(
+            "Masukkan reference / ide dulu."
+        )
+        return
+
+    # --------------------------------------------------------
+    # GEMINI ANALYSIS
+    # --------------------------------------------------------
+
+    with st.spinner(
+        "AI sedang menganalisis reference "
+        "dan membuat 3 remix..."
+    ):
+
+        try:
+
+            raw_response = text_response(
+                client,
+                prompt,
+                parts,
+            )
+
+            data = extract_json(
+                raw_response
+            )
+
+            concepts = data.get(
+                "concepts",
+                [],
+            )
+
+            if len(concepts) != 3:
+                raise ValueError(
+                    "AI tidak mengembalikan tepat 3 konsep."
+                )
+
+            st.session_state.analysis = (
+                data.get(
+                    "analysis",
+                    {},
+                )
+            )
+
+            st.session_state.concepts = (
+                concepts
+            )
+
+            st.session_state.selected_concept = None
+            st.session_state.selected_concept_index = None
+
+            st.session_state.storyboard = []
+            st.session_state.scene_prompts = {}
+            st.session_state.scene_frames = {}
+            st.session_state.current_scene = 1
+
+            go("concepts")
+
+        except Exception as e:
+
+            st.error(
+                f"Gagal membuat remix: {e}"
+            )
+
+
+# ============================================================
+# END PART 1
+# ============================================================
+# PART 2 — CONCEPTS + STORYBOARD
 # ============================================================
 
 
@@ -770,394 +880,621 @@ st.session_state.reference_video = video
 
 def render_concepts():
 
-    st.title("💡 3 Original Concepts")
+    st.title("💡 AI Remix Concepts")
 
     if not st.session_state.concepts:
-        st.info("Belum ada konsep. Kembali ke Home.")
-        if st.button("🏠 Kembali ke Home"):
-            go("home")
-        return
-
-    analysis = st.session_state.analysis or {}
-
-    with st.expander("🔎 Hasil Analisis Reference", expanded=False):
-
-        st.write(
-            "**Main Subject:**",
-            safe_text(analysis.get("main_subject"))
-        )
-
-        st.write(
-            "**Content Type:**",
-            safe_text(analysis.get("content_type"))
-        )
-
-        st.write(
-            "**Core Story:**",
-            safe_text(analysis.get("core_story"))
-        )
-
-        st.write(
-            "**Core Actions:**"
-        )
-
-        for item in analysis.get("core_actions", []):
-            st.write(f"• {safe_text(item)}")
-
-        st.write(
-            "**Action Sequence:**"
-        )
-
-        for item in analysis.get("action_sequence", []):
-            st.write(f"• {safe_text(item)}")
-
-    st.divider()
-
-    st.subheader("Pilih 1 konsep untuk dibuat menjadi storyboard")
-
-    concepts = st.session_state.concepts
-
-    for i, concept in enumerate(concepts[:3]):
-
-        st.markdown(
-            f"### Concept {i + 1}: "
-            f"{safe_text(concept.get('title'))}"
-        )
-
-        st.write(
-            f"**Hook:** "
-            f"{safe_text(concept.get('hook'))}"
-        )
-
-        st.write(
-            f"**Description:** "
-            f"{safe_text(concept.get('description'))}"
-        )
-
-        st.write(
-            f"**Main Subject:** "
-            f"{safe_text(concept.get('main_subject'))}"
-        )
-
-        with st.expander("🎬 Core Scene Sequence"):
-
-            sequence = concept.get(
-                "core_scene_sequence",
-                []
-            )
-
-            for n, item in enumerate(sequence, 1):
-                st.write(
-                    f"{n}. {safe_text(item)}"
-                )
-
-        with st.expander("🎭 Action Sequence"):
-
-            actions = concept.get(
-                "action_sequence",
-                []
-            )
-
-            for n, item in enumerate(actions, 1):
-                st.write(
-                    f"{n}. {safe_text(item)}"
-                )
-
-        with st.expander("🔬 Micro Actions"):
-
-            micro = concept.get(
-                "micro_actions",
-                []
-            )
-
-            for n, item in enumerate(micro, 1):
-                st.write(
-                    f"{n}. {safe_text(item)}"
-                )
-
-        st.write(
-            f"**Visual Execution:** "
-            f"{safe_text(concept.get('visual_execution'))}"
-        )
-
-        st.write(
-            f"**Ending Payoff:** "
-            f"{safe_text(concept.get('ending_payoff'))}"
+        st.info(
+            "Belum ada konsep. Kembali ke Home dan jalankan "
+            "AI Analyzer + Auto Remix terlebih dahulu."
         )
 
         if st.button(
-            f"✅ Pilih Concept {i + 1}",
-            key=f"select_concept_{i}",
-            use_container_width=True
+            "← Kembali ke Home",
+            use_container_width=True,
+        ):
+            go("home")
+
+        return
+
+    # --------------------------------------------------------
+    # ANALYSIS SUMMARY
+    # --------------------------------------------------------
+
+    analysis = st.session_state.analysis
+
+    if analysis:
+
+        with st.expander(
+            "🔍 AI Analysis — Reference Breakdown",
+            expanded=True,
         ):
 
-            st.session_state.selected_concept = i
-            st.session_state.storyboard = []
-            st.session_state.scene_prompts = {}
-            st.session_state.scene_frames = {}
+            col1, col2 = st.columns(2)
 
-            go("storyboard")
+            with col1:
+                st.write(
+                    "**Source Summary**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "source_summary"
+                        )
+                    )
+                )
 
-        st.divider()
+                st.write(
+                    "**Niche**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "niche"
+                        )
+                    )
+                )
 
-    if st.button(
-        "🏠 Kembali ke Home",
-        use_container_width=True
+                st.write(
+                    "**Main Subject**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "main_subject"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Hook**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "hook"
+                        )
+                    )
+                )
+
+            with col2:
+                st.write(
+                    "**Cause / Effect**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "cause_effect"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Emotional Goal**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "emotional_goal"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Pacing Logic**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "pacing_logic"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Payoff**"
+                )
+                st.write(
+                    safe_text(
+                        analysis.get(
+                            "payoff"
+                        )
+                    )
+                )
+
+            mechanics = analysis.get(
+                "key_visual_mechanics",
+                [],
+            )
+
+            if mechanics:
+                st.write(
+                    "**Key Visual Mechanics**"
+                )
+
+                for item in mechanics:
+                    st.write(
+                        f"• {item}"
+                    )
+
+            transformations = analysis.get(
+                "transformation_notes",
+                [],
+            )
+
+            if transformations:
+                st.write(
+                    "**Transformation Notes**"
+                )
+
+                for item in transformations:
+                    st.write(
+                        f"• {item}"
+                    )
+
+    st.divider()
+
+    st.subheader(
+        "🎯 Pilih 1 dari 3 konsep"
+    )
+
+    st.caption(
+        "AI membuat tepat 3 konsep. Pilih satu konsep "
+        "untuk dilanjutkan menjadi storyboard."
+    )
+
+    concepts = st.session_state.concepts
+
+    for index, concept in enumerate(
+        concepts
     ):
-        go("home")
+
+        title = safe_text(
+            concept.get(
+                "title",
+                f"Concept {index + 1}",
+            )
+        )
+
+        pitch = safe_text(
+            concept.get(
+                "one_line_pitch",
+                "",
+            )
+        )
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### {index + 1}. {title}"
+            )
+
+            if pitch:
+                st.write(
+                    f"**Pitch:** {pitch}"
+                )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+
+                st.write(
+                    "**Niche**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "niche"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Main Subject**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "main_subjects"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Hook**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "hook"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Story Arc**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "story_arc"
+                        )
+                    )
+                )
+
+            with col2:
+
+                st.write(
+                    "**Setting**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "setting"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Visual Direction**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "visual_direction"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Comedy / Drama Engine**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "comedy_or_drama_engine"
+                        )
+                    )
+                )
+
+                st.write(
+                    "**Ending Payoff**"
+                )
+                st.write(
+                    safe_text(
+                        concept.get(
+                            "ending_payoff"
+                        )
+                    )
+                )
+
+            st.write(
+                "**Why It Is Original**"
+            )
+            st.write(
+                safe_text(
+                    concept.get(
+                        "why_it_is_original"
+                    )
+                )
+            )
+
+            if st.button(
+                f"✅ Pilih Concept {index + 1}",
+                key=f"select_concept_{index}",
+                type="primary",
+                use_container_width=True,
+            ):
+
+                st.session_state.selected_concept = (
+                    concept
+                )
+
+                st.session_state.selected_concept_index = (
+                    index
+                )
+
+                st.session_state.storyboard = []
+                st.session_state.scene_prompts = {}
+                st.session_state.scene_frames = {}
+                st.session_state.current_scene = 1
+
+                go("storyboard")
 
 
 # ============================================================
-# STORYBOARD GENERATOR
+# STORYBOARD GENERATION
 # ============================================================
 
 def generate_storyboard():
 
     client = get_client()
 
-    if client is None:
-        st.error(
-            "Masukkan Gemini API Key terlebih dahulu."
-        )
+    if not client:
         return
 
     concept = selected_concept()
 
     if not concept:
-        st.error(
-            "Belum ada konsep yang dipilih."
+        st.warning(
+            "Pilih konsep terlebih dahulu."
         )
         return
 
-    duration = st.session_state.duration
-    total_scenes = scene_count(duration)
+    total_scenes = scene_count()
 
     prompt = f"""
-You are a professional storyboard director for AI video generation.
+You are a professional storyboard director.
 
-Create a complete storyboard for the selected concept.
+Create a complete storyboard for the selected
+original video concept.
 
-IMPORTANT:
+The video duration is:
+{st.session_state.duration}
 
-Target duration:
-{duration}
-
-EXACT number of scenes:
+The exact number of scenes MUST be:
 {total_scenes}
 
 Each scene is approximately 8 seconds.
 
-You MUST return exactly {total_scenes} scenes.
+IMPORTANT SCENE RULES:
 
-Do not return fewer scenes.
-Do not return more scenes.
+1. Return EXACTLY {total_scenes} scenes.
+2. Scene numbers must start at 1.
+3. Scene numbers must end at {total_scenes}.
+4. Do not skip scene numbers.
+5. Do not add extra scenes.
+6. Preserve the selected concept's core story.
+7. Preserve the main subject identity throughout.
+8. Keep important actions logically continuous.
+9. Every scene must connect naturally to the next.
+10. Scene {total_scenes} must contain the final payoff.
+11. Keep the sequence entertaining and easy to
+    understand without relying on text.
+12. Do not copy exact shots from the reference.
+13. Do not use recognizable copyrighted characters,
+    logos, brands, or exact dialogue.
+14. Keep the production family-friendly.
+15. If a dangerous action exists, convert only the
+    dangerous element into a clearly safe,
+    fake, simulated, toy, unplugged, or
+    non-functional version.
 
-LANGUAGE:
+CONTINUITY IS VERY IMPORTANT.
 
-All storyboard content must be written in Indonesian.
+For every scene, explicitly define:
 
-The final video will later be generated using Google Flow/Veo.
+- What the subject is doing.
+- Where the subject is.
+- Where important props are.
+- The subject's position.
+- The subject's movement direction.
+- The camera position.
+- The camera movement.
+- The visual state at the END of the scene.
+- What must continue into the NEXT scene.
 
-REFERENCE / CONCEPT:
+Do not randomly teleport subjects or props.
 
-Title:
-{safe_text(concept.get("title"))}
+Selected concept:
 
-Hook:
-{safe_text(concept.get("hook"))}
+{concept_text(concept)}
 
-Description:
-{safe_text(concept.get("description"))}
+Visual style:
+{st.session_state.visual_style}
 
-Main Subject:
-{safe_text(concept.get("main_subject"))}
+Aspect ratio:
+{st.session_state.aspect_ratio}
 
-Core Scene Sequence:
-{safe_text(concept.get("core_scene_sequence"))}
+Creative instruction:
+{st.session_state.custom_instruction}
 
-Action Sequence:
-{safe_text(concept.get("action_sequence"))}
-
-Micro Actions:
-{safe_text(concept.get("micro_actions"))}
-
-Visual Execution:
-{safe_text(concept.get("visual_execution"))}
-
-Ending Payoff:
-{safe_text(concept.get("ending_payoff"))}
-
-USER SETTINGS:
-
-Style:
-{st.session_state.style}
-
-Aspect Ratio:
-{st.session_state.aspect}
-
-Additional Creative Instruction:
-{st.session_state.creative_instruction}
-
-{ORIGINALITY_RULES}
-
-{ACTION_CONTINUITY_RULES}
-
-{SAFETY_RULES}
-
-
-CRITICAL STORYBOARD LOGIC:
-
-The storyboard must preserve the core comedic sequence.
-
-Do not randomly replace the main subject.
-
-Do not change the important action merely to make it original.
-
-Originality should come mainly from visual execution.
-
-Every important physical action must be represented as a sequence.
-
-For example:
-
-approach
-→ contact
-→ grip
-→ manipulation
-→ visible change
-→ result
-→ reaction
-
-Do not allow an object to suddenly appear already completed.
-
-Do not allow an object to magically change state.
-
-Do not skip an important cause-and-effect action.
-
-If an action is too long for one 8-second scene,
-continue it into the next scene.
-
-The next scene MUST begin from the ending state of the previous scene.
-
-IMPORTANT CONTINUITY:
-
-Scene 1 establishes the initial visual state.
-
-Scene 2 must continue from Scene 1's ending state.
-
-Scene 3 must continue from Scene 2's ending state.
-
-And so on.
-
-Each scene must explicitly describe:
-
-- starting state
-- action progression
-- ending state
-
-The ending state must be specific enough that a screenshot of the final frame
-could be used as the exact visual starting point for the next scene.
-
-Do not reset the character.
-
-Do not reset object positions.
-
-Do not randomly change wardrobe.
-
-Do not randomly change environment.
-
-Do not randomly change lighting direction.
-
-Do not randomly change camera geography.
-
-Do not randomly change the state of props.
-
-Only change established states when the current action visibly causes the change.
-
-
-RETURN ONLY VALID JSON.
-
-Use this exact structure:
+Return ONLY valid JSON:
 
 {{
-  "scenes": [
+  "storyboard": [
     {{
-      "scene_number": 1,
-      "duration_sec": 8,
+      "scene": 1,
+      "duration_seconds": 8,
       "purpose": "...",
-      "starting_state": "...",
       "visual": "...",
       "action": "...",
-      "micro_actions": [],
       "camera": "...",
-      "continuity": "...",
-      "ending_state": "...",
+      "subject_state": "...",
+      "prop_state": "...",
+      "end_state": "...",
+      "next_scene_continuity": "...",
       "audio": "...",
       "transition": "..."
     }}
   ]
 }}
-
-The "scenes" array MUST contain exactly {total_scenes} objects.
-
-Remember:
-
-Scene N ending_state
-must logically become
-Scene N+1 starting_state.
 """
 
-    try:
+    with st.spinner(
+        f"Membuat storyboard {total_scenes} scene..."
+    ):
 
-        raw = ask(
-            client,
-            prompt
-        )
+        try:
 
-        data = extract_json(raw)
-
-        scenes = data.get(
-            "scenes",
-            []
-        )
-
-        if len(scenes) != total_scenes:
-
-            raise ValueError(
-                f"Storyboard menghasilkan "
-                f"{len(scenes)} scene, "
-                f"seharusnya {total_scenes}."
+            raw_response = text_response(
+                client,
+                prompt,
             )
 
-        normalized = []
+            data = extract_json(
+                raw_response
+            )
 
-        for i, scene in enumerate(scenes, 1):
+            storyboard = data.get(
+                "storyboard",
+                [],
+            )
 
-            scene["scene_number"] = i
-            scene["duration_sec"] = 8
+            if len(storyboard) != total_scenes:
+                raise ValueError(
+                    f"Storyboard harus berisi tepat "
+                    f"{total_scenes} scene, tetapi AI "
+                    f"menghasilkan {len(storyboard)}."
+                )
 
-            if not isinstance(
-                scene.get("micro_actions"),
-                list
+            # ------------------------------------------------
+            # NORMALIZE SCENE NUMBERS
+            # ------------------------------------------------
+
+            normalized = []
+
+            for index, scene in enumerate(
+                storyboard
             ):
-                scene["micro_actions"] = []
 
-            normalized.append(scene)
+                scene = dict(scene)
 
-        st.session_state.storyboard = normalized
+                scene["scene"] = index + 1
 
-        st.session_state.scene_prompts = {}
-        st.session_state.scene_frames = {}
+                if not scene.get(
+                    "duration_seconds"
+                ):
+                    scene[
+                        "duration_seconds"
+                    ] = 8
 
-        st.success(
-            f"Storyboard berhasil dibuat: "
-            f"{total_scenes} scene."
+                normalized.append(
+                    scene
+                )
+
+            st.session_state.storyboard = (
+                normalized
+            )
+
+            st.session_state.scene_prompts = {}
+            st.session_state.scene_frames = {}
+            st.session_state.current_scene = 1
+
+            st.success(
+                f"Storyboard berhasil dibuat: "
+                f"{total_scenes} scene."
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Gagal membuat storyboard: {e}"
+            )
+
+
+# ============================================================
+# ACTION CONTINUITY ENGINE
+# ============================================================
+
+def build_action_continuity(
+    scene_number,
+):
+
+    storyboard = (
+        st.session_state.storyboard
+    )
+
+    if not storyboard:
+        return ""
+
+    current_index = scene_number - 1
+
+    if current_index < 0:
+        current_index = 0
+
+    if current_index >= len(
+        storyboard
+    ):
+        current_index = (
+            len(storyboard) - 1
         )
 
-    except Exception as e:
+    current_scene = storyboard[
+        current_index
+    ]
 
-        st.error(
-            f"Storyboard gagal dibuat: {e}"
-        )
+    previous_scene = None
+
+    if current_index > 0:
+        previous_scene = storyboard[
+            current_index - 1
+        ]
+
+    previous_text = ""
+
+    if previous_scene:
+
+        previous_text = f"""
+PREVIOUS SCENE STATE:
+
+Subject:
+{safe_text(previous_scene.get("subject_state"))}
+
+Props:
+{safe_text(previous_scene.get("prop_state"))}
+
+Ending state:
+{safe_text(previous_scene.get("end_state"))}
+
+Required continuity:
+{safe_text(previous_scene.get("next_scene_continuity"))}
+"""
+
+    current_text = f"""
+CURRENT SCENE:
+
+Scene number:
+{scene_number}
+
+Purpose:
+{safe_text(current_scene.get("purpose"))}
+
+Visual:
+{safe_text(current_scene.get("visual"))}
+
+Action:
+{safe_text(current_scene.get("action"))}
+
+Camera:
+{safe_text(current_scene.get("camera"))}
+
+Subject state:
+{safe_text(current_scene.get("subject_state"))}
+
+Prop state:
+{safe_text(current_scene.get("prop_state"))}
+
+Ending state:
+{safe_text(current_scene.get("end_state"))}
+"""
+
+    return f"""
+ACTION CONTINUITY ENGINE
+
+{previous_text}
+
+{current_text}
+
+CONTINUITY REQUIREMENTS:
+
+- Start the current scene from the logical
+  physical state established by the previous scene.
+- Keep the same main subject identity.
+- Keep wardrobe / appearance consistent.
+- Keep important props consistent.
+- Keep the environment geographically consistent.
+- Continue movement direction logically.
+- Do not teleport the subject.
+- Do not randomly change prop positions.
+- Do not reset the scene.
+- Preserve the intended action and comedic timing.
+- If the previous scene ended during an action,
+  continue that action naturally.
+- The final frame of the current scene must create
+  a logical starting point for the next scene.
+"""
 
 
 # ============================================================
@@ -1166,230 +1503,168 @@ Scene N+1 starting_state.
 
 def render_storyboard():
 
-    st.title("🎞️ Storyboard")
+    st.title("🧩 Storyboard")
 
     concept = selected_concept()
 
     if not concept:
-        st.warning(
+
+        st.info(
             "Belum ada konsep yang dipilih."
         )
 
-        if st.button("💡 Kembali ke Concepts"):
+        if st.button(
+            "← Kembali ke Concepts",
+            use_container_width=True,
+        ):
             go("concepts")
 
         return
 
-    total_scenes = scene_count(
-        st.session_state.duration
-    )
-
-    st.info(
-        f"Durasi: {st.session_state.duration}  |  "
-        f"Total: {total_scenes} scene  |  "
-        f"±8 detik / scene"
-    )
-
     st.subheader(
-        safe_text(concept.get("title"))
+        "Selected Concept"
+    )
+
+    st.markdown(
+        f"### {safe_text(concept.get('title'))}"
     )
 
     st.write(
-        safe_text(concept.get("description"))
+        safe_text(
+            concept.get(
+                "one_line_pitch"
+            )
+        )
     )
 
     st.divider()
 
-    if not st.session_state.storyboard:
+    total_scenes = scene_count()
 
-        st.warning(
-            "Storyboard belum dibuat."
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Duration",
+            st.session_state.duration,
         )
 
-        if st.button(
-            "🎬 GENERATE STORYBOARD",
-            type="primary",
-            use_container_width=True
-        ):
+    with col2:
+        st.metric(
+            "Scenes",
+            total_scenes,
+        )
 
-            with st.spinner(
-                "AI sedang menyusun storyboard..."
-            ):
-                generate_storyboard()
+    with col3:
+        st.metric(
+            "Scene Length",
+            "≈ 8 sec",
+        )
 
-        if st.button(
-            "⬅️ Kembali ke Concepts",
-            use_container_width=True
-        ):
-            go("concepts")
-
-        return
-
-    st.success(
-        f"Storyboard siap — "
-        f"{len(st.session_state.storyboard)} scene"
+    st.info(
+        f"Storyboard akan dibuat menjadi "
+        f"tepat {total_scenes} scene."
     )
+
+    if st.button(
+        "🧩 GENERATE STORYBOARD",
+        type="primary",
+        use_container_width=True,
+    ):
+        generate_storyboard()
+
+    if not st.session_state.storyboard:
+        return
 
     st.divider()
 
-    for scene in st.session_state.storyboard:
+    st.subheader(
+        f"📋 {len(st.session_state.storyboard)} Scenes"
+    )
+
+    for scene in (
+        st.session_state.storyboard
+    ):
 
         number = scene.get(
-            "scene_number",
-            0
+            "scene",
+            0,
+        )
+
+        title = (
+            f"Scene {number}"
         )
 
         with st.expander(
-            f"🎬 Scene {number} — 8 detik",
-            expanded=False
+            title,
+            expanded=False,
         ):
 
             st.write(
-                "**Purpose:**"
+                f"**Purpose:** "
+                f"{safe_text(scene.get('purpose'))}"
             )
 
             st.write(
-                safe_text(
-                    scene.get("purpose")
-                )
+                f"**Visual:** "
+                f"{safe_text(scene.get('visual'))}"
             )
 
             st.write(
-                "**Starting State:**"
+                f"**Action:** "
+                f"{safe_text(scene.get('action'))}"
             )
 
             st.write(
-                safe_text(
-                    scene.get("starting_state")
-                )
+                f"**Camera:** "
+                f"{safe_text(scene.get('camera'))}"
             )
 
             st.write(
-                "**Visual:**"
+                f"**Subject State:** "
+                f"{safe_text(scene.get('subject_state'))}"
             )
 
             st.write(
-                safe_text(
-                    scene.get("visual")
-                )
+                f"**Prop State:** "
+                f"{safe_text(scene.get('prop_state'))}"
             )
 
             st.write(
-                "**Action:**"
+                f"**End State:** "
+                f"{safe_text(scene.get('end_state'))}"
             )
 
             st.write(
-                safe_text(
-                    scene.get("action")
-                )
+                f"**Next Scene Continuity:** "
+                f"{safe_text(scene.get('next_scene_continuity'))}"
             )
 
             st.write(
-                "**Micro Actions:**"
-            )
-
-            micro = scene.get(
-                "micro_actions",
-                []
-            )
-
-            for i, item in enumerate(
-                micro,
-                1
-            ):
-
-                st.write(
-                    f"{i}. {safe_text(item)}"
-                )
-
-            st.write(
-                "**Camera:**"
+                f"**Audio:** "
+                f"{safe_text(scene.get('audio'))}"
             )
 
             st.write(
-                safe_text(
-                    scene.get("camera")
-                )
-            )
-
-            st.write(
-                "**Continuity:**"
-            )
-
-            st.write(
-                safe_text(
-                    scene.get("continuity")
-                )
-            )
-
-            st.write(
-                "**Ending State:**"
-            )
-
-            st.write(
-                safe_text(
-                    scene.get("ending_state")
-                )
-            )
-
-            st.write(
-                "**Audio:**"
-            )
-
-            st.write(
-                safe_text(
-                    scene.get("audio")
-                )
-            )
-
-            st.write(
-                "**Transition:**"
-            )
-
-            st.write(
-                safe_text(
-                    scene.get("transition")
-                )
+                f"**Transition:** "
+                f"{safe_text(scene.get('transition'))}"
             )
 
     st.divider()
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        if st.button(
-            "🔄 Regenerate Storyboard",
-            use_container_width=True
-        ):
-
-            st.session_state.storyboard = []
-            st.session_state.scene_prompts = {}
-            st.session_state.scene_frames = {}
-
-            st.rerun()
-
-    with col2:
-
-        if st.button(
-            "🎥 Lanjut ke Scene Generator",
-            type="primary",
-            use_container_width=True
-        ):
-
-            st.session_state.current_scene = 1
-
-            go("scenes")
-
     if st.button(
-        "💡 Kembali ke Concepts",
-        use_container_width=True
+        "➡️ Lanjut ke Scene Generator",
+        type="primary",
+        use_container_width=True,
     ):
+        st.session_state.current_scene = 1
+        go("scenes")
 
-        go("concepts")
-    # ============================================================
-# PART 3/3
-# SCENE GENERATOR + SCREENSHOT CONTINUITY + SEO + NAVIGATION
+
+# ============================================================
+# END PART 2
+# ============================================================
+# PART 3 — SCENE GENERATOR + SEO + ROUTER
 # ============================================================
 
 
@@ -1397,191 +1672,126 @@ def render_storyboard():
 # SCENE PROMPT GENERATOR
 # ============================================================
 
-def generate_scene_prompt(scene_number: int):
+def generate_scene_prompt(scene_number):
 
     client = get_client()
 
-    if client is None:
-        st.error(
-            "Masukkan Gemini API Key terlebih dahulu."
+    if not client:
+        return
+
+    storyboard = st.session_state.storyboard
+
+    if not storyboard:
+        st.warning(
+            "Storyboard belum dibuat."
         )
         return
 
-    scenes = st.session_state.storyboard
+    if scene_number < 1:
+        scene_number = 1
 
-    if not scenes:
-        st.error(
-            "Storyboard belum tersedia."
-        )
-        return
+    if scene_number > len(storyboard):
+        scene_number = len(storyboard)
 
-    if scene_number < 1 or scene_number > len(scenes):
-        st.error(
-            "Nomor scene tidak valid."
-        )
-        return
-
-    # IMPORTANT:
-    # Scene 1 = index 0
-    # Scene 2 = index 1
-    # Scene 3 = index 2
-    scene = scenes[scene_number - 1]
+    scene = storyboard[
+        scene_number - 1
+    ]
 
     concept = selected_concept()
 
-    parts = []
-
-    # ========================================================
-    # PREVIOUS FRAME
-    # ========================================================
-
-    previous_frame = None
-
-    if scene_number > 1:
-
-        previous_frame = st.session_state.scene_frames.get(
-            scene_number - 1
-        )
-
-        if not previous_frame:
-            st.warning(
-                f"Upload screenshot final Scene "
-                f"{scene_number - 1} terlebih dahulu."
-            )
-            return
-
-        parts.extend(
-            file_part(
-                client,
-                previous_frame
-            )
-        )
-
-    # ========================================================
-    # PREVIOUS SCENE DATA
-    # ========================================================
-
-    previous_info = previous_scene_info(
+    continuity = build_action_continuity(
         scene_number
     )
 
-    # ========================================================
-    # PROMPT
-    # ========================================================
+    previous_frame_note = ""
 
-    if scene_number == 1:
+    if scene_number > 1:
 
-        continuity_instruction = """
-This is Scene 1.
+        previous_frame_note = """
+A LAST-FRAME SCREENSHOT FROM THE PREVIOUS
+SCENE MAY BE PROVIDED.
 
-Establish the initial visual state clearly.
+If it is provided, treat that image as the
+PRIMARY VISUAL CONTINUITY ANCHOR.
 
-The character, environment, props, wardrobe,
-lighting and camera geography must be stable.
+The current scene MUST begin from the
+visual state shown in that screenshot.
 
-Do not skip important physical actions.
+Preserve:
+- same main subject identity
+- same appearance
+- same wardrobe / markings
+- same important props
+- same environment
+- same spatial geography
+- same lighting direction
+- same camera-side geography
+- same physical position
+- same ongoing motion state
+
+Do NOT treat the screenshot as a new reference
+to redesign.
+
+Continue directly from it.
+
+Do NOT reset the scene.
+Do NOT teleport the subject.
+Do NOT randomly replace props.
+Do NOT change the main subject.
+
+The current scene may develop the action
+forward, but its opening visual state must
+logically continue from the uploaded frame.
 """
 
     else:
 
-        continuity_instruction = f"""
-THIS IS SCENE {scene_number}.
+        previous_frame_note = """
+This is Scene 1.
 
-The uploaded image is the FINAL FRAME of Scene {scene_number - 1}.
+There is no previous scene screenshot.
 
-IMPORTANT:
-
-The uploaded previous-scene image is NOT merely a visual reference.
-
-It is the EXACT STARTING VISUAL STATE for this scene.
-
-Start the new scene from the exact state shown in that image.
-
-Preserve:
-
-- character identity
-- character appearance
-- character pose
-- body position
-- facial expression
-- wardrobe
-- prop identity
-- prop position
-- object state
-- environment
-- background
-- lighting direction
-- shadows
-- camera geography
-- spatial relationships
-- motion state
-
-DO NOT:
-
-- reset the character
-- recreate the scene from scratch
-- change the character
-- change the environment
-- randomly move props
-- randomly change object states
-- randomly change wardrobe
-- randomly change lighting
-- teleport objects
-- jump to a later action
-- make an object already completed
-- restart an action that was already completed
-
-The current scene must continue naturally from the exact final state
-shown in the uploaded image.
-
-Only change the established visual state when the CURRENT ACTION
-visibly causes that change.
-
-The first moment of this scene should visually connect directly
-to the uploaded previous final frame.
+Establish the main subject, environment,
+props, visual style, camera geography and
+starting physical state clearly so later
+scenes can maintain continuity.
 """
 
     prompt = f"""
-You are creating ONE production-ready prompt for Google Flow / Veo.
+You are an expert prompt engineer for
+Google Flow / Veo video generation.
 
-The final prompt MUST be written entirely in ENGLISH.
+Create ONE production-ready video prompt
+for Scene {scene_number}.
 
-Do not include Indonesian explanations inside the final prompt.
+The final prompt MUST be written in ENGLISH.
 
-============================================================
-PROJECT
-============================================================
+The rest of this application uses Indonesian,
+but the final Flow/Veo execution prompt must
+be English.
 
-Concept:
-{safe_text(concept.get("title"))}
+SELECTED CONCEPT:
 
-Concept Description:
-{safe_text(concept.get("description"))}
+{concept_text(concept)}
 
-Main Subject:
-{safe_text(concept.get("main_subject"))}
+PROJECT SETTINGS:
 
-Visual Style:
-{st.session_state.style}
+Visual style:
+{st.session_state.visual_style}
 
-Aspect Ratio:
-{st.session_state.aspect}
+Aspect ratio:
+{st.session_state.aspect_ratio}
 
 Duration:
-8 seconds
+{st.session_state.duration}
 
-============================================================
-CURRENT SCENE
-============================================================
+Current scene:
+{scene_number} of {len(storyboard)}
 
-Scene Number:
-{scene_number}
+STORYBOARD SCENE:
 
 Purpose:
 {safe_text(scene.get("purpose"))}
-
-Starting State:
-{safe_text(scene.get("starting_state"))}
 
 Visual:
 {safe_text(scene.get("visual"))}
@@ -1589,17 +1799,20 @@ Visual:
 Action:
 {safe_text(scene.get("action"))}
 
-Micro Actions:
-{safe_text(scene.get("micro_actions"))}
-
 Camera:
 {safe_text(scene.get("camera"))}
 
-Continuity:
-{safe_text(scene.get("continuity"))}
+Subject state:
+{safe_text(scene.get("subject_state"))}
 
-Ending State:
-{safe_text(scene.get("ending_state"))}
+Prop state:
+{safe_text(scene.get("prop_state"))}
+
+End state:
+{safe_text(scene.get("end_state"))}
+
+Next scene continuity:
+{safe_text(scene.get("next_scene_continuity"))}
 
 Audio:
 {safe_text(scene.get("audio"))}
@@ -1607,126 +1820,131 @@ Audio:
 Transition:
 {safe_text(scene.get("transition"))}
 
-============================================================
-PREVIOUS SCENE
-============================================================
+ACTION CONTINUITY:
 
-{previous_info}
+{continuity}
 
-============================================================
-CONTINUITY INSTRUCTION
-============================================================
+{previous_frame_note}
 
-{continuity_instruction}
+ORIGINALITY RULES:
 
-============================================================
-ACTION CONTINUITY
-============================================================
+- Keep the main subject/type consistent with
+  the selected concept and reference logic.
+- Preserve the intended core action and
+  comedic/dramatic timing.
+- Do not randomly replace the main subject.
+- Do not copy recognizable characters.
+- Do not include logos, brands or watermarks.
+- Do not reproduce exact dialogue from a
+  copyrighted reference.
+- Use original visual execution.
+- Use original camera execution.
+- Use original lighting and production details.
+- Keep the content family-friendly.
+- Do not imitate a living creator's distinctive
+  style.
+- Do not recreate an exact shot-for-shot copy.
 
-{ACTION_CONTINUITY_RULES}
+SAFETY:
 
-Every important physical action must be visible.
+If the scene contains an inherently dangerous
+action, do NOT provide instructions that teach
+a person or animal how to perform that action.
 
-Do not compress multiple important actions into one unexplained
-state change.
+Instead, change ONLY the dangerous element into
+an obviously fake, simulated, unplugged, toy,
+non-functional, or otherwise harmless version.
 
-If a character needs to interact with an object:
+Keep the surrounding narrative logic and
+comedic timing intact.
 
-show the approach,
-then physical contact,
-then the interaction,
-then the visible change,
-then the result,
-then the reaction.
+PROMPT QUALITY:
 
-Do not make the result appear before the action that causes it.
+Describe:
+- subject
+- appearance
+- environment
+- important props
+- action
+- physical movement
+- camera
+- framing
+- lens feel
+- lighting
+- atmosphere
+- facial/body expression where relevant
+- timing
+- sound design
+- ending visual state
 
-Objects must maintain logical physical states.
+Make the prompt practical for a video model.
 
-============================================================
-ORIGINALITY
-============================================================
+Do not add explanations before or after it.
 
-{ORIGINALITY_RULES}
-
-============================================================
-SAFETY
-============================================================
-
-{SAFETY_RULES}
-
-============================================================
-VIDEO GENERATION REQUIREMENTS
-============================================================
-
-Create a natural 8-second continuous video shot.
-
-The animation must have clear cause-and-effect.
-
-Preserve the main subject.
-
-Preserve the core comedic action.
-
-Preserve the important story beat.
-
-Make the visual execution original through secondary details,
-cinematography, environment, lighting, textures, expressions,
-and visual design.
-
-Do not copy recognizable characters, brands, logos,
-exact dialogue, exact shots, or distinctive creator/studio style.
-
-Avoid unexplained cuts.
-
-Avoid teleportation.
-
-Avoid sudden object state changes.
-
-Avoid sudden character state changes.
-
-Avoid impossible continuity.
-
-The ending frame must clearly establish the ending state described
-in the storyboard so it can be used as the starting point for the
-next scene.
-
-============================================================
-FINAL OUTPUT
-============================================================
-
-Return ONLY the final production prompt.
-
-No explanation.
-No JSON.
-No headings outside the prompt.
-No Indonesian text.
-
-Write a detailed but efficient prompt suitable for Google Flow / Veo.
+Return ONLY the final English video prompt.
 """
 
-    try:
+    parts = []
 
-        raw = ask(
-            client,
-            prompt,
-            parts
+    # --------------------------------------------------------
+    # PREVIOUS SCENE LAST-FRAME
+    # --------------------------------------------------------
+
+    if scene_number > 1:
+
+        previous_frame = (
+            st.session_state.scene_frames.get(
+                scene_number - 1
+            )
         )
 
-        final_prompt = raw.strip()
+        if previous_frame:
 
-        st.session_state.scene_prompts[
-            scene_number
-        ] = final_prompt
+            parts.extend(
+                file_part(
+                    client,
+                    previous_frame,
+                )
+            )
 
-        st.success(
-            f"Prompt Scene {scene_number} berhasil dibuat."
-        )
+    # --------------------------------------------------------
+    # GENERATE
+    # --------------------------------------------------------
 
-    except Exception as e:
+    with st.spinner(
+        f"Generating Flow/Veo prompt for Scene "
+        f"{scene_number}..."
+    ):
 
-        st.error(
-            f"Generate prompt gagal: {e}"
-        )
+        try:
+
+            result = text_response(
+                client,
+                prompt,
+                parts,
+            )
+
+            result = result.strip()
+
+            if not result:
+                raise ValueError(
+                    "Gemini mengembalikan prompt kosong."
+                )
+
+            st.session_state.scene_prompts[
+                scene_number
+            ] = result
+
+            st.success(
+                f"Prompt Scene {scene_number} berhasil dibuat."
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Gagal membuat prompt Scene "
+                f"{scene_number}: {e}"
+            )
 
 
 # ============================================================
@@ -1739,266 +1957,297 @@ def render_scenes():
         "🎥 Scene Generator"
     )
 
-    scenes = st.session_state.storyboard
+    storyboard = (
+        st.session_state.storyboard
+    )
 
-    if not scenes:
+    if not storyboard:
 
-        st.warning(
+        st.info(
             "Storyboard belum tersedia."
         )
 
         if st.button(
-            "🎞️ Kembali ke Storyboard"
+            "← Kembali ke Storyboard",
+            use_container_width=True,
         ):
             go("storyboard")
 
         return
 
-    total = len(scenes)
-
-    if "current_scene" not in st.session_state:
-        st.session_state.current_scene = 1
+    total_scenes = len(
+        storyboard
+    )
 
     current = st.session_state.current_scene
 
     if current < 1:
         current = 1
 
-    if current > total:
-        current = total
+    if current > total_scenes:
+        current = total_scenes
 
     st.session_state.current_scene = current
 
-    st.info(
-        f"Scene {current} / {total}  |  "
-        f"Durasi scene: 8 detik"
-    )
+    # --------------------------------------------------------
+    # HEADER
+    # --------------------------------------------------------
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Current Scene",
+            f"{current}/{total_scenes}",
+        )
+
+    with col2:
+        st.metric(
+            "Duration",
+            st.session_state.duration,
+        )
+
+    with col3:
+        st.metric(
+            "Scene Length",
+            "≈ 8 sec",
+        )
 
     st.progress(
-        current / total
+        current / total_scenes
     )
 
-    scene = scenes[current - 1]
+    st.divider()
+
+    # --------------------------------------------------------
+    # CURRENT STORYBOARD
+    # --------------------------------------------------------
+
+    scene = storyboard[
+        current - 1
+    ]
 
     st.subheader(
         f"🎬 Scene {current}"
     )
 
-    st.write(
-        f"**Purpose:** "
-        f"{safe_text(scene.get('purpose'))}"
-    )
-
-    st.write(
-        f"**Starting State:** "
-        f"{safe_text(scene.get('starting_state'))}"
-    )
-
-    st.write(
-        f"**Visual:** "
-        f"{safe_text(scene.get('visual'))}"
-    )
-
-    st.write(
-        f"**Action:** "
-        f"{safe_text(scene.get('action'))}"
-    )
-
-    micro = scene.get(
-        "micro_actions",
-        []
-    )
-
-    if micro:
+    with st.container(
+        border=True
+    ):
 
         st.write(
-            "**Micro Actions:**"
+            f"**Purpose:** "
+            f"{safe_text(scene.get('purpose'))}"
         )
 
-        for i, item in enumerate(
-            micro,
-            1
-        ):
+        st.write(
+            f"**Visual:** "
+            f"{safe_text(scene.get('visual'))}"
+        )
 
-            st.write(
-                f"{i}. {safe_text(item)}"
-            )
+        st.write(
+            f"**Action:** "
+            f"{safe_text(scene.get('action'))}"
+        )
 
-    st.write(
-        f"**Ending State:** "
-        f"{safe_text(scene.get('ending_state'))}"
-    )
+        st.write(
+            f"**Camera:** "
+            f"{safe_text(scene.get('camera'))}"
+        )
 
-    st.divider()
+        st.write(
+            f"**Subject State:** "
+            f"{safe_text(scene.get('subject_state'))}"
+        )
 
-    # ========================================================
-    # SCREENSHOT CONTINUITY
-    # ========================================================
+        st.write(
+            f"**Prop State:** "
+            f"{safe_text(scene.get('prop_state'))}"
+        )
+
+        st.write(
+            f"**End State:** "
+            f"{safe_text(scene.get('end_state'))}"
+        )
+
+        st.write(
+            f"**Continuity:** "
+            f"{safe_text(scene.get('next_scene_continuity'))}"
+        )
+
+    # --------------------------------------------------------
+    # PREVIOUS FRAME
+    # --------------------------------------------------------
 
     if current > 1:
 
         st.subheader(
-            f"📸 Screenshot Final Scene {current - 1}"
+            "🖼️ Previous Scene Last Frame"
         )
 
-        st.info(
-            "Screenshot ini menjadi EXACT STARTING STATE "
-            "untuk Scene berikutnya."
+        st.caption(
+            "Upload screenshot/frame terakhir dari "
+            f"Scene {current - 1}. Frame ini digunakan "
+            "sebagai continuity anchor untuk Scene "
+            f"{current}."
         )
 
-        frame_key = (
-            f"scene_frame_{current - 1}"
-        )
-
-        uploaded_frame = st.file_uploader(
-            f"Upload screenshot final Scene {current - 1}",
+        uploaded_previous_frame = st.file_uploader(
+            f"Upload last frame Scene {current - 1}",
             type=[
                 "png",
                 "jpg",
                 "jpeg",
-                "webp"
+                "webp",
             ],
-            key=frame_key
+            key=f"scene_frame_{current - 1}",
         )
 
-        if uploaded_frame:
+        if uploaded_previous_frame:
 
             st.session_state.scene_frames[
                 current - 1
-            ] = uploaded_frame
+            ] = uploaded_previous_frame
 
             st.success(
-                f"Screenshot Scene {current - 1} tersimpan."
-            )
-
-        elif not st.session_state.scene_frames.get(
-            current - 1
-        ):
-
-            st.warning(
-                f"Scene {current} membutuhkan screenshot "
-                f"final Scene {current - 1}."
+                f"Last frame Scene {current - 1} siap "
+                f"digunakan untuk Scene {current}."
             )
 
     else:
 
-        st.success(
-            "Scene 1 dimulai dari reference + storyboard."
+        st.info(
+            "Scene 1 adalah titik awal video. "
+            "Tidak perlu upload previous frame."
         )
+
+    # --------------------------------------------------------
+    # GENERATE BUTTON
+    # --------------------------------------------------------
 
     st.divider()
 
-    # ========================================================
-    # GENERATE
-    # ========================================================
-
-    existing_prompt = st.session_state.scene_prompts.get(
-        current
-    )
-
-    if current > 1 and not st.session_state.scene_frames.get(
-        current - 1
+    if st.button(
+        f"✨ GENERATE PROMPT SCENE {current}",
+        type="primary",
+        use_container_width=True,
     ):
-
-        st.warning(
-            "Upload screenshot scene sebelumnya "
-            "sebelum membuat prompt."
-        )
-
-    else:
-
-        if st.button(
-            f"✨ Generate Prompt Scene {current}",
-            type="primary",
-            use_container_width=True
-        ):
-
-            with st.spinner(
-                f"AI sedang membuat prompt Scene {current}..."
-            ):
-
-                generate_scene_prompt(
-                    current
-                )
-
-    existing_prompt = st.session_state.scene_prompts.get(
-        current
-    )
-
-    if existing_prompt:
-
-        st.divider()
-
-        st.subheader(
-            "📋 Flow / Veo Prompt"
-        )
-
-        st.caption(
-            "Prompt final selalu dalam English."
-        )
-
-        st.text_area(
-            "Copy prompt ini ke Google Flow / Veo",
-            value=existing_prompt,
-            height=400,
-            key=f"prompt_display_{current}"
-        )
-
-        st.success(
-            "Setelah video scene ini selesai dibuat, "
-            "ambil screenshot frame terakhirnya."
-        )
-
-    # ========================================================
-    # NAVIGATION
-    # ========================================================
-
-    st.divider()
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
 
         if current > 1:
 
-            if st.button(
-                "⬅️ Previous",
-                use_container_width=True
+            if not st.session_state.scene_frames.get(
+                current - 1
             ):
 
-                st.session_state.current_scene -= 1
-                st.rerun()
+                st.warning(
+                    f"Upload last frame Scene "
+                    f"{current - 1} terlebih dahulu "
+                    f"agar continuity Scene {current} "
+                    "terjaga."
+                )
 
-    with col2:
+                return
+
+        generate_scene_prompt(
+            current
+        )
+
+    # --------------------------------------------------------
+    # GENERATED PROMPT
+    # --------------------------------------------------------
+
+    generated = (
+        st.session_state.scene_prompts.get(
+            current
+        )
+    )
+
+    if generated:
+
+        st.subheader(
+            "📋 Final Flow / Veo Prompt"
+        )
+
+        st.text_area(
+            "English prompt",
+            value=generated,
+            height=420,
+            key=f"scene_prompt_display_{current}",
+        )
+
+        st.caption(
+            "Copy prompt ini ke Google Flow/Veo "
+            "untuk membuat scene."
+        )
+
+    # --------------------------------------------------------
+    # NAVIGATION
+    # --------------------------------------------------------
+
+    st.divider()
+
+    nav1, nav2, nav3 = st.columns(3)
+
+    with nav1:
 
         if st.button(
-            "🎞️ Storyboard",
-            use_container_width=True
+            "⬅️ Previous",
+            disabled=(current <= 1),
+            use_container_width=True,
+        ):
+
+            st.session_state.current_scene = (
+                current - 1
+            )
+
+            st.rerun()
+
+    with nav2:
+
+        if st.button(
+            "🧩 Storyboard",
+            use_container_width=True,
         ):
 
             go("storyboard")
 
-    with col3:
+    with nav3:
 
-        if current < total:
+        if st.button(
+            "Next ➡️",
+            disabled=(current >= total_scenes),
+            use_container_width=True,
+        ):
 
-            if st.button(
-                "Next ➡️",
-                use_container_width=True
-            ):
+            st.session_state.current_scene = (
+                current + 1
+            )
 
-                st.session_state.current_scene += 1
-                st.rerun()
+            st.rerun()
 
-        else:
+    # --------------------------------------------------------
+    # SCENE STATUS
+    # --------------------------------------------------------
 
-            if st.button(
-                "🔍 Generate SEO",
-                type="primary",
-                use_container_width=True
-            ):
+    st.divider()
 
-                go("seo")
+    generated_count = len(
+        st.session_state.scene_prompts
+    )
+
+    frame_count = len(
+        st.session_state.scene_frames
+    )
+
+    st.write(
+        f"**Progress:** {generated_count}/{total_scenes} "
+        f"scene prompts generated."
+    )
+
+    st.write(
+        f"**Continuity frames:** {frame_count}/"
+        f"{max(total_scenes - 1, 0)} uploaded."
+    )
 
 
 # ============================================================
@@ -2009,76 +2258,92 @@ def generate_seo():
 
     client = get_client()
 
-    if client is None:
-        st.error(
-            "Masukkan Gemini API Key terlebih dahulu."
-        )
+    if not client:
         return
 
     concept = selected_concept()
 
-    prompt = f"""
-You are a YouTube Shorts and video SEO specialist.
+    if not concept:
+        st.warning(
+            "Pilih konsep terlebih dahulu."
+        )
+        return
 
-Create SEO metadata for this original AI-generated video.
+    prompt = f"""
+You are a YouTube SEO strategist.
+
+Create SEO metadata for an original,
+family-friendly video based on this concept.
 
 Concept:
-{safe_text(concept.get("title"))}
 
-Description:
-{safe_text(concept.get("description"))}
-
-Main Subject:
-{safe_text(concept.get("main_subject"))}
+{concept_text(concept)}
 
 Duration:
 {st.session_state.duration}
 
-Visual Style:
-{st.session_state.style}
+Aspect ratio:
+{st.session_state.aspect_ratio}
 
-Create:
+Visual style:
+{st.session_state.visual_style}
 
-- 5 clickable Indonesian titles
-- 1 recommended title
-- 1 Indonesian description
-- 15 relevant hashtags
-- 15 search keywords
-- 3 thumbnail text ideas
+Requirements:
 
-Do not use misleading claims.
-
-Do not mention copyrighted characters or brands unless they are
-actually part of the user's own original content.
+- Create a strong but natural YouTube title.
+- Do not use misleading clickbait.
+- Do not copy the reference title.
+- Create a concise description.
+- Create relevant search keywords.
+- Create relevant hashtags.
+- Keep everything original.
+- Keep it suitable for mainstream YouTube.
 
 Return ONLY valid JSON:
 
 {{
-  "titles": [],
-  "recommended_title": "",
-  "description": "",
-  "hashtags": [],
-  "keywords": [],
-  "thumbnail_text": []
+  "title": "...",
+  "description": "...",
+  "keywords": [
+    "...",
+    "...",
+    "...",
+    "..."
+  ],
+  "hashtags": [
+    "...",
+    "...",
+    "..."
+  ]
 }}
 """
 
-    try:
+    with st.spinner(
+        "Generating YouTube SEO..."
+    ):
 
-        raw = ask(
-            client,
-            prompt
-        )
+        try:
 
-        data = extract_json(raw)
+            raw = text_response(
+                client,
+                prompt,
+            )
 
-        st.session_state.seo = data
+            data = extract_json(
+                raw
+            )
 
-    except Exception as e:
+            st.session_state.seo = data
 
-        st.error(
-            f"SEO gagal dibuat: {e}"
-        )
+            st.success(
+                "SEO berhasil dibuat."
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Gagal membuat SEO: {e}"
+            )
 
 
 # ============================================================
@@ -2088,65 +2353,87 @@ Return ONLY valid JSON:
 def render_seo():
 
     st.title(
-        "🚀 YouTube SEO"
+        "🔎 YouTube SEO"
     )
 
-    if not st.session_state.seo:
+    if not selected_concept():
 
         st.info(
-            "SEO metadata belum dibuat."
+            "Pilih konsep terlebih dahulu."
         )
 
         if st.button(
-            "✨ Generate SEO",
-            type="primary",
-            use_container_width=True
+            "← Ke Concepts",
+            use_container_width=True,
         ):
+            go("concepts")
 
-            with st.spinner(
-                "AI sedang membuat SEO..."
-            ):
+        return
 
-                generate_seo()
+    concept = selected_concept()
+
+    st.write(
+        f"**Concept:** "
+        f"{safe_text(concept.get('title'))}"
+    )
+
+    if st.button(
+        "🚀 GENERATE SEO",
+        type="primary",
+        use_container_width=True,
+    ):
+
+        generate_seo()
 
     seo = st.session_state.seo
 
     if not seo:
         return
 
-    st.subheader(
-        "🔥 Recommended Title"
-    )
-
-    st.code(
-        safe_text(
-            seo.get("recommended_title")
-        )
-    )
+    st.divider()
 
     st.subheader(
-        "🎯 Other Title Ideas"
+        "📌 Title"
     )
 
-    for i, title in enumerate(
-        seo.get("titles", []),
-        1
-    ):
-
-        st.write(
-            f"{i}. {safe_text(title)}"
-        )
+    st.text_area(
+        "YouTube Title",
+        value=safe_text(
+            seo.get("title")
+        ),
+        height=80,
+        key="seo_title_display",
+    )
 
     st.subheader(
         "📝 Description"
     )
 
     st.text_area(
-        "Description",
+        "YouTube Description",
         value=safe_text(
             seo.get("description")
         ),
-        height=180
+        height=220,
+        key="seo_description_display",
+    )
+
+    st.subheader(
+        "🔑 Keywords"
+    )
+
+    keywords = seo.get(
+        "keywords",
+        [],
+    )
+
+    st.text_area(
+        "Keywords",
+        value=", ".join(
+            str(x) for x in keywords
+        ),
+        height=100,
+        key="seo_keywords_display",
     )
 
     st.subheader(
@@ -2155,156 +2442,51 @@ def render_seo():
 
     hashtags = seo.get(
         "hashtags",
-        []
+        [],
     )
 
-    st.code(
-        " ".join(
-            safe_text(x)
-            for x in hashtags
-        )
+    st.text_area(
+        "Hashtags",
+        value=" ".join(
+            str(x) for x in hashtags
+        ),
+        height=80,
+        key="seo_hashtags_display",
     )
-
-    st.subheader(
-        "🔎 Keywords"
-    )
-
-    keywords = seo.get(
-        "keywords",
-        []
-    )
-
-    st.code(
-        ", ".join(
-            safe_text(x)
-            for x in keywords
-        )
-    )
-
-    st.subheader(
-        "🖼️ Thumbnail Text"
-    )
-
-    for item in seo.get(
-        "thumbnail_text",
-        []
-    ):
-
-        st.write(
-            f"• {safe_text(item)}"
-        )
-
-    st.divider()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        if st.button(
-            "🎥 Kembali ke Scene",
-            use_container_width=True
-        ):
-
-            go("scenes")
-
-    with col2:
-
-        if st.button(
-            "🆕 New Project",
-            type="primary",
-            use_container_width=True
-        ):
-
-            reset_project()
-            st.rerun()
 
 
 # ============================================================
-# SIDEBAR
+# PAGE ROUTER
 # ============================================================
 
-def render_sidebar():
+page = st.session_state.page
 
-    st.sidebar.title(
-        "⚙️ Settings"
-    )
-
-    st.sidebar.text_input(
-        "Gemini API Key",
-        type="password",
-        key="api_key",
-        placeholder="AIza..."
-    )
-
-    st.sidebar.divider()
-
-    st.sidebar.caption(
-        "Workflow"
-    )
-
-    pages = [
-        ("🏠 Home", "home"),
-        ("💡 Concepts", "concepts"),
-        ("🎞️ Storyboard", "storyboard"),
-        ("🎥 Scene Generator", "scenes"),
-        ("🚀 SEO", "seo"),
-    ]
-
-    for label, page in pages:
-
-        if st.sidebar.button(
-            label,
-            use_container_width=True
-        ):
-
-            st.session_state.page = page
-            st.rerun()
-
-    st.sidebar.divider()
-
-    if st.sidebar.button(
-        "🆕 New Project",
-        use_container_width=True
-    ):
-
-        reset_project()
-        st.rerun()
-
-
-# ============================================================
-# APP ROUTER
-# ============================================================
-
-st.set_page_config(
-    page_title="UGC Shorts AI Remix Engine",
-    page_icon="🎬",
-    layout="wide"
-)
-
-render_sidebar()
-
-
-if st.session_state.page == "home":
+if page == "home":
 
     render_home()
 
-elif st.session_state.page == "concepts":
+elif page == "concepts":
 
     render_concepts()
 
-elif st.session_state.page == "storyboard":
+elif page == "storyboard":
 
     render_storyboard()
 
-elif st.session_state.page == "scenes":
+elif page == "scenes":
 
     render_scenes()
 
-elif st.session_state.page == "seo":
+elif page == "seo":
 
     render_seo()
 
 else:
 
     st.session_state.page = "home"
-    st.rerun()
+
+    render_home()
+
+
+# ============================================================
+# END PART 3
