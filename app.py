@@ -13,7 +13,7 @@ from google.genai import types
 
 st.set_page_config(
     page_title="UGC Remix Studio",
-    page_icon="🎬",
+    page_icon="ðŸŽ¬",
     layout="wide",
 )
 
@@ -46,9 +46,9 @@ STYLE_OPTIONS = [
 ]
 
 ASPECT_OPTIONS = [
-    "9:16 — Shorts / Reels / TikTok",
-    "16:9 — YouTube",
-    "1:1 — Square",
+    "9:16 â€” Shorts / Reels / TikTok",
+    "16:9 â€” YouTube",
+    "1:1 â€” Square",
 ]
 
 REFERENCE_OPTIONS = ["Video", "Screenshots", "Text / idea"]
@@ -66,7 +66,7 @@ DEFAULTS = {
     "reference_files": [],
     "reference_text": "",
     "visual_style": "Realistic cinematic",
-    "aspect_ratio": "9:16 — Shorts / Reels / TikTok",
+    "aspect_ratio": "9:16 â€” Shorts / Reels / TikTok",
     "duration": "8 seconds",
     "custom_instruction": "",
     "analysis": {},
@@ -208,8 +208,8 @@ def go(page):
 # ============================================================
 
 with st.sidebar:
-    st.title("🎬 UGC Remix Studio")
-    st.caption("Reference → Remix → Storyboard → Flow/Veo Prompts")
+    st.title("ðŸŽ¬ UGC Remix Studio")
+    st.caption("Reference â†’ Remix â†’ Storyboard â†’ Flow/Veo Prompts")
 
     st.text_input(
         "Gemini API Key",
@@ -220,20 +220,20 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("🏠 Home", use_container_width=True):
+    if st.button("ðŸ  Home", use_container_width=True):
         go("home")
-    if st.button("💡 Concepts", use_container_width=True):
+    if st.button("ðŸ’¡ Concepts", use_container_width=True):
         go("concepts")
-    if st.button("🧩 Storyboard", use_container_width=True):
+    if st.button("ðŸ§© Storyboard", use_container_width=True):
         go("storyboard")
-    if st.button("🎥 Scene Prompts", use_container_width=True):
+    if st.button("ðŸŽ¥ Scene Prompts", use_container_width=True):
         go("scenes")
-    if st.button("🔎 YouTube SEO", use_container_width=True):
+    if st.button("ðŸ”Ž YouTube SEO", use_container_width=True):
         go("seo")
 
     st.divider()
 
-    if st.button("🆕 New Project", use_container_width=True):
+    if st.button("ðŸ†• New Project", use_container_width=True):
         reset_project()
         st.rerun()
 
@@ -243,7 +243,7 @@ with st.sidebar:
 # ============================================================
 
 def render_home():
-    st.title("🎬 Turn Any Reference Into an Original Video Blueprint")
+    st.title("ðŸŽ¬ Turn Any Reference Into an Original Video Blueprint")
     st.write(
         "Upload a reference video, screenshots, or an idea. "
         "AI analyzes the entertainment logic, creates 3 original remix concepts, "
@@ -327,7 +327,7 @@ def render_home():
         "Aktifkan originality + transformation guard",
         value=True,
         key="originality_guard",
-    )
+)
 
     st.write(
         "AI akan mempertahankan hook, cause/effect, emotional goal, payoff, "
@@ -336,12 +336,11 @@ def render_home():
         "visual design, dialog, dan sound design."
     )
 
-    if st.button("🚀 ANALYZE + AUTO REMIX", type="primary", use_container_width=True):
+    if st.button("ðŸš€ ANALYZE + AUTO REMIX", type="primary", use_container_width=True):
         run_analysis()
 
 
-#
-============================================================
+# ============================================================
 # ANALYSIS + REMIX
 # ============================================================
 
@@ -368,7 +367,7 @@ IMPORTANT:
 - Substantially transform the execution.
 - Make each concept independently usable for any duration from 8 seconds to 3 minutes.
 - Keep the result suitable for mainstream YouTube unless the user explicitly asks otherwise.
-- The app will later turn the chosen concept into 1–23 scenes and Flow/Veo prompts.
+- The app will later turn the chosen concept into 1â€“23 scenes and Flow/Veo prompts.
 
 Settings:
 Reference type: {ref_type}
@@ -478,7 +477,7 @@ Kembalikan HANYA JSON valid. Semua nilai teks wajib Bahasa Indonesia:
 
 
 def render_concepts():
-    st.title("💡 AI Analysis + Auto Remix")
+    st.title("ðŸ’¡ AI Analysis + Auto Remix")
 
     if not st.session_state.concepts:
         st.info("Belum ada konsep. Mulai dari Home.")
@@ -486,7 +485,7 @@ def render_concepts():
 
     analysis = st.session_state.analysis
 
-    with st.expander("🧠 Reference Analysis", expanded=True):
+    with st.expander("ðŸ§  Reference Analysis", expanded=True):
         st.write("**Niche:**", safe_text(analysis.get("niche")))
         st.write("**Hook:**", safe_text(analysis.get("hook")))
         st.write("**Cause / Effect:**", safe_text(analysis.get("cause_effect")))
@@ -604,7 +603,7 @@ Kembalikan HANYA JSON valid. Nilai semua field harus Bahasa Indonesia:
 
 
 def render_storyboard():
-    st.title("🧩 Storyboard")
+    st.title("ðŸ§© Storyboard")
 
     concept = selected_concept()
     if not concept:
@@ -617,16 +616,16 @@ def render_storyboard():
     )
 
     n = scene_count()
-    st.write(f"**Durasi:** {st.session_state.duration}  •  **Jumlah Scene:** {n}")
+    st.write(f"**Durasi:** {st.session_state.duration}  â€¢  **Jumlah Scene:** {n}")
 
     if not st.session_state.storyboard:
-        if st.button("🧩 GENERATE STORYBOARD", type="primary", use_container_width=True):
+        if st.button("ðŸ§© GENERATE STORYBOARD", type="primary", use_container_width=True):
             run_storyboard()
         return
 
     for scene in st.session_state.storyboard:
         with st.expander(
-            f"Scene {scene['scene']} • {scene.get('time', '')} • {scene.get('purpose', '')}"
+            f"Scene {scene['scene']} â€¢ {scene.get('time', '')} â€¢ {scene.get('purpose', '')}"
         ):
             st.write("**Visual:**", scene.get("visual", ""))
             st.write("**Action:**", scene.get("action", ""))
@@ -635,7 +634,7 @@ def render_storyboard():
             st.write("**Audio:**", scene.get("audio", ""))
             st.write("**Transition:**", scene.get("transition", ""))
 
-    if st.button("🎥 LANJUT KE PROMPT SCENE", type="primary", use_container_width=True):
+    if st.button("ðŸŽ¥ LANJUT KE PROMPT SCENE", type="primary", use_container_width=True):
         go("scenes")
 
 
@@ -658,7 +657,6 @@ def generate_scene_prompt(scene_number):
     scenes = st.session_state.storyboard
     scene = scenes[scene_number - 1]
     concept = selected_concept()
-
     previous_frame = st.session_state.scene_frames.get(scene_number - 1)
 
     prompt = f"""
@@ -714,7 +712,7 @@ The prompt must be directly usable in Google Flow/Veo.
 
 
 def render_scenes():
-    st.title("🎥 Scene-by-Scene Flow/Veo Prompts")
+    st.title("馃帴 Scene-by-Scene Flow/Veo Prompts")
 
     scenes = st.session_state.storyboard
     if not scenes:
@@ -731,7 +729,7 @@ def render_scenes():
     scene = scenes[current - 1]
 
     st.subheader(
-        f"Scene {current} • {scene.get('time', '')}"
+        f"Scene {current} 鈥� {scene.get('time', '')}"
     )
 
     st.write("**Purpose:**", scene.get("purpose", ""))
@@ -742,7 +740,7 @@ def render_scenes():
     st.write("**Audio:**", scene.get("audio", ""))
 
     if current > 1:
-        st.subheader("🖼️ Continuity Frame")
+        st.subheader("馃柤锔� Continuity Frame")
         st.caption(
             "Setelah membuat video Scene sebelumnya di Flow/Veo, "
             "upload screenshot frame terakhirnya di sini."
@@ -762,24 +760,24 @@ def render_scenes():
 
     if current not in st.session_state.scene_prompts:
         if st.button(
-            f"✨ GENERATE PROMPT SCENE {current}",
+            f"鉁� GENERATE PROMPT SCENE {current}",
             type="primary",
             use_container_width=True,
         ):
             generate_scene_prompt(current)
             st.rerun()
     else:
-        st.subheader("📋 Flow / Veo Prompt")
+        st.subheader("馃搵 Flow / Veo Prompt")
 
         st.text_area(
-            "Prompt — copy this into Google Flow/Veo",
+            "Prompt 鈥� copy this into Google Flow/Veo",
             value=st.session_state.scene_prompts[current],
             height=360,
             key=f"prompt_view_{current}",
         )
 
         if st.button(
-            "🔄 REGENERATE THIS PROMPT",
+            "馃攧 REGENERATE THIS PROMPT",
             use_container_width=True,
         ):
             del st.session_state.scene_prompts[current]
@@ -790,17 +788,17 @@ def render_scenes():
 
         with c1:
             if current > 1:
-                if st.button("⬅️ PREVIOUS SCENE", use_container_width=True):
+                if st.button("猬咃笍 PREVIOUS SCENE", use_container_width=True):
                     st.session_state.current_scene = current - 1
                     st.rerun()
 
         with c2:
             if current < n:
-                if st.button("LANJUT KE SCENE BERIKUTNYA ➡️", type="primary", use_container_width=True):
+                if st.button("LANJUT KE SCENE BERIKUTNYA 鉃★笍", type="primary", use_container_width=True):
                     st.session_state.current_scene = current + 1
                     st.rerun()
             else:
-                if st.button("🔎 FINISH → SEO", type="primary", use_container_width=True):
+                if st.button("馃攷 FINISH 鈫� SEO", type="primary", use_container_width=True):
                     go("seo")
 
     st.divider()
@@ -818,8 +816,7 @@ def render_scenes():
         st.rerun()
 
 
-#
-============================================================
+# ============================================================
 # SEO
 # ============================================================
 
@@ -871,7 +868,7 @@ Rules:
 
 
 def render_seo():
-    st.title("🔎 YouTube SEO")
+    st.title("馃攷 YouTube SEO")
 
     if not selected_concept():
         st.info("Pilih konsep dulu.")
@@ -887,7 +884,7 @@ def render_seo():
         )
 
     if not st.session_state.seo:
-        if st.button("🚀 GENERATE SEO PACKAGE", type="primary", use_container_width=True):
+        if st.button("馃殌 GENERATE SEO PACKAGE", type="primary", use_container_width=True):
             run_seo()
             st.rerun()
         return
@@ -895,7 +892,7 @@ def render_seo():
     seo = st.session_state.seo
 
     titles = seo.get("titles", [])
-    st.subheader("🎯 Titles")
+    st.subheader("馃幆 Titles")
     for i, title in enumerate(titles):
         st.text_input(
             f"Title {i + 1}",
@@ -903,7 +900,7 @@ def render_seo():
             key=f"seo_title_{i}",
         )
 
-    st.subheader("📝 Description")
+    st.subheader("馃摑 Description")
     st.text_area(
         "Description",
         value=safe_text(seo.get("description")),
@@ -914,7 +911,7 @@ def render_seo():
     c1, c2 = st.columns(2)
 
     with c1:
-        st.subheader("🔑 Keywords")
+        st.subheader("馃攽 Keywords")
         st.text_area(
             "Keywords",
             value=", ".join(str(x) for x in seo.get("keywords", [])),
@@ -923,7 +920,7 @@ def render_seo():
         )
 
     with c2:
-        st.subheader("#️⃣ Hashtags")
+        st.subheader("#锔忊儯 Hashtags")
         st.text_area(
             "Hashtags",
             value=" ".join(str(x) for x in seo.get("hashtags", [])),
@@ -931,7 +928,7 @@ def render_seo():
             key="seo_hashtags",
         )
 
-    st.subheader("🖼️ Thumbnail")
+    st.subheader("馃柤锔� Thumbnail")
     st.text_input(
         "Thumbnail Text",
         value=safe_text(seo.get("thumbnail_text")),
@@ -944,7 +941,7 @@ def render_seo():
         key="thumbnail_concept",
     )
 
-    st.subheader("💬 Pinned Comment")
+    st.subheader("馃挰 Pinned Comment")
     st.text_area(
         "Pinned Comment",
         value=safe_text(seo.get("pinned_comment")),
@@ -952,7 +949,7 @@ def render_seo():
         key="pinned_comment",
     )
 
-    st.subheader("📣 CTA")
+    st.subheader("馃摚 CTA")
     st.text_area(
         "Call To Action",
         value=safe_text(seo.get("cta")),
@@ -960,16 +957,16 @@ def render_seo():
         key="seo_cta",
     )
 
-    st.success("🎉 Project workflow selesai.")
+    st.success("馃帀 Project workflow selesai.")
 
     c1, c2 = st.columns(2)
 
     with c1:
-        if st.button("🎥 BACK TO SCENES", use_container_width=True):
+        if st.button("馃帴 BACK TO SCENES", use_container_width=True):
             go("scenes")
 
     with c2:
-        if st.button("🆕 NEW PROJECT", type="primary", use_container_width=True):
+        if st.button("馃啎 NEW PROJECT", type="primary", use_container_width=True):
             reset_project()
             st.rerun()
 
