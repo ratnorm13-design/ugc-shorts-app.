@@ -58,7 +58,7 @@ DEFAULTS = {
     "visual_style": STYLE_OPTIONS[0], "aspect_ratio": ASPECT_OPTIONS[0],
     "duration": "8 detik", "custom_instruction": "",
     "analysis": {}, "character": CHARACTER_LOCK.copy(), "storyboard": [], "scene_prompts": {},
-    "scene_frames": {}, "current_scene": 1, "seo": {},
+    "scene_frames": {}, "current_scene": 1, "storyboard_duration": None, "seo": {},
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -247,7 +247,7 @@ ATURAN UTAMA:
 3. GUNAKAN IDENTITAS KARAKTER TERKUNCI TALE OF PAW di bawah. Jangan memilih atau mendesain karakter baru. Identitas ini wajib dipakai persis di semua adegan.
 4. Detail produksi boleh disesuaikan tanpa mengubah inti kejadian: penampilan, properti, setting, detail aksi kecil, kamera, lighting, visual design, dialog, dan sound design.
 5. Jangan menambahkan karakter utama baru secara acak.
-6. Jika referensi memiliki unsur berbahaya, jangan memberikan instruksi tindakan berbahaya. Pertahankan fungsi cerita tetapi ubah elemen berbahaya menjadi versi aman, palsu, mainan, atau tidak berfungsi.
+6. Properti biasa yang tidak berbahaya boleh dipertahankan secara visual. Jika referensi memuat senjata atau mekanisme berbahaya, pertahankan hanya beat aksi sinematik yang tidak operasional dan jangan memberi detail penggunaan; elemen berbahaya harus ditampilkan secara aman/tidak berfungsi.
 7. Semua nilai teks WAJIB Bahasa Indonesia.
 
 IDENTITAS KARAKTER TERKUNCI TALE OF PAW:
@@ -298,6 +298,7 @@ Kembalikan HANYA JSON valid dengan struktur:
             st.session_state.character = char
             st.session_state.storyboard = []
             st.session_state.scene_prompts = {}
+            st.session_state.storyboard_duration = None
             st.session_state.scene_frames = {}
             st.session_state.current_scene = 1
             go("analysis")
@@ -372,7 +373,9 @@ Kembalikan HANYA JSON:
                 s.setdefault("waktu", f"{(i-1)*8:02d}-{i*8:02d}")
             st.session_state.storyboard = scenes
             st.session_state.scene_prompts = {}
+            st.session_state.scene_frames = {}
             st.session_state.current_scene = 1
+            st.session_state.storyboard_duration = st.session_state.duration
             go("storyboard")
         except Exception as e: st.error(f"Storyboard gagal dibuat: {e}")
 
@@ -398,7 +401,7 @@ def previous_scene(scene_number):
 
 def generate_scene_prompt(scene_number):
     client = get_client()
-    if not client: return
+    if not client: return False
     scene = st.session_state.storyboard[scene_number-1]
     char = st.session_state.character
     prev_frame = st.session_state.scene_frames.get(scene_number-1)
@@ -412,7 +415,7 @@ CRITICAL STORY RULES:
 - The main character is the SAME kitten in every scene. Repeat the full character identity below whenever relevant.
 - Preserve hook, cause/effect, emotional goal, payoff, pacing, and the core action beat.
 - Only vary permitted production details without changing the core event: appearance details, props, setting details, camera, lighting, visual design, dialogue wording, and sound design.
-- If a dangerous element exists, render only a clearly safe, fake, toy, unplugged, or non-functional version while preserving the story beat.
+- Ordinary non-hazardous props from the reference may remain visually faithful. If a dangerous weapon or hazardous mechanism appears, preserve only the non-actionable cinematic story beat and avoid operational, realistic use details; depict the hazardous element in a clearly non-functional or otherwise safe way.
 
 LOCKED CHARACTER IDENTITY — TALE OF PAW:
 {CHARACTER_LOCK_EN}
@@ -440,7 +443,10 @@ Write one detailed paragraph only. Include the kitten's exact appearance, enviro
             result = ask(client, prompt, parts).strip()
             if not result: raise ValueError("Prompt kosong.")
             st.session_state.scene_prompts[scene_number] = result
-        except Exception as e: st.error(f"Prompt adegan gagal: {e}")
+            return True
+        except Exception as e:
+            st.error(f"Prompt adegan gagal: {e}")
+            return False
 
 
 def render_scenes():
@@ -449,6 +455,17 @@ def render_scenes():
     if not scenes:
         st.info("Storyboard belum dibuat."); return
     n = len(scenes)
+    expected_n = scene_count()
+    if st.session_state.storyboard_duration and st.session_state.storyboard_duration != st.session_state.duration:
+        st.warning(
+            f"Durasi sekarang {st.session_state.duration} = {expected_n} adegan, "
+            f"tetapi storyboard ini dibuat saat durasi {st.session_state.storyboard_duration} = {n} adegan. "
+            "Buat ulang storyboard agar jumlah adegan sesuai."
+        )
+        if st.button("BUAT ULANG STORYBOARD SESUAI DURASI", type="primary", use_container_width=True):
+            run_storyboard()
+            st.rerun()
+        return
     current = max(1, min(st.session_state.current_scene, n))
     st.session_state.current_scene = current
     st.progress(current / n)
@@ -466,7 +483,8 @@ def render_scenes():
 
     if current not in st.session_state.scene_prompts:
         if st.button(f"BUAT PROMPT ADEGAN {current}", type="primary", use_container_width=True):
-            generate_scene_prompt(current); st.rerun()
+            if generate_scene_prompt(current):
+                st.rerun()
     else:
         st.text_area("Prompt Flow/Veo — Bahasa Inggris", value=st.session_state.scene_prompts[current], height=380, key=f"view_{current}")
         c1, c2 = st.columns(2)
