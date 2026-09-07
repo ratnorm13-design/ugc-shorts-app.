@@ -24,12 +24,40 @@ STYLE_OPTIONS = [
 ASPECT_OPTIONS = ["9:16 â€” Shorts", "16:9 â€” YouTube", "1:1 â€” Kotak"]
 REFERENCE_OPTIONS = ["Video", "Screenshot", "Teks / ide"]
 
+# ============================================================
+# TALE OF PAW â€” FIXED CHARACTER LOCK
+# Karakter ini adalah identitas permanen channel. AI tidak boleh
+# mengganti, mendesain ulang, atau memilih karakter baru.
+# ============================================================
+CHARACTER_LOCK = {
+    "nama": "Milo",
+    "spesies": "anak kucing / kitten domestik kecil",
+    "identitas_visual": (
+        "kitten kecil dengan bulu putih krem, sedikit abu-abu muda pada telinga "
+        "dan punggung, mata besar bulat dan ekspresif, wajah innocent dan penasaran, "
+        "proporsi tubuh kitten realistis, ukuran tubuh kecil dan konsisten"
+    ),
+    "ciri_khas": (
+        "pola bulu, struktur wajah, warna mata, bentuk telinga, ukuran tubuh, "
+        "dan proporsi tetap sama di setiap adegan dan setiap episode"
+    ),
+    "aturan_konsistensi": (
+        "Milo selalu merupakan kitten yang sama. Jangan mengganti spesies, ras, "
+        "warna/pola bulu utama, struktur wajah, warna mata, ukuran relatif, usia visual, "
+        "atau proporsi tubuh. Jangan membuat karakter baru sebagai pengganti Milo. "
+        "Hanya pakaian/aksesori yang memang dibutuhkan cerita, properti aman, setting, "
+        "kamera, lighting, dan detail produksi yang boleh berubah."
+    ),
+}
+
+CHARACTER_LOCK_EN = """Milo is the permanent main character of Tale Of Paw. He is always the exact same young domestic kitten: small realistic kitten proportions, creamy white fur with subtle light-gray fur on the ears and back, large round expressive eyes, innocent curious face, and consistent facial structure, fur pattern, eye color, ear shape, body size, age appearance, and proportions. Never redesign, replace, age up, morph, or change Milo's identity. Only scene-specific safe clothing/accessories, props, environment, camera, lighting, and production details may change."""
+
 DEFAULTS = {
     "page": "home", "api_key": "", "reference_type": "Video",
     "reference_file": None, "reference_files": [], "reference_text": "",
     "visual_style": STYLE_OPTIONS[0], "aspect_ratio": ASPECT_OPTIONS[0],
     "duration": "8 detik", "custom_instruction": "",
-    "analysis": {}, "character": {}, "storyboard": [], "scene_prompts": {},
+    "analysis": {}, "character": CHARACTER_LOCK.copy(), "storyboard": [], "scene_prompts": {},
     "scene_frames": {}, "current_scene": 1, "seo": {},
 }
 for k, v in DEFAULTS.items():
@@ -159,6 +187,8 @@ with st.sidebar:
     st.divider()
     if st.button("Proyek Baru", use_container_width=True):
         reset_project(); st.rerun()
+
+
 def render_home():
     st.title("UGC Remix Studio")
     st.write("Mesin referensi untuk mengubah video acuan menjadi storyboard dan prompt Flow/Veo dengan alur kejadian yang tetap konsisten.")
@@ -170,7 +200,8 @@ def render_home():
         st.session_state.reference_file = st.file_uploader("Upload video referensi", type=["mp4", "mov", "webm", "avi", "mkv"])
         st.session_state.reference_files = []
     elif rt == "Screenshot":
-        st.session_state.reference_files = st.file_uploader("Upload screenshot referensi", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True)
+        st.session_state.reference_files = st.file_uploader("Upload screenshot referensi", type=["png", "
+jpg", "jpeg", "webp"], accept_multiple_files=True)
         st.session_state.reference_file = None
     else:
         st.session_state.reference_text = st.text_area("Tulis referensi atau ide", value=st.session_state.reference_text, height=160)
@@ -191,6 +222,7 @@ def render_home():
 
     st.subheader("3. Aturan Produksi")
     st.write("Tidak ada remix dan tidak ada 3 konsep. Sistem langsung menganalisis referensi dan mempertahankan urutan kejadian, hook, sebab-akibat, tujuan emosi, payoff, dan logika tempo.")
+    st.info("Referensi boleh berasal dari video viral yang kamu temukan di platform sosial mana pun. Aplikasi ini hanya menganalisis file yang kamu upload; sumber referensi tidak mengubah Character Lock Tale Of Paw.")
     st.write("Karakter utama dikunci agar identitasnya konsisten di semua adegan. Untuk konten ini, subjek utama diprioritaskan sebagai anak kucing/kitten dan tidak diganti menjadi karakter lain.")
     st.write("Perbedaan hanya boleh berada pada detail produksi yang dipilih pengguna: penampilan, properti, setting, detail aksi yang tidak mengubah inti kejadian, kamera, pencahayaan, desain visual, dialog, dan suara.")
 
@@ -213,11 +245,14 @@ Hasil harus langsung menjadi dasar storyboard video.
 ATURAN UTAMA:
 1. Pertahankan urutan kejadian dan inti execution referensi sedekat mungkin: hook, sebab-akibat, tujuan emosi, payoff, dan pacing logic harus tetap.
 2. Jangan mengubah karakter utama menjadi manusia, robot, atau hewan lain. Untuk proyek ini karakter utama WAJIB anak kucing/kitten.
-3. Buat satu IDENTITAS KARAKTER UTAMA yang dapat diulang persis di setiap adegan. Kunci spesies, ukuran relatif, bentuk wajah, warna/bulu, pola bulu, mata, telinga, ekor, dan ciri khas yang mudah dikenali.
+3. GUNAKAN IDENTITAS KARAKTER TERKUNCI TALE OF PAW di bawah. Jangan memilih atau mendesain karakter baru. Identitas ini wajib dipakai persis di semua adegan.
 4. Detail produksi boleh disesuaikan tanpa mengubah inti kejadian: penampilan, properti, setting, detail aksi kecil, kamera, lighting, visual design, dialog, dan sound design.
 5. Jangan menambahkan karakter utama baru secara acak.
 6. Jika referensi memiliki unsur berbahaya, jangan memberikan instruksi tindakan berbahaya. Pertahankan fungsi cerita tetapi ubah elemen berbahaya menjadi versi aman, palsu, mainan, atau tidak berfungsi.
 7. Semua nilai teks WAJIB Bahasa Indonesia.
+
+IDENTITAS KARAKTER TERKUNCI TALE OF PAW:
+{json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
 
 PENGATURAN:
 Gaya visual: {st.session_state.visual_style}
@@ -258,9 +293,8 @@ Kembalikan HANYA JSON valid dengan struktur:
     with st.spinner("Menganalisis referensi..."):
         try:
             data = extract_json(ask(client, prompt, parts))
-            char = data.get("karakter_utama", {})
-            if not char:
-                raise ValueError("AI tidak menghasilkan identitas karakter utama.")
+            char = CHARACTER_LOCK.copy()
+            data["karakter_utama"] = char
             st.session_state.analysis = data
             st.session_state.character = char
             st.session_state.storyboard = []
@@ -315,8 +349,11 @@ Jangan mengganti spesies atau identitas karakter.
 Jangan menambahkan kejadian baru yang mengubah alur.
 Akhir setiap adegan harus menjelaskan posisi/keadaan kitten dan properti untuk kesinambungan adegan berikutnya.
 
-IDENTITAS KARAKTER TERKUNCI:
+IDENTITAS KARAKTER TERKUNCI TALE OF PAW:
 {json.dumps(c, ensure_ascii=False, indent=2)}
+
+CHARACTER LOCK IN ENGLISH:
+{CHARACTER_LOCK_EN}
 
 ANALISIS:
 {json.dumps(a, ensure_ascii=False, indent=2)}
@@ -328,7 +365,8 @@ Kembalikan HANYA JSON:
 """
     with st.spinner(f"Membuat {n} adegan..."):
         try:
-            data = extract_json(ask(client, prompt))
+            data 
+= extract_json(ask(client, prompt))
             scenes = data.get("adegan", [])
             if len(scenes) != n: raise ValueError(f"Harus tepat {n} adegan, AI menghasilkan {len(scenes)}.")
             for i, s in enumerate(scenes, 1):
@@ -378,7 +416,10 @@ CRITICAL STORY RULES:
 - Only vary permitted production details without changing the core event: appearance details, props, setting details, camera, lighting, visual design, dialogue wording, and sound design.
 - If a dangerous element exists, render only a clearly safe, fake, toy, unplugged, or non-functional version while preserving the story beat.
 
-LOCKED CHARACTER IDENTITY:
+LOCKED CHARACTER IDENTITY — TALE OF PAW:
+{CHARACTER_LOCK_EN}
+
+LOCKED CHARACTER DATA:
 {json.dumps(char, ensure_ascii=False, indent=2)}
 
 CURRENT SCENE:
@@ -485,4 +526,3 @@ elif st.session_state.page == "analysis": render_analysis()
 elif st.session_state.page == "storyboard": render_storyboard()
 elif st.session_state.page == "scenes": render_scenes()
 elif st.session_state.page == "seo": render_seo()
-
