@@ -24,40 +24,12 @@ STYLE_OPTIONS = [
 ASPECT_OPTIONS = ["9:16 â€” Shorts", "16:9 â€” YouTube", "1:1 â€” Kotak"]
 REFERENCE_OPTIONS = ["Video", "Screenshot", "Teks / ide"]
 
-# ============================================================
-# TALE OF PAW â€” FIXED CHARACTER LOCK
-# Karakter ini adalah identitas permanen channel. AI tidak boleh
-# mengganti, mendesain ulang, atau memilih karakter baru.
-# ============================================================
-CHARACTER_LOCK = {
-    "nama": "Milo",
-    "spesies": "anak kucing / kitten domestik kecil",
-    "identitas_visual": (
-        "kitten kecil dengan bulu putih krem, sedikit abu-abu muda pada telinga "
-        "dan punggung, mata besar bulat dan ekspresif, wajah innocent dan penasaran, "
-        "proporsi tubuh kitten realistis, ukuran tubuh kecil dan konsisten"
-    ),
-    "ciri_khas": (
-        "pola bulu, struktur wajah, warna mata, bentuk telinga, ukuran tubuh, "
-        "dan proporsi tetap sama di setiap adegan dan setiap episode"
-    ),
-    "aturan_konsistensi": (
-        "Milo selalu merupakan kitten yang sama. Jangan mengganti spesies, ras, "
-        "warna/pola bulu utama, struktur wajah, warna mata, ukuran relatif, usia visual, "
-        "atau proporsi tubuh. Jangan membuat karakter baru sebagai pengganti Milo. "
-        "Hanya pakaian/aksesori yang memang dibutuhkan cerita, properti aman, setting, "
-        "kamera, lighting, dan detail produksi yang boleh berubah."
-    ),
-}
-
-CHARACTER_LOCK_EN = """Milo is the permanent main character of Tale Of Paw. He is always the exact same young domestic kitten: small realistic kitten proportions, creamy white fur with subtle light-gray fur on the ears and back, large round expressive eyes, innocent curious face, and consistent facial structure, fur pattern, eye color, ear shape, body size, age appearance, and proportions. Never redesign, replace, age up, morph, or change Milo's identity. Only scene-specific safe clothing/accessories, props, environment, camera, lighting, and production details may change."""
-
 DEFAULTS = {
     "page": "home", "api_key": "", "reference_type": "Video",
     "reference_file": None, "reference_files": [], "reference_text": "",
     "visual_style": STYLE_OPTIONS[0], "aspect_ratio": ASPECT_OPTIONS[0],
     "duration": "8 detik", "custom_instruction": "",
-    "analysis": {}, "character": CHARACTER_LOCK.copy(), "storyboard": [], "scene_prompts": {},
+    "analysis": {}, "character": {}, "storyboard": [], "scene_prompts": {},
     "scene_frames": {}, "current_scene": 1, "seo": {},
 }
 for k, v in DEFAULTS.items():
@@ -200,8 +172,7 @@ def render_home():
         st.session_state.reference_file = st.file_uploader("Upload video referensi", type=["mp4", "mov", "webm", "avi", "mkv"])
         st.session_state.reference_files = []
     elif rt == "Screenshot":
-        st.session_state.reference_files = st.file_uploader("Upload screenshot referensi", type=["png", "
-jpg", "jpeg", "webp"], accept_multiple_files=True)
+        st.session_state.reference_files = st.file_uploader("Upload screenshot referensi", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True)
         st.session_state.reference_file = None
     else:
         st.session_state.reference_text = st.text_area("Tulis referensi atau ide", value=st.session_state.reference_text, height=160)
@@ -222,7 +193,6 @@ jpg", "jpeg", "webp"], accept_multiple_files=True)
 
     st.subheader("3. Aturan Produksi")
     st.write("Tidak ada remix dan tidak ada 3 konsep. Sistem langsung menganalisis referensi dan mempertahankan urutan kejadian, hook, sebab-akibat, tujuan emosi, payoff, dan logika tempo.")
-    st.info("Referensi boleh berasal dari video viral yang kamu temukan di platform sosial mana pun. Aplikasi ini hanya menganalisis file yang kamu upload; sumber referensi tidak mengubah Character Lock Tale Of Paw.")
     st.write("Karakter utama dikunci agar identitasnya konsisten di semua adegan. Untuk konten ini, subjek utama diprioritaskan sebagai anak kucing/kitten dan tidak diganti menjadi karakter lain.")
     st.write("Perbedaan hanya boleh berada pada detail produksi yang dipilih pengguna: penampilan, properti, setting, detail aksi yang tidak mengubah inti kejadian, kamera, pencahayaan, desain visual, dialog, dan suara.")
 
@@ -237,64 +207,13 @@ def run_analysis():
     if not parts:
         st.warning("Masukkan atau upload referensi terlebih dahulu.")
         return
-    prompt = f"""
-Anda adalah pengarah kreatif untuk sistem produksi video anak yang aman.
-Analisis referensi yang diberikan. JANGAN membuat remix dan JANGAN membuat beberapa konsep.
-Hasil harus langsung menjadi dasar storyboard video.
-
-ATURAN UTAMA:
-1. Pertahankan urutan kejadian dan inti execution referensi sedekat mungkin: hook, sebab-akibat, tujuan emosi, payoff, dan pacing logic harus tetap.
-2. Jangan mengubah karakter utama menjadi manusia, robot, atau hewan lain. Untuk proyek ini karakter utama WAJIB anak kucing/kitten.
-3. GUNAKAN IDENTITAS KARAKTER TERKUNCI TALE OF PAW di bawah. Jangan memilih atau mendesain karakter baru. Identitas ini wajib dipakai persis di semua adegan.
-4. Detail produksi boleh disesuaikan tanpa mengubah inti kejadian: penampilan, properti, setting, detail aksi kecil, kamera, lighting, visual design, dialog, dan sound design.
-5. Jangan menambahkan karakter utama baru secara acak.
-6. Jika referensi memiliki unsur berbahaya, jangan memberikan instruksi tindakan berbahaya. Pertahankan fungsi cerita tetapi ubah elemen berbahaya menjadi versi aman, palsu, mainan, atau tidak berfungsi.
-7. Semua nilai teks WAJIB Bahasa Indonesia.
-
-IDENTITAS KARAKTER TERKUNCI TALE OF PAW:
-{json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
-
-PENGATURAN:
-Gaya visual: {st.session_state.visual_style}
-Rasio: {st.session_state.aspect_ratio}
-Durasi: {st.session_state.duration}
-Jumlah adegan: {scene_count()}
-Instruksi pengguna: {st.session_state.custom_instruction}
-
-Kembalikan HANYA JSON valid dengan struktur:
-{{
-  "ringkasan": "...",
-  "niche": "...",
-  "hook": "...",
-  "sebab_akibat": "...",
-  "tujuan_emosi": "...",
-  "pacing_logic": "...",
-  "payoff": "...",
-  "urutan_kejadian": ["kejadian 1", "kejadian 2"],
-  "karakter_utama": {{
-    "nama": "...",
-    "spesies": "anak kucing/kitten",
-    "identitas_visual": "...",
-    "ciri_khas": "...",
-    "aturan_konsistensi": "..."
-  }},
-  "detail_produksi": {{
-    "penampilan": "...",
-    "properti": "...",
-    "setting": "...",
-    "kamera": "...",
-    "lighting": "...",
-    "visual_design": "...",
-    "dialog": "...",
-    "sound_design": "..."
-  }}
-}}
-"""
+    prompt = f""" Anda adalah pengarah kreatif untuk sistem produksi video anak yang aman. Analisis referensi yang diberikan. JANGAN membuat remix dan JANGAN membuat beberapa konsep. Hasil harus langsung menjadi dasar storyboard video. ATURAN UTAMA: 1. Pertahankan urutan kejadian dan inti execution referensi sedekat mungkin: hook, sebab-akibat, tujuan emosi, payoff, dan pacing logic harus tetap. 2. Jangan mengubah karakter utama menjadi manusia, robot, atau hewan lain. Untuk proyek ini karakter utama WAJIB anak kucing/kitten. 3. Buat satu IDENTITAS KARAKTER UTAMA yang dapat diulang persis di setiap adegan. Kunci spesies, ukuran relatif, bentuk wajah, warna/bulu, pola bulu, mata, telinga, ekor, dan ciri khas yang mudah dikenali. 4. Detail produksi boleh disesuaikan tanpa mengubah inti kejadian: penampilan, properti, setting, detail aksi kecil, kamera, lighting, visual design, dialog, dan sound design. 5. Jangan menambahkan karakter utama baru secara acak. 6. Jika referensi memiliki unsur berbahaya, jangan memberikan instruksi tindakan berbahaya. Pertahankan fungsi cerita tetapi ubah elemen berbahaya menjadi versi aman, palsu, mainan, atau tidak berfungsi. 7. Semua nilai teks WAJIB Bahasa Indonesia. PENGATURAN: Gaya visual: {st.session_state.visual_style} Rasio: {st.session_state.aspect_ratio} Durasi: {st.session_state.duration} Jumlah adegan: {scene_count()} Instruksi pengguna: {st.session_state.custom_instruction} Kembalikan HANYA JSON valid dengan struktur: {{ "ringkasan": "...", "niche": "...", "hook": "...", "sebab_akibat": "...", "tujuan_emosi": "...", "pacing_logic": "...", "payoff": "...", "urutan_kejadian": ["kejadian 1", "kejadian 2"], "karakter_utama": {{ "nama": "...", "spesies": "anak kucing/kitten", "identitas_visual": "...", "ciri_khas": "...", "aturan_konsistensi": "..." }}, "detail_produksi": {{ "penampilan": "...", "properti": "...", "setting": "...", "kamera": "...", "lighting": "...", "visual_design": "...", "dialog": "...", "sound_design": "..." }} }} """
     with st.spinner("Menganalisis referensi..."):
         try:
             data = extract_json(ask(client, prompt, parts))
-            char = CHARACTER_LOCK.copy()
-            data["karakter_utama"] = char
+            char = data.get("karakter_utama", {})
+            if not char:
+                raise ValueError("AI tidak menghasilkan identitas karakter utama.")
             st.session_state.analysis = data
             st.session_state.character = char
             st.session_state.storyboard = []
@@ -318,7 +237,7 @@ def render_analysis():
     st.write("**Urutan kejadian:**")
     for i, item in enumerate(a.get("urutan_kejadian", []), 1): st.write(f"{i}. {item}")
 
-    st.subheader("Identitas Karakter Utama 鈥� Dikunci")
+    st.subheader("Identitas Karakter Utama â€” Dikunci")
     c = st.session_state.character
     st.write(f"**Nama:** {safe_text(c.get('nama'))}")
     st.write(f"**Spesies:** {safe_text(c.get('spesies'))}")
@@ -337,36 +256,10 @@ def run_storyboard():
     client = get_client()
     if not client: return
     n = scene_count(); a = st.session_state.analysis; c = st.session_state.character
-    prompt = f"""
-Buat storyboard berdasarkan analisis referensi berikut. JANGAN membuat remix.
-
-WAJIB tepat {n} adegan, nomor 1 sampai {n}, sekitar 8 detik per adegan.
-Semua nilai teks Bahasa Indonesia.
-
-Pertahankan urutan kejadian inti dari referensi: hook, sebab-akibat, tujuan emosi, payoff, dan pacing logic.
-Karakter utama HARUS identik secara deskripsi di semua adegan dan selalu berupa kitten yang sama.
-Jangan mengganti spesies atau identitas karakter.
-Jangan menambahkan kejadian baru yang mengubah alur.
-Akhir setiap adegan harus menjelaskan posisi/keadaan kitten dan properti untuk kesinambungan adegan berikutnya.
-
-IDENTITAS KARAKTER TERKUNCI TALE OF PAW:
-{json.dumps(c, ensure_ascii=False, indent=2)}
-
-CHARACTER LOCK IN ENGLISH:
-{CHARACTER_LOCK_EN}
-
-ANALISIS:
-{json.dumps(a, ensure_ascii=False, indent=2)}
-
-Pengaturan: {st.session_state.duration}, {st.session_state.aspect_ratio}, {st.session_state.visual_style}
-
-Kembalikan HANYA JSON:
-{{"adegan": [{{"nomor": 1, "waktu": "00:00-00:08", "tujuan": "...", "visual": "...", "aksi": "...", "kamera": "...", "kontinuitas": "...", "audio": "...", "transisi": "..."}}]}}
-"""
+    prompt = f""" Buat storyboard berdasarkan analisis referensi berikut. JANGAN membuat remix. WAJIB tepat {n} adegan, nomor 1 sampai {n}, sekitar 8 detik per adegan. Semua nilai teks Bahasa Indonesia. Pertahankan urutan kejadian inti dari referensi: hook, sebab-akibat, tujuan emosi, payoff, dan pacing logic. Karakter utama HARUS identik secara deskripsi di semua adegan dan selalu berupa kitten yang sama. Jangan mengganti spesies atau identitas karakter. Jangan menambahkan kejadian baru yang mengubah alur. Akhir setiap adegan harus menjelaskan posisi/keadaan kitten dan properti untuk kesinambungan adegan berikutnya. IDENTITAS KARAKTER TERKUNCI: {json.dumps(c, ensure_ascii=False, indent=2)} ANALISIS: {json.dumps(a, ensure_ascii=False, indent=2)} Pengaturan: {st.session_state.duration}, {st.session_state.aspect_ratio}, {st.session_state.visual_style} Kembalikan HANYA JSON: {{"adegan": [{{"nomor": 1, "waktu": "00:00-00:08", "tujuan": "...", "visual": "...", "aksi": "...", "kamera": "...", "kontinuitas": "...", "audio": "...", "transisi": "..."}}]}} """
     with st.spinner(f"Membuat {n} adegan..."):
         try:
-            data 
-= extract_json(ask(client, prompt))
+            data = extract_json(ask(client, prompt))
             scenes = data.get("adegan", [])
             if len(scenes) != n: raise ValueError(f"Harus tepat {n} adegan, AI menghasilkan {len(scenes)}.")
             for i, s in enumerate(scenes, 1):
@@ -387,7 +280,7 @@ def render_storyboard():
         return
     st.info(f"Durasi {st.session_state.duration} = {len(scenes)} adegan")
     for s in scenes:
-        with st.expander(f"Adegan {s['nomor']} — {s.get('waktu','')}"):
+        with st.expander(f"Adegan {s['nomor']} â€” {s.get('waktu','')}"):
             for label, key in [("Tujuan", "tujuan"), ("Visual", "visual"), ("Aksi", "aksi"), ("Kamera", "kamera"), ("Kontinuitas", "kontinuitas"), ("Audio", "audio"), ("Transisi", "transisi")]:
                 st.write(f"**{label}:**", s.get(key, ""))
     if st.button("LANJUT KE PROMPT ADEGAN", type="primary", use_container_width=True): go("scenes")
@@ -404,38 +297,7 @@ def generate_scene_prompt(scene_number):
     scene = st.session_state.storyboard[scene_number-1]
     char = st.session_state.character
     prev_frame = st.session_state.scene_frames.get(scene_number-1)
-    prompt = f"""
-Write ONE production-ready Google Flow / Veo prompt in ENGLISH for Scene {scene_number}.
-This English prompt is the ONLY English output allowed in this workflow.
-
-CRITICAL STORY RULES:
-- Follow the reference-derived storyboard exactly for the core event sequence and comedic/emotional timing.
-- Do NOT remix, invent a different concept, or change the main character.
-- The main character is the SAME kitten in every scene. Repeat the full character identity below whenever relevant.
-- Preserve hook, cause/effect, emotional goal, payoff, pacing, and the core action beat.
-- Only vary permitted production details without changing the core event: appearance details, props, setting details, camera, lighting, visual design, dialogue wording, and sound design.
-- If a dangerous element exists, render only a clearly safe, fake, toy, unplugged, or non-functional version while preserving the story beat.
-
-LOCKED CHARACTER IDENTITY — TALE OF PAW:
-{CHARACTER_LOCK_EN}
-
-LOCKED CHARACTER DATA:
-{json.dumps(char, ensure_ascii=False, indent=2)}
-
-CURRENT SCENE:
-{json.dumps(scene, ensure_ascii=False, indent=2)}
-
-PREVIOUS SCENE:
-{previous_scene(scene_number)}
-
-Project style: {st.session_state.visual_style}
-Aspect ratio: {st.session_state.aspect_ratio}
-Total duration: {st.session_state.duration}
-
-If a previous last-frame image is supplied, use it only for continuity of the same kitten, pose/state, props, environment, lighting direction, and camera geography.
-
-Write one detailed paragraph only. Include the kitten's exact appearance, environment, core action, performance, camera, lens/depth of field, lighting, motion, sound, optional dialogue, and a clean ending that matches the next scene.
-"""
+    prompt = f""" Write ONE production-ready Google Flow / Veo prompt in ENGLISH for Scene {scene_number}. This English prompt is the ONLY English output allowed in this workflow. CRITICAL STORY RULES: - Follow the reference-derived storyboard exactly for the core event sequence and comedic/emotional timing. - Do NOT remix, invent a different concept, or change the main character. - The main character is the SAME kitten in every scene. Repeat the full character identity below whenever relevant. - Preserve hook, cause/effect, emotional goal, payoff, pacing, and the core action beat. - Only vary permitted production details without changing the core event: appearance details, props, setting details, camera, lighting, visual design, dialogue wording, and sound design. - If a dangerous element exists, render only a clearly safe, fake, toy, unplugged, or non-functional version while preserving the story beat. LOCKED CHARACTER IDENTITY: {json.dumps(char, ensure_ascii=False, indent=2)} CURRENT SCENE: {json.dumps(scene, ensure_ascii=False, indent=2)} PREVIOUS SCENE: {previous_scene(scene_number)} Project style: {st.session_state.visual_style} Aspect ratio: {st.session_state.aspect_ratio} Total duration: {st.session_state.duration} If a previous last-frame image is supplied, use it only for continuity of the same kitten, pose/state, props, environment, lighting direction, and camera geography. Write one detailed paragraph only. Include the kitten's exact appearance, environment, core action, performance, camera, lens/depth of field, lighting, motion, sound, optional dialogue, and a clean ending that matches the next scene. """
     parts = file_parts(client, prev_frame) if prev_frame else []
     with st.spinner(f"Membuat prompt Adegan {scene_number}..."):
         try:
@@ -456,7 +318,7 @@ def render_scenes():
     st.progress(current / n)
     st.write(f"Adegan {current} dari {n}")
     scene = scenes[current-1]
-    st.subheader(f"Adegan {current} — {scene.get('waktu','')}")
+    st.subheader(f"Adegan {current} â€” {scene.get('waktu','')}")
     st.write("**Aksi:**", scene.get("aksi", ""))
     st.write("**Kontinuitas:**", scene.get("kontinuitas", ""))
 
@@ -470,7 +332,7 @@ def render_scenes():
         if st.button(f"BUAT PROMPT ADEGAN {current}", type="primary", use_container_width=True):
             generate_scene_prompt(current); st.rerun()
     else:
-        st.text_area("Prompt Flow/Veo — Bahasa Inggris", value=st.session_state.scene_prompts[current], height=380, key=f"view_{current}")
+        st.text_area("Prompt Flow/Veo â€” Bahasa Inggris", value=st.session_state.scene_prompts[current], height=380, key=f"view_{current}")
         c1, c2 = st.columns(2)
         with c1:
             if current > 1 and st.button("ADEGAN SEBELUMNYA", use_container_width=True):
@@ -490,13 +352,7 @@ def render_scenes():
 def run_seo():
     client = get_client()
     if not client: return
-    prompt = f"""
-Buat paket SEO YouTube dalam Bahasa Indonesia untuk video berikut.
-Analisis: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
-Jumlah adegan: {len(st.session_state.storyboard)}
-Kembalikan HANYA JSON valid:
-{{"judul":["...","...","..."],"deskripsi":"...","kata_kunci":["..."],"hashtag":["..."],"teks_thumbnail":"...","konsep_thumbnail":"...","komentar_tersemat":"...","ajakan":"..."}}
-"""
+    prompt = f""" Buat paket SEO YouTube dalam Bahasa Indonesia untuk video berikut. Analisis: {json.dumps(st.session_state.analysis, ensure_ascii=False)} Jumlah adegan: {len(st.session_state.storyboard)} Kembalikan HANYA JSON valid: {{"judul":["...","...","..."],"deskripsi":"...","kata_kunci":["..."],"hashtag":["..."],"teks_thumbnail":"...","konsep_thumbnail":"...","komentar_tersemat":"...","ajakan":"..."}} """
     with st.spinner("Membuat SEO..."):
         try: st.session_state.seo = extract_json(ask(client, prompt))
         except Exception as e: st.error(f"SEO gagal dibuat: {e}")
