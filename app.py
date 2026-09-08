@@ -25,6 +25,10 @@ DURATION_SCENES = {
     "2 menit": 15,
     "2,5 menit": 19,
     "3 menit": 23,
+    "3,5 menit": 27,
+    "4 menit": 30,
+    "4,5 menit": 34,
+    "5 menit": 38,
 }
 
 STYLE_OPTIONS = [
@@ -92,6 +96,7 @@ DEFAULTS = {
     "scene_frames": {},
     "current_scene": 1,
     "storyboard_duration": None,
+    "target_scene_count": 1,
     "seo": {},
 }
 
@@ -112,6 +117,19 @@ def go(page):
 
 def scene_count():
     return DURATION_SCENES[st.session_state.duration]
+
+
+def on_duration_change():
+    # Changing duration invalidates any old storyboard so a multi-scene project
+    # can never silently fall back to the previous scene count.
+    new_count = scene_count()
+    st.session_state.storyboard = []
+    st.session_state.scene_prompts = {}
+    st.session_state.scene_frames = {}
+    st.session_state.current_scene = 1
+    st.session_state.storyboard_duration = None
+    st.session_state.target_scene_count = new_count
+    st.session_state.seo = {}
 
 
 def safe_text(value):
@@ -219,6 +237,7 @@ def invalidate_from_analysis():
     st.session_state.scene_frames = {}
     st.session_state.current_scene = 1
     st.session_state.storyboard_duration = None
+    st.session_state.target_scene_count = scene_count()
     st.session_state.seo = {}
 
 
@@ -227,7 +246,7 @@ def invalidate_from_analysis():
 # ============================================================
 with st.sidebar:
     st.title(":material/movie: UGC Reference Studio")
-    st.caption(":material/video_library: Referensi :material/arrow_forward: :material/analytics: Continuity Analysis :material/arrow_forward: :material/account_tree: Storyboard :material/arrow_forward: :material/auto_awesome: Flow/Veo")
+    st.caption(":material/video_library: Referensi  :material/arrow_forward:  :material/analytics: Continuity Analysis  :material/arrow_forward:  :material/account_tree: Storyboard  :material/arrow_forward:  :material/auto_awesome: Flow/Veo")
     st.text_input("Gemini API Key", type="password", key="api_key", placeholder="AIza...")
     st.divider()
     if st.button(":material/home: Beranda", use_container_width=True):
@@ -287,7 +306,12 @@ def render_home():
         st.selectbox("Gaya visual", STYLE_OPTIONS, key="visual_style")
         st.selectbox("Rasio video", ASPECT_OPTIONS, key="aspect_ratio")
     with col2:
-        st.selectbox("Durasi video", list(DURATION_SCENES.keys()), key="duration")
+        st.selectbox(
+            "Durasi video",
+            list(DURATION_SCENES.keys()),
+            key="duration",
+            on_change=on_duration_change,
+        )
         st.text_area(
             "Instruksi tambahan",
             key="custom_instruction",
@@ -332,7 +356,103 @@ def run_analysis():
         return
 
     target_scenes = scene_count()
-    prompt = f""" Anda adalah showrunner dan continuity supervisor untuk video pendek komedi sinematik. Analisis referensi yang diberikan SECARA TEMPORAL dan SPATIAL sebelum membuat storyboard. Jangan langsung menulis prompt video. TUJUAN: Membangun satu sumber kebenaran (single source of truth) tentang apa yang terjadi, di mana karakter berada, dari mana objek datang, bagaimana kamera melihat kejadian, dan bagaimana satu kejadian menyebabkan kejadian berikutnya. ATURAN KERAS: 1. Urutan kejadian harus mengikuti referensi. Jangan mengarang plot baru. 2. Setiap perubahan harus mempunyai sebab yang terlihat atau sudah disiapkan sebelumnya. 3. Jangan membuat objek, pintu, orang, kendaraan, ruangan, atau kamera tiba-tiba muncul. 4. Jika sesuatu baru muncul pada referensi, jelaskan bagaimana dan dari mana ia masuk. 5. Bedakan elemen yang SUDAH ADA sejak awal dengan elemen yang BARU MASUK. 6. Catat posisi relatif: kiri/kanan/tengah/depan/belakang, dekat/jauh, di atas/bawah. 7. Catat kamera: posisi, tinggi, arah pandang, framing, lensa/perspektif, dan gerak kamera. 8. Catat status properti: dipegang, di lantai, di meja, di dalam kendaraan, terbuka/tertutup, dll. 9. Setiap beat harus memiliki START STATE, ACTION, dan END STATE. 10. END STATE beat sebelumnya menjadi START STATE beat berikutnya kecuali referensi sendiri menunjukkan perubahan. 11. Jika target video {st.session_state.duration} membutuhkan {target_scenes} scene, pecah kejadian referensi secara temporal. Jangan menambah kejadian baru hanya untuk memenuhi jumlah scene. 12. Untuk karakter utama, gunakan Milo sebagai karakter Tale Of Paw. Karakter pendukung hanya boleh ada jika memang diperlukan oleh referensi/alur. 13. Properti biasa dan lingkungan yang tidak berbahaya harus dipertahankan secara visual. Untuk elemen berbahaya, pertahankan fungsi dramatis/komedinya tanpa detail operasional dan buat representasinya aman. 14. Jangan mengubah lokasi atau geografi hanya agar prompt terlihat lebih sinematik. 15. Semua nilai JSON berbahasa Indonesia. CHARACTER LOCK: {json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)} PENGATURAN: Gaya visual: {st.session_state.visual_style} Rasio: {st.session_state.aspect_ratio} Durasi target: {st.session_state.duration} Jumlah scene target: {target_scenes} Instruksi pengguna: {st.session_state.custom_instruction} Kembalikan HANYA JSON dengan struktur persis: {{ "ringkasan": "...", "niche": "...", "hook": "...", "sebab_akibat": "...", "tujuan_emosi": "...", "pacing_logic": "...", "payoff": "...", "world_lock": {{ "lokasi_utama": "...", "geografi": "...", "elemen_tetap": ["..."], "titik_masuk_keluar": ["..."], "aturan_lokasi": ["..."] }}, "camera_lock": {{ "posisi": "...", "tinggi": "...", "arah_pandang": "...", "framing": "...", "perspektif_lensa": "...", "gerakan": "...", "aturan_kamera": ["..."] }}, "character_lock": {{ "nama": "Milo", "peran_dalam_referensi": "...", "posisi_awal": "...", "gerakan_khas": "..." }}, "prop_locks": [ {{"nama":"...", "status_awal":"...", "lokasi":"...", "perubahan":"..."}} ], "temporal_breakdown": [ {{ "beat": 1, "waktu": "00:00-00:08", "start_state": "...", "action": "...", "cause": "...", "end_state": "...", "camera_state": "...", "character_state": "...", "prop_state": "...", "continuity_to_next": "..." }} ], "urutan_kejadian": ["..."], "detail_produksi": {{ "penampilan": "...", "setting": "...", "lighting": "...", "visual_design": "...", "dialog": "...", "sound_design": "..." }} }} """
+    prompt = f"""
+Anda adalah showrunner dan continuity supervisor untuk video pendek komedi sinematik.
+Analisis referensi yang diberikan SECARA TEMPORAL dan SPATIAL sebelum membuat storyboard.
+Jangan langsung menulis prompt video.
+
+TUJUAN:
+Membangun satu sumber kebenaran (single source of truth) tentang apa yang terjadi,
+di mana karakter berada, dari mana objek datang, bagaimana kamera melihat kejadian,
+dan bagaimana satu kejadian menyebabkan kejadian berikutnya.
+
+ATURAN KERAS:
+1. Urutan kejadian harus mengikuti referensi. Jangan mengarang plot baru.
+2. Setiap perubahan harus mempunyai sebab yang terlihat atau sudah disiapkan sebelumnya.
+3. Jangan membuat objek, pintu, orang, kendaraan, ruangan, atau kamera tiba-tiba muncul.
+4. Jika sesuatu baru muncul pada referensi, jelaskan bagaimana dan dari mana ia masuk.
+5. Bedakan elemen yang SUDAH ADA sejak awal dengan elemen yang BARU MASUK.
+6. Catat posisi relatif: kiri/kanan/tengah/depan/belakang, dekat/jauh, di atas/bawah.
+7. Catat kamera: posisi, tinggi, arah pandang, framing, lensa/perspektif, dan gerak kamera.
+8. Catat status properti: dipegang, di lantai, di meja, di dalam kendaraan, terbuka/tertutup, dll.
+9. Setiap beat harus memiliki START STATE, ACTION, dan END STATE.
+10. END STATE beat sebelumnya menjadi START STATE beat berikutnya kecuali referensi sendiri menunjukkan perubahan.
+11. Jika target video {st.session_state.duration} membutuhkan {target_scenes} scene, pecah kejadian referensi secara temporal.
+    Jangan menambah kejadian baru hanya untuk memenuhi jumlah scene.
+12. Untuk karakter utama, gunakan Milo sebagai karakter Tale Of Paw. Karakter pendukung hanya boleh ada jika memang diperlukan oleh referensi/alur.
+13. Properti biasa dan lingkungan yang tidak berbahaya harus dipertahankan secara visual. Untuk elemen berbahaya, pertahankan fungsi dramatis/komedinya tanpa detail operasional dan buat representasinya aman.
+14. Jangan mengubah lokasi atau geografi hanya agar prompt terlihat lebih sinematik.
+15. Semua nilai JSON berbahasa Indonesia.
+
+CHARACTER LOCK:
+{json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
+
+PENGATURAN:
+Gaya visual: {st.session_state.visual_style}
+Rasio: {st.session_state.aspect_ratio}
+Durasi target: {st.session_state.duration}
+Jumlah scene target: {target_scenes}
+Instruksi pengguna: {st.session_state.custom_instruction}
+
+Kembalikan HANYA JSON dengan struktur persis:
+{{
+  "ringkasan": "...",
+  "niche": "...",
+  "hook": "...",
+  "sebab_akibat": "...",
+  "tujuan_emosi": "...",
+  "pacing_logic": "...",
+  "payoff": "...",
+  "world_lock": {{
+    "lokasi_utama": "...",
+    "geografi": "...",
+    "elemen_tetap": ["..."],
+    "titik_masuk_keluar": ["..."],
+    "aturan_lokasi": ["..."]
+  }},
+  "camera_lock": {{
+    "posisi": "...",
+    "tinggi": "...",
+    "arah_pandang": "...",
+    "framing": "...",
+    "perspektif_lensa": "...",
+    "gerakan": "...",
+    "aturan_kamera": ["..."]
+  }},
+  "character_lock": {{
+    "nama": "Milo",
+    "peran_dalam_referensi": "...",
+    "posisi_awal": "...",
+    "gerakan_khas": "..."
+  }},
+  "prop_locks": [
+    {{"nama":"...", "status_awal":"...", "lokasi":"...", "perubahan":"..."}}
+  ],
+  "temporal_breakdown": [
+    {{
+      "beat": 1,
+      "waktu": "00:00-00:08",
+      "start_state": "...",
+      "action": "...",
+      "cause": "...",
+      "end_state": "...",
+      "camera_state": "...",
+      "character_state": "...",
+      "prop_state": "...",
+      "continuity_to_next": "..."
+    }}
+  ],
+  "urutan_kejadian": ["..."],
+  "detail_produksi": {{
+    "penampilan": "...",
+    "setting": "...",
+    "lighting": "...",
+    "visual_design": "...",
+    "dialog": "...",
+    "sound_design": "..."
+  }}
+}}
+"""
 
     with st.spinner("Membedah referensi: urutan, lokasi, kamera, karakter, properti, dan continuity..."):
         try:
@@ -364,7 +484,7 @@ def render_analysis():
         ("Tujuan emosi", "tujuan_emosi"),
         ("Pacing", "pacing_logic"),
         ("Payoff", "payoff"),
-    ]:
+            ]:
         st.write(f"**{label}:** {safe_text(analysis.get(key))}")
 
     world = analysis.get("world_lock", {})
@@ -423,7 +543,69 @@ def run_storyboard():
     n = scene_count()
     analysis = st.session_state.analysis
 
-    prompt = f""" Anda adalah continuity supervisor. Buat storyboard final dari continuity map yang sudah dianalisis. Jangan membuat konsep baru dan jangan mengarang kejadian baru. TARGET: - Tepat {n} scene. - Masing-masing sekitar 8 detik. - Scene 1 dimulai dari keadaan awal referensi. - Scene N berakhir pada payoff/keadaan akhir referensi. - Setiap scene harus menjadi kelanjutan langsung scene sebelumnya. ATURAN WAJIB: 1. START STATE Scene 1 harus konsisten dengan referensi. 2. START STATE Scene 2+ harus sama dengan END STATE scene sebelumnya, kecuali perubahan terjadi secara eksplisit dalam transisi. 3. Setiap scene wajib memiliki satu rantai: START STATE -> CAUSE -> ACTION -> END STATE. 4. Jangan memperkenalkan objek/karakter/lokasi baru tanpa menjelaskan asal dan momen masuknya. 5. Jangan mengubah posisi pintu, jendela, tangga, kendaraan, meja, kamera, atau elemen lingkungan tetap. 6. Jangan memindahkan kamera ke tempat lain kecuali camera lock/reference memang menunjukkan perpindahan. 7. Jangan memindahkan properti secara teleport. Jika properti berpindah, tulis aksi yang memindahkannya. 8. Milo harus karakter yang sama secara fisik di semua scene. 9. Jangan menambahkan scene filler yang tidak ada hubungan sebab-akibat. 10. Jika jumlah target scene lebih besar daripada jumlah beat referensi, pecah satu beat menjadi beberapa langkah mikro yang memang terjadi secara natural; jangan membuat plot baru. 11. Jika jumlah target scene lebih kecil, gabungkan beat yang berdekatan tanpa menghilangkan sebab-akibat. 12. Buat ending setiap scene mudah dilanjutkan oleh generator video berikutnya. 13. Semua teks JSON Bahasa Indonesia. CHARACTER LOCK: {json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)} CONTINUITY MAP: {json.dumps(analysis, ensure_ascii=False, indent=2)} Kembalikan HANYA JSON: {{ "adegan": [ {{ "nomor": 1, "waktu": "00:00-00:08", "tujuan": "...", "start_state": {{ "lokasi": "...", "kamera": "...", "milo": "...", "properti": "...", "elemen_lingkungan": "..." }}, "cause": "...", "aksi": "...", "end_state": {{ "lokasi": "...", "kamera": "...", "milo": "...", "properti": "...", "elemen_lingkungan": "..." }}, "kontinuitas": "Jelaskan tepat bagaimana end state ini menjadi start state scene berikutnya.", "kamera": "...", "audio": "...", "transisi": "..." }} ] }} """
+    prompt = f"""
+Anda adalah continuity supervisor. Buat storyboard final dari continuity map yang sudah dianalisis.
+Jangan membuat konsep baru dan jangan mengarang kejadian baru.
+
+TARGET:
+- Tepat {n} scene.
+- Masing-masing sekitar 8 detik.
+- Scene 1 dimulai dari keadaan awal referensi.
+- Scene N berakhir pada payoff/keadaan akhir referensi.
+- Setiap scene harus menjadi kelanjutan langsung scene sebelumnya.
+
+ATURAN WAJIB:
+1. START STATE Scene 1 harus konsisten dengan referensi.
+2. START STATE Scene 2+ harus sama dengan END STATE scene sebelumnya, kecuali perubahan terjadi secara eksplisit dalam transisi.
+3. Setiap scene wajib memiliki satu rantai: START STATE -> CAUSE -> ACTION -> END STATE.
+4. Jangan memperkenalkan objek/karakter/lokasi baru tanpa menjelaskan asal dan momen masuknya.
+5. Jangan mengubah posisi pintu, jendela, tangga, kendaraan, meja, kamera, atau elemen lingkungan tetap.
+6. Jangan memindahkan kamera ke tempat lain kecuali camera lock/reference memang menunjukkan perpindahan.
+7. Jangan memindahkan properti secara teleport. Jika properti berpindah, tulis aksi yang memindahkannya.
+8. Milo harus karakter yang sama secara fisik di semua scene.
+9. Jangan menambahkan scene filler yang tidak ada hubungan sebab-akibat.
+10. Jika jumlah target scene lebih besar daripada jumlah beat referensi, pecah satu beat menjadi beberapa langkah mikro yang memang terjadi secara natural; jangan membuat plot baru.
+11. Jika jumlah target scene lebih kecil, gabungkan beat yang berdekatan tanpa menghilangkan sebab-akibat.
+12. Buat ending setiap scene mudah dilanjutkan oleh generator video berikutnya.
+13. Semua teks JSON Bahasa Indonesia.
+
+CHARACTER LOCK:
+{json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
+
+CONTINUITY MAP:
+{json.dumps(analysis, ensure_ascii=False, indent=2)}
+
+Kembalikan HANYA JSON:
+{{
+  "adegan": [
+    {{
+      "nomor": 1,
+      "waktu": "00:00-00:08",
+      "tujuan": "...",
+      "start_state": {{
+        "lokasi": "...",
+        "kamera": "...",
+        "milo": "...",
+        "properti": "...",
+        "elemen_lingkungan": "..."
+      }},
+      "cause": "...",
+      "aksi": "...",
+      "end_state": {{
+        "lokasi": "...",
+        "kamera": "...",
+        "milo": "...",
+        "properti": "...",
+        "elemen_lingkungan": "..."
+      }},
+      "kontinuitas": "Jelaskan tepat bagaimana end state ini menjadi start state scene berikutnya.",
+      "kamera": "...",
+      "audio": "...",
+      "transisi": "..."
+    }}
+  ]
+}}
+"""
 
     with st.spinner(f"Menyusun {n} scene dengan continuity contract..."):
         try:
@@ -453,6 +635,7 @@ def run_storyboard():
             st.session_state.scene_frames = {}
             st.session_state.current_scene = 1
             st.session_state.storyboard_duration = st.session_state.duration
+            st.session_state.target_scene_count = n
             st.session_state.seo = {}
             go("storyboard")
         except Exception as exc:
@@ -519,7 +702,70 @@ def generate_scene_prompt(scene_number):
     previous_frame = st.session_state.scene_frames.get(scene_number - 1)
     analysis = st.session_state.analysis
 
-    prompt = f""" Write ONE production-ready Google Flow / Veo prompt in ENGLISH for Scene {scene_number}. Do not write commentary before or after the prompt. THIS IS A CONTINUATION TASK, NOT A NEW IMAGE CONCEPT. The generated scene must look like the immediate continuation of the previous scene. CONTINUITY HIERARCHY - highest priority first: 1. Previous scene END STATE and uploaded last-frame image, if supplied. 2. Current scene START STATE. 3. Locked location/geography and camera. 4. Locked character identity. 5. Current scene ACTION and CAUSE. 6. Current scene END STATE. 7. Style/lighting polish. ABSOLUTE RULES: - Never teleport or relocate a character, prop, doorway, vehicle, furniture, or camera. - Never introduce a new environment that was not established. - Never make a person/object suddenly appear without a visible entrance or cause defined by the storyboard. - Keep the same physical geography: left/right/center, foreground/background, entrances and exits. - Keep the same camera position and perspective unless the storyboard explicitly requires a camera move. - If the camera moves, describe the movement continuously from its previous position rather than cutting to an unrelated angle. - The first moment of this scene must visually match the previous END STATE. - The final moment must visually match this scene's END STATE so the next scene can continue from it. - Milo must remain exactly the same kitten. - Do not redesign Milo between scenes. - Ordinary non-hazardous props and environmental details should remain visually faithful to the established reference. - For hazardous elements, keep only the non-operational cinematic/comedic beat and do not provide realistic operational details. MILO LOCK: {CHARACTER_LOCK_EN} WORLD LOCK: {json.dumps(analysis.get('world_lock', {}), ensure_ascii=False, indent=2)} CAMERA LOCK: {json.dumps(analysis.get('camera_lock', {}), ensure_ascii=False, indent=2)} CURRENT SCENE CONTRACT: {json.dumps(scene, ensure_ascii=False, indent=2)} PREVIOUS SCENE CONTRACT: {previous_scene_text(scene_number)} NEXT SCENE CONTRACT: {next_scene_text(scene_number)} PROJECT STYLE: {st.session_state.visual_style} ASPECT RATIO: {st.session_state.aspect_ratio} TOTAL DURATION: {st.session_state.duration} OUTPUT REQUIREMENT: Write one detailed paragraph in English. Explicitly describe: - exact opening state and composition; - fixed geography and object positions; - Milo's exact appearance and current pose; - cause and continuous action; - camera position and movement; - lighting continuity; - sound/dialogue only when appropriate; - exact final state and where every important character/prop is located. Do not invent anything that conflicts with the contracts. """
+    prompt = f"""
+Write ONE production-ready Google Flow / Veo prompt in ENGLISH for Scene {scene_number}.
+Do not write commentary before or after the prompt.
+
+THIS IS A CONTINUATION TASK, NOT A NEW IMAGE CONCEPT.
+The generated scene must look like the immediate continuation of the previous scene.
+
+CONTINUITY HIERARCHY - highest priority first:
+1. Previous scene END STATE and uploaded last-frame image, if supplied.
+2. Current scene START STATE.
+3. Locked location/geography and camera.
+4. Locked character identity.
+5. Current scene ACTION and CAUSE.
+6. Current scene END STATE.
+7. Style/lighting polish.
+
+ABSOLUTE RULES:
+- Never teleport or relocate a character, prop, doorway, vehicle, furniture, or camera.
+- Never introduce a new environment that was not established.
+- Never make a person/object suddenly appear without a visible entrance or cause defined by the storyboard.
+- Keep the same physical geography: left/right/center, foreground/background, entrances and exits.
+- Keep the same camera position and perspective unless the storyboard explicitly requires a camera move.
+- If the camera moves, describe the movement continuously from its previous position rather than cutting to an unrelated angle.
+- The first moment of this scene must visually match the previous END STATE.
+- The final moment must visually match this scene's END STATE so the next scene can continue from it.
+- Milo must remain exactly the same kitten.
+- Do not redesign Milo between scenes.
+- Ordinary non-hazardous props and environmental details should remain visually faithful to the established reference.
+- For hazardous elements, keep only the non-operational cinematic/comedic beat and do not provide realistic operational details.
+
+MILO LOCK:
+{CHARACTER_LOCK_EN}
+
+WORLD LOCK:
+{json.dumps(analysis.get('world_lock', {}), ensure_ascii=False, indent=2)}
+
+CAMERA LOCK:
+{json.dumps(analysis.get('camera_lock', {}), ensure_ascii=False, indent=2)}
+
+CURRENT SCENE CONTRACT:
+{json.dumps(scene, ensure_ascii=False, indent=2)}
+
+PREVIOUS SCENE CONTRACT:
+{previous_scene_text(scene_number)}
+
+NEXT SCENE CONTRACT:
+{next_scene_text(scene_number)}
+
+PROJECT STYLE: {st.session_state.visual_style}
+ASPECT RATIO: {st.session_state.aspect_ratio}
+TOTAL DURATION: {st.session_state.duration}
+
+OUTPUT REQUIREMENT:
+Write one detailed paragraph in English. Explicitly describe:
+- exact opening state and composition;
+- fixed geography and object positions;
+- Milo's exact appearance and current pose;
+- cause and continuous action;
+- camera position and movement;
+- lighting continuity;
+- sound/dialogue only when appropriate;
+- exact final state and where every important character/prop is located.
+Do not invent anything that conflicts with the contracts.
+"""
 
     parts = file_parts(client, previous_frame) if previous_frame else []
 
@@ -545,34 +791,52 @@ def render_scenes():
         st.info("Storyboard belum dibuat.")
         return
 
-    n = len(scenes)
-    expected = scene_count()
-    if st.session_state.storyboard_duration != st.session_state.duration:
+    # The scene count is locked when the storyboard is created.
+    locked_duration = st.session_state.storyboard_duration or st.session_state.duration
+    expected_from_duration = DURATION_SCENES.get(locked_duration)
+    expected = expected_from_duration or st.session_state.target_scene_count or len(scenes)
+    actual = len(scenes)
+
+    st.info(f"Durasi terkunci: {locked_duration} | Target: {expected} scene | Storyboard: {actual} scene")
+
+    if locked_duration != st.session_state.duration:
         st.warning(
-            f"Storyboard ini dibuat untuk {st.session_state.storyboard_duration} ({n} scene), "
-            f"sedangkan durasi sekarang {st.session_state.duration} ({expected} scene). "
-            "Buat ulang storyboard agar jumlah scene sesuai."
+            f"Durasi saat ini {st.session_state.duration} berbeda dari storyboard {locked_duration}. "
+            "Jangan lanjut sebelum storyboard sesuai durasi."
         )
-        if st.button(":material/refresh: BUAT ULANG STORYBOARD SESUAI DURASI", type="primary", use_container_width=True):
+        if st.button(":material/refresh: BUAT ULANG STORYBOARD", type="primary", use_container_width=True):
             run_storyboard()
         return
 
-    current = max(1, min(st.session_state.current_scene, n))
+    # Never allow a 1-scene storyboard to silently turn a multi-scene project into SEO.
+    if actual != expected:
+        st.error(
+            f"Jumlah scene tidak sesuai. Durasi {locked_duration} wajib menghasilkan {expected} scene, "
+            f"tetapi storyboard hanya berisi {actual}. Scene berikutnya sengaja dikunci agar alur tidak rusak."
+        )
+        if st.button(":material/refresh: GENERATE ULANG {0} SCENE".format(expected), type="primary", use_container_width=True):
+            run_storyboard()
+        return
+
+    current = max(1, min(st.session_state.current_scene, expected))
+    # Scene progression is strictly sequential; a stale session value cannot jump over scenes.
     st.session_state.current_scene = current
-    st.progress(current / n)
-    st.write(f"**Scene {current} / {n}**")
+    st.progress(current / expected)
+    st.subheader(f"SCENE {current} / {expected}")
 
     scene = scenes[current - 1]
-    st.subheader(f"Scene {current} - {scene.get('waktu', '')}")
+    st.write(f"**Waktu:** {safe_text(scene.get('waktu'))}")
     st.write(f"**Start state:** {safe_text(scene.get('start_state'))}")
     st.write(f"**Cause:** {safe_text(scene.get('cause'))}")
     st.write(f"**Action:** {safe_text(scene.get('aksi'))}")
     st.write(f"**End state:** {safe_text(scene.get('end_state'))}")
 
+    # Scene 2+ cannot be generated until the last frame of the previous scene is supplied.
     if current > 1:
+        st.subheader(":material/photo_camera: Continuity Frame")
         st.info(
-            f"Scene {current} harus dimulai dari END STATE Scene {current - 1}. "
-            "Upload frame terakhir hasil Flow/Veo untuk continuity visual yang lebih kuat."
+            f"Upload screenshot frame terakhir Scene {current - 1}. "
+            "Frame ini menjadi acuan visual untuk memulai scene berikutnya."
         )
         frame = st.file_uploader(
             f"Upload screenshot frame terakhir Scene {current - 1}",
@@ -584,9 +848,13 @@ def render_scenes():
             st.success(f"Frame terakhir Scene {current - 1} tersimpan.")
 
     if current not in st.session_state.scene_prompts:
-        if st.button(f":material/auto_awesome: BUAT PROMPT SCENE {current}", type="primary", use_container_width=True):
-            if generate_scene_prompt(current):
-                st.rerun()
+        blocked = current > 1 and (current - 1 not in st.session_state.scene_frames)
+        if blocked:
+            st.warning(f"Scene {current} belum bisa dibuat. Upload dulu screenshot akhir Scene {current - 1}.")
+        else:
+            if st.button(f":material/auto_awesome: BUAT PROMPT SCENE {current}", type="primary", use_container_width=True):
+                if generate_scene_prompt(current):
+                    st.rerun()
     else:
         st.success(f"Prompt Scene {current} sudah dibuat.")
         st.text_area(
@@ -596,30 +864,38 @@ def render_scenes():
             key=f"view_prompt_{current}",
         )
 
-        left, right = st.columns(2)
-        with left:
-            if current > 1 and st.button(":material/arrow_back: SCENE SEBELUMNYA", use_container_width=True):
-                st.session_state.current_scene = current - 1
+        st.divider()
+        if current < expected:
+            st.success(
+                f"SCENE {current} SELESAI. Setelah generate video di Flow/Veo dan mengambil screenshot frame terakhir, "
+                f"lanjutkan ke SCENE {current + 1}."
+            )
+            current_frame_ready = current in st.session_state.scene_frames
+            if not current_frame_ready:
+                st.warning(
+                    f"Upload screenshot frame terakhir Scene {current} sebelum membuka Scene {current + 1}."
+                )
+            if st.button(
+                f":material/arrow_forward: SELESAI SCENE {current} - LANJUT KE SCENE {current + 1}",
+                type="primary",
+                use_container_width=True,
+                disabled=not current_frame_ready,
+            ):
+                st.session_state.current_scene = current + 1
                 st.rerun()
-        with right:
-            if current < n:
-                if st.button(":material/arrow_forward: SCENE BERIKUTNYA", type="primary", use_container_width=True):
-                    st.session_state.current_scene = current + 1
-                    st.rerun()
-            else:
-                if st.button(":material/search: LANJUT KE SEO", type="primary", use_container_width=True):
+        else:
+            all_prompts_done = all(i in st.session_state.scene_prompts for i in range(1, expected + 1))
+            if all_prompts_done:
+                if st.button(":material/search: SEMUA SCENE SELESAI - LANJUT KE SEO", type="primary", use_container_width=True):
                     go("seo")
+            else:
+                st.info("Ini scene terakhir. SEO akan dibuka setelah semua prompt scene selesai.")
 
     st.divider()
-    jump = st.selectbox(
-        "Pilih scene",
-        list(range(1, n + 1)),
-        index=current - 1,
-        key="jump_scene",
+    st.caption(
+        f":material/lock: Alur terkunci berurutan: Scene 1 sampai Scene {expected}. "
+        "Scene berikutnya dibuka setelah frame terakhir scene aktif tersedia."
     )
-    if jump != current:
-        st.session_state.current_scene = jump
-        st.rerun()
 
 
 # ============================================================
@@ -629,7 +905,26 @@ def run_seo():
     client = get_client()
     if not client:
         return
-    prompt = f""" Buat paket SEO YouTube dalam Bahasa Indonesia untuk video Tale Of Paw berikut. Jangan mengubah inti cerita. Analisis: {json.dumps(st.session_state.analysis, ensure_ascii=False)} Jumlah scene: {len(st.session_state.storyboard)} Kembalikan HANYA JSON valid: {{ "judul":["...","...","..."], "deskripsi":"...", "kata_kunci":["..."], "hashtag":["..."], "teks_thumbnail":"...", "konsep_thumbnail":"...", "komentar_tersemat":"...", "ajakan":"..." }} """
+    prompt = f"""
+Buat paket SEO YouTube dalam Bahasa Indonesia untuk video Tale Of Paw berikut.
+Jangan mengubah inti cerita.
+
+Analisis:
+{json.dumps(st.session_state.analysis, ensure_ascii=False)}
+Jumlah scene: {len(st.session_state.storyboard)}
+
+Kembalikan HANYA JSON valid:
+{{
+  "judul":["...","...","..."],
+  "deskripsi":"...",
+  "kata_kunci":["..."],
+  "hashtag":["..."],
+  "teks_thumbnail":"...",
+  "konsep_thumbnail":"...",
+  "komentar_tersemat":"...",
+  "ajakan":"..."
+}}
+"""
     with st.spinner("Membuat SEO..."):
         try:
             st.session_state.seo = extract_json(ask(client, prompt))
