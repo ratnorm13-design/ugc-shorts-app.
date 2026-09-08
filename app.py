@@ -8,7 +8,7 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="UGC Reference Studio", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Reference Studio", page_icon=":material/movie:", layout="wide")
 
 MODEL_NAME = "gemini-3.6-flash"
 
@@ -37,11 +37,11 @@ STYLE_OPTIONS = [
     "Aksi sinematik",
     "Kustom",
 ]
-ASPECT_OPTIONS = ["9:16 — Shorts", "16:9 — YouTube", "1:1 — Kotak"]
+ASPECT_OPTIONS = ["9:16 - Shorts", "16:9 - YouTube", "1:1 - Kotak"]
 REFERENCE_OPTIONS = ["Video", "Screenshot", "Teks / ide"]
 
 # ============================================================
-# TALE OF PAW — CHARACTER LOCK
+# TALE OF PAW - CHARACTER LOCK
 # ============================================================
 CHARACTER_LOCK = {
     "nama": "Milo",
@@ -226,22 +226,22 @@ def invalidate_from_analysis():
 # SIDEBAR
 # ============================================================
 with st.sidebar:
-    st.title("UGC Reference Studio")
-    st.caption("Referensi → Continuity Analysis → Storyboard → Flow/Veo")
+    st.title(":material/movie: UGC Reference Studio")
+    st.caption("Referensi -> Continuity Analysis -> Storyboard -> Flow/Veo")
     st.text_input("Gemini API Key", type="password", key="api_key", placeholder="AIza...")
     st.divider()
-    if st.button("Beranda", use_container_width=True):
+    if st.button(":material/home: Beranda", use_container_width=True):
         go("home")
-    if st.button("Analisis Referensi", use_container_width=True):
+    if st.button(":material/analytics: Analisis Referensi", use_container_width=True):
         go("analysis")
-    if st.button("Storyboard", use_container_width=True):
+    if st.button(":material/account_tree: Storyboard", use_container_width=True):
         go("storyboard")
-    if st.button("Prompt Adegan", use_container_width=True):
+    if st.button(":material/auto_awesome: Prompt Adegan", use_container_width=True):
         go("scenes")
-    if st.button("SEO YouTube", use_container_width=True):
+    if st.button(":material/search: SEO YouTube", use_container_width=True):
         go("seo")
     st.divider()
-    if st.button("Proyek Baru", use_container_width=True):
+    if st.button(":material/add: Proyek Baru", use_container_width=True):
         reset_project()
         st.rerun()
 
@@ -250,13 +250,13 @@ with st.sidebar:
 # HOME
 # ============================================================
 def render_home():
-    st.title("UGC Reference Studio")
+    st.title(":material/movie: UGC Reference Studio")
     st.write(
         "Mesin referensi yang membedah video acuan secara berurutan, memetakan lokasi, "
         "kamera, karakter, properti, aksi, dan keadaan akhir setiap adegan sebelum membuat prompt Flow/Veo."
     )
 
-    st.subheader("1. Referensi")
+    st.subheader(":material/video_library: 1. Referensi")
     st.radio("Jenis referensi", REFERENCE_OPTIONS, horizontal=True, key="reference_type")
     ref_type = st.session_state.reference_type
     if ref_type == "Video":
@@ -281,7 +281,7 @@ def render_home():
         st.session_state.reference_file = None
         st.session_state.reference_files = []
 
-    st.subheader("2. Pengaturan Video")
+    st.subheader(":material/tune: 2. Pengaturan Video")
     col1, col2 = st.columns(2)
     with col1:
         st.selectbox("Gaya visual", STYLE_OPTIONS, key="visual_style")
@@ -301,7 +301,7 @@ def render_home():
         "Jumlah adegan hanya membagi waktu; alur tidak boleh melompat."
     )
 
-    st.subheader("3. Prinsip Continuity")
+    st.subheader(":material/link: 3. Prinsip Continuity")
     st.write(
         "Sistem tidak langsung membuat prompt. Referensi dibedah dulu menjadi urutan kejadian, "
         "peta lokasi, posisi kamera, posisi karakter, status properti, start state, action, dan end state."
@@ -315,12 +315,12 @@ def render_home():
         "Identitas karakter utama Tale Of Paw tetap Milo."
     )
 
-    if st.button("ANALISIS REFERENSI", type="primary", use_container_width=True):
+    if st.button(":material/analytics: ANALISIS REFERENSI", type="primary", use_container_width=True):
         run_analysis()
 
 
 # ============================================================
-# REFERENCE ANALYSIS — TEMPORAL + SPATIAL + STATE
+# REFERENCE ANALYSIS - TEMPORAL + SPATIAL + STATE
 # ============================================================
 def run_analysis():
     client = get_client()
@@ -441,18 +441,17 @@ Kembalikan HANYA JSON dengan struktur persis:
         except Exception as exc:
             st.error(f"Analisis gagal: {exc}")
 
-
 # ============================================================
 # ANALYSIS PAGE
 # ============================================================
 def render_analysis():
-    st.title("Analisis Referensi + Continuity Map")
+    st.title(":material/analytics: Analisis Referensi + Continuity Map")
     analysis = st.session_state.analysis
     if not analysis:
         st.info("Belum ada analisis. Kembali ke Beranda dan analisis referensi.")
         return
 
-    st.subheader("Alur yang Dikunci")
+    st.subheader(":material/account_tree: Alur yang Dikunci")
     for label, key in [
         ("Niche", "niche"),
         ("Hook", "hook"),
@@ -466,14 +465,14 @@ def render_analysis():
     world = analysis.get("world_lock", {})
     camera = analysis.get("camera_lock", {})
 
-    st.subheader("World / Geography Lock")
+    st.subheader(":material/map: World / Geography Lock")
     st.write(f"**Lokasi utama:** {safe_text(world.get('lokasi_utama'))}")
     st.write(f"**Geografi:** {safe_text(world.get('geografi'))}")
     st.write(f"**Elemen tetap:** {safe_text(world.get('elemen_tetap'))}")
     st.write(f"**Titik masuk/keluar:** {safe_text(world.get('titik_masuk_keluar'))}")
     st.write(f"**Aturan lokasi:** {safe_text(world.get('aturan_lokasi'))}")
 
-    st.subheader("Camera Lock")
+    st.subheader(":material/photo_camera: Camera Lock")
     for label, key in [
         ("Posisi", "posisi"),
         ("Tinggi", "tinggi"),
@@ -484,15 +483,15 @@ def render_analysis():
     ]:
         st.write(f"**{label}:** {safe_text(camera.get(key))}")
 
-    st.subheader("Character Lock")
+    st.subheader(":material/pets: Character Lock")
     st.write(f"**Nama:** {CHARACTER_LOCK['nama']}")
     st.write(f"**Visual:** {CHARACTER_LOCK['identitas_visual']}")
     st.warning("Milo tidak boleh berubah identitas. Posisi dan keadaan Milo boleh berubah hanya karena aksi cerita.")
 
-    st.subheader("Temporal Breakdown")
+    st.subheader(":material/timeline: Temporal Breakdown")
     beats = analysis.get("temporal_breakdown", [])
     for beat in beats:
-        with st.expander(f"Beat {beat.get('beat')} — {beat.get('waktu', '')}"):
+        with st.expander(f"Beat {beat.get('beat')} - {beat.get('waktu', '')}"):
             for label, key in [
                 ("Start state", "start_state"),
                 ("Cause", "cause"),
@@ -505,12 +504,12 @@ def render_analysis():
             ]:
                 st.write(f"**{label}:** {safe_text(beat.get(key))}")
 
-    if st.button("BUAT STORYBOARD DARI CONTINUITY MAP", type="primary", use_container_width=True):
+    if st.button(":material/account_tree: BUAT STORYBOARD DARI CONTINUITY MAP", type="primary", use_container_width=True):
         run_storyboard()
 
 
 # ============================================================
-# STORYBOARD GENERATOR — START/ACTION/END CONTRACT
+# STORYBOARD GENERATOR - START/ACTION/END CONTRACT
 # ============================================================
 def run_storyboard():
     client = get_client()
@@ -533,7 +532,7 @@ TARGET:
 ATURAN WAJIB:
 1. START STATE Scene 1 harus konsisten dengan referensi.
 2. START STATE Scene 2+ harus sama dengan END STATE scene sebelumnya, kecuali perubahan terjadi secara eksplisit dalam transisi.
-3. Setiap scene wajib memiliki satu rantai: START STATE → CAUSE → ACTION → END STATE.
+3. Setiap scene wajib memiliki satu rantai: START STATE -> CAUSE -> ACTION -> END STATE.
 4. Jangan memperkenalkan objek/karakter/lokasi baru tanpa menjelaskan asal dan momen masuknya.
 5. Jangan mengubah posisi pintu, jendela, tangga, kendaraan, meja, kamera, atau elemen lingkungan tetap.
 6. Jangan memindahkan kamera ke tempat lain kecuali camera lock/reference memang menunjukkan perpindahan.
@@ -545,8 +544,6 @@ ATURAN WAJIB:
 12. Buat ending setiap scene mudah dilanjutkan oleh generator video berikutnya.
 13. Semua teks JSON Bahasa Indonesia.
 
-CHARACTER LOCK:
-{json.dumps(CHARACTER_LOCK, ensu
 CHARACTER LOCK:
 {json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
 
@@ -623,7 +620,7 @@ Kembalikan HANYA JSON:
 # STORYBOARD PAGE
 # ============================================================
 def render_storyboard():
-    st.title("Storyboard — Continuity Terkunci")
+    st.title(":material/account_tree: Storyboard - Continuity Terkunci")
     scenes = st.session_state.storyboard
     if not scenes:
         st.info("Storyboard belum dibuat.")
@@ -635,7 +632,7 @@ def render_storyboard():
     )
 
     for scene in scenes:
-        with st.expander(f"Scene {scene['nomor']} — {scene.get('waktu', '')}", expanded=scene['nomor'] == 1):
+        with st.expander(f"Scene {scene['nomor']} - {scene.get('waktu', '')}", expanded=scene['nomor'] == 1):
             st.write(f"**Tujuan:** {safe_text(scene.get('tujuan'))}")
             st.write("**START STATE:**")
             st.json(scene.get("start_state", {}))
@@ -648,7 +645,7 @@ def render_storyboard():
             st.write(f"**Audio:** {safe_text(scene.get('audio'))}")
             st.write(f"**Transition:** {safe_text(scene.get('transisi'))}")
 
-    if st.button("LANJUT KE PROMPT ADEGAN", type="primary", use_container_width=True):
+    if st.button(":material/arrow_forward: LANJUT KE PROMPT ADEGAN", type="primary", use_container_width=True):
         go("scenes")
 
 
@@ -686,7 +683,7 @@ Do not write commentary before or after the prompt.
 THIS IS A CONTINUATION TASK, NOT A NEW IMAGE CONCEPT.
 The generated scene must look like the immediate continuation of the previous scene.
 
-CONTINUITY HIERARCHY — highest priority first:
+CONTINUITY HIERARCHY - highest priority first:
 1. Previous scene END STATE and uploaded last-frame image, if supplied.
 2. Current scene START STATE.
 3. Locked location/geography and camera.
@@ -730,6 +727,7 @@ NEXT SCENE CONTRACT:
 PROJECT STYLE: {st.session_state.visual_style}
 ASPECT RATIO: {st.session_state.aspect_ratio}
 TOTAL DURATION: {st.session_state.duration}
+
 OUTPUT REQUIREMENT:
 Write one detailed paragraph in English. Explicitly describe:
 - exact opening state and composition;
@@ -761,7 +759,7 @@ Do not invent anything that conflicts with the contracts.
 # SCENE PAGE
 # ============================================================
 def render_scenes():
-    st.title("Prompt Adegan untuk Flow/Veo")
+    st.title(":material/auto_awesome: Prompt Adegan untuk Flow/Veo")
     scenes = st.session_state.storyboard
     if not scenes:
         st.info("Storyboard belum dibuat.")
@@ -775,7 +773,7 @@ def render_scenes():
             f"sedangkan durasi sekarang {st.session_state.duration} ({expected} scene). "
             "Buat ulang storyboard agar jumlah scene sesuai."
         )
-        if st.button("BUAT ULANG STORYBOARD SESUAI DURASI", type="primary", use_container_width=True):
+        if st.button(":material/refresh: BUAT ULANG STORYBOARD SESUAI DURASI", type="primary", use_container_width=True):
             run_storyboard()
         return
 
@@ -785,7 +783,7 @@ def render_scenes():
     st.write(f"**Scene {current} / {n}**")
 
     scene = scenes[current - 1]
-    st.subheader(f"Scene {current} — {scene.get('waktu', '')}")
+    st.subheader(f"Scene {current} - {scene.get('waktu', '')}")
     st.write(f"**Start state:** {safe_text(scene.get('start_state'))}")
     st.write(f"**Cause:** {safe_text(scene.get('cause'))}")
     st.write(f"**Action:** {safe_text(scene.get('aksi'))}")
@@ -806,13 +804,13 @@ def render_scenes():
             st.success(f"Frame terakhir Scene {current - 1} tersimpan.")
 
     if current not in st.session_state.scene_prompts:
-        if st.button(f"BUAT PROMPT SCENE {current}", type="primary", use_container_width=True):
+        if st.button(f":material/auto_awesome: BUAT PROMPT SCENE {current}", type="primary", use_container_width=True):
             if generate_scene_prompt(current):
                 st.rerun()
     else:
         st.success(f"Prompt Scene {current} sudah dibuat.")
         st.text_area(
-            "Prompt Flow/Veo — Bahasa Inggris",
+            "Prompt Flow/Veo - Bahasa Inggris",
             value=st.session_state.scene_prompts[current],
             height=430,
             key=f"view_prompt_{current}",
@@ -820,16 +818,16 @@ def render_scenes():
 
         left, right = st.columns(2)
         with left:
-            if current > 1 and st.button("SCENE SEBELUMNYA", use_container_width=True):
+            if current > 1 and st.button(":material/arrow_back: SCENE SEBELUMNYA", use_container_width=True):
                 st.session_state.current_scene = current - 1
                 st.rerun()
         with right:
             if current < n:
-                if st.button("SCENE BERIKUTNYA", type="primary", use_container_width=True):
+                if st.button(":material/arrow_forward: SCENE BERIKUTNYA", type="primary", use_container_width=True):
                     st.session_state.current_scene = current + 1
                     st.rerun()
             else:
-                if st.button("LANJUT KE SEO", type="primary", use_container_width=True):
+                if st.button(":material/search: LANJUT KE SEO", type="primary", use_container_width=True):
                     go("seo")
 
     st.divider()
@@ -879,12 +877,12 @@ Kembalikan HANYA JSON valid:
 
 
 def render_seo():
-    st.title("SEO YouTube")
+    st.title(":material/search: SEO YouTube")
     if not st.session_state.analysis:
         st.info("Analisis referensi belum tersedia.")
         return
     if not st.session_state.seo:
-        if st.button("BUAT SEO", type="primary", use_container_width=True):
+        if st.button(":material/auto_awesome: BUAT SEO", type="primary", use_container_width=True):
             run_seo()
             st.rerun()
         return
