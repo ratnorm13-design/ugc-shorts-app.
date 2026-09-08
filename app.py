@@ -466,76 +466,7 @@ def render_analysis():
 # ============================================================
 # STORYBOARD GENERATOR - START/ACTION/END CONTRACT
 # ============================================================
-def run_storyboard():
-    client = get_client()
-    if not client:
-        return
-    n = scene_count()
-    analysis = st.session_state.analysis
-
-    prompt = f""" Anda adalah continuity supervisor. Buat storyboard final dari continuity map yang sudah dianalisis. Jangan membuat konsep baru dan jangan mengarang kejadian baru. TARGET: - Tepat {n} scene. - Masing-masing sekitar 8 detik. - Scene 1 dimulai dari keadaan awal referensi. - Scene N berakhir pada payoff/keadaan akhir referensi. - Setiap scene harus menjadi kelanjutan langsung scene sebelumnya. ATURAN WAJIB: 1. START STATE Scene 1 harus konsisten dengan referensi. 2. START STATE Scene 2+ harus sama dengan END STATE scene sebelumnya, kecuali perubahan terjadi secara eksplisit dalam transisi. 3. Setiap scene wajib memiliki satu rantai: START STATE -> CAUSE -> ACTION -> END STATE. 4. Jangan memperkenalkan objek/karakter/lokasi baru tanpa menjelaskan asal dan momen masuknya. 5. Jangan mengubah posisi pintu, jendela, tangga, kendaraan, meja, kamera, atau elemen lingkungan tetap. 6. Jangan memindahkan kamera ke tempat lain kecuali camera lock/reference memang menunjukkan perpindahan. 7. Jangan memindahkan properti secara teleport. Jika properti berpindah, tulis aksi yang memindahkannya. 8. Milo harus karakter yang sama secara fisik di semua scene. 9. Jangan menambahkan scene filler yang tidak ada hubungan sebab-akibat. 10. Jika jumlah target scene lebih besar daripada jumlah beat referensi, pecah satu beat menjadi beberapa langkah mikro yang memang terjadi secara natural; jangan membuat plot baru. 11. Jika jumlah target scene lebih kecil, gabungkan beat yang berdekatan tanpa menghilangkan sebab-akibat. 12. Buat ending setiap scene mudah dilanjutkan oleh generator video berikutnya. 13. Semua teks JSON Bahasa Indonesia. 14. CHAIN RULE: Scene 3, Scene 4, dan semua scene setelahnya mengikuti pola yang sama: START STATE = END STATE scene sebelumnya -> CAUSE -> ACTION -> END STATE. Jangan pernah memperlakukan scene sebagai adegan mandiri. 15. Jumlah scene hanya pembagian durasi sekitar 8 detik per scene; alur tidak boleh melompat hanya karena pergantian scene. CHARACTER LOCK: {json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)} CONTINUITY MAP: {json.dumps(analysis, ensure_ascii=False, indent=2)} Kembalikan HANYA JSON: {{ "adegan": [ {{ "nomor": 1, "waktu": "00:00-00:08", "tujuan": "...", "start_state": {{ "lokasi": "...", "kamera": "...", "milo": "...", "properti": "...", "elemen_lingkungan": "..." }}, "cause": "...", "aksi": "...", "end_state": {{ "lokasi": "...", "kamera": "...", "milo": "...", "properti": "...", "elemen_lingkungan": "..." }}, "kontinuitas": "Jelaskan tepat bagaimana end state ini menjadi start state scene berikutnya.", "kamera": "...", "audio": "...", "transisi": "..." }} ] }} """
-
-    with st.spinner(f"Menyusun {n} scene dengan continuity contract..."):
-        try:
-            data = extract_json(ask(client, prompt))
-            scenes = data.get("adegan", [])
-            if len(scenes) != n:
-                raise ValueError(f"Harus tepat {n} scene, tetapi AI menghasilkan {len(scenes)}.")
-
-            for index, scene in enumerate(scenes, 1):
-                scene["nomor"] = index
-                scene.setdefault("waktu", f"{(index - 1) * 8:02d}-{index * 8:02d}")
-                scene.setdefault("start_state", {})
-                scene.setdefault("end_state", {})
-                scene.setdefault("cause", "")
-                scene.setdefault("aksi", "")
-                scene.setdefault("kontinuitas", "")
-
-            # Local structural validation before allowing prompts.
-            if not scenes[0].get("start_state"):
-                raise ValueError("Scene 1 tidak memiliki START STATE.")
-            for index in range(1, len(scenes)):
-                if not scenes[index].get("start_state") or not scenes[index].get("end_state"):
-                    raise ValueError(f"Scene {index + 1} tidak memiliki state lengkap.")
-
-            st.session_state.storyboard = scenes
-            st.session_state.scene_prompts = {}
-            st.session_state.scene_frames = {}
-            st.session_state.current_scene = 1
-            st.session_state.storyboard_duration = st.session_state.duration
-            st.session_state.target_scene_count = n
-            st.session_state.seo = {}
-            go("storyboard")
-        except Exception as exc:
-            st.error(f"Storyboard gagal dibuat: {exc}")
-
-
-# ============================================================
-# STORYBOARD PAGE
-# ============================================================
-def render_storyboard():
-    st.title(":material/account_tree: Storyboard - Continuity Terkunci")
-    scenes = st.session_state.storyboard
-    if not scenes:
-        st.info("Storyboard belum dibuat.")
-        return
-
-    ranges = part_ranges(len(scenes))
-    part_text = " | ".join([f"Part {i}: Scene {a}-{b}" for i, (a, b) in enumerate(ranges, 1)])
-    st.info(
-        f"{st.session_state.duration} = {len(scenes)} scene. {part_text}. "
-        "Setiap scene memiliki START STATE, CAUSE, ACTION, dan END STATE."
-    )
-
-    for scene in scenes:
-        with st.expander(f"Scene {scene['nomor']} - {scene.get('waktu', '')}", expanded=scene['nomor'] == 1):
-            st.write(f"**Tujuan:** {safe_text(scene.get('tujuan'))}")
-            st.write("**START STATE:**")
-            st.json(scene.get("start_state", {}))
-            st.write(f"**CAUSE:** {safe_text(scene.get('cause'))}")
-            st.write(f"**ACTION:** {safe_text(scene.get('aksi'))}")
-            st.write("**END STATE:**")
-            st.json(scene.get("end_state", {}))
+{}))
             st.write(f"**Continuity:** {safe_text(scene.get('kontinuitas'))}")
             st.write(f"**Camera:** {safe_text(scene.get('kamera'))}")
             st.write(f"**Audio:** {safe_text(scene.get('audio'))}")
@@ -594,110 +525,6 @@ def generate_scene_prompt(scene_number):
 # ============================================================
 # SCENE PAGE
 # ============================================================
-def render_scenes():
-    st.title(":material/auto_awesome: Prompt Adegan untuk Flow/Veo")
-    scenes = st.session_state.storyboard
-    if not scenes:
-        st.info("Storyboard belum dibuat.")
-        return
-
-    # The scene count is locked when the storyboard is created.
-    locked_duration = st.session_state.storyboard_duration or st.session_state.duration
-    expected_from_duration = DURATION_SCENES.get(locked_duration)
-    expected = expected_from_duration or st.session_state.target_scene_count or len(scenes)
-    actual = len(scenes)
-
-    st.info(f"Durasi terkunci: {locked_duration} | Target: {expected} scene | Storyboard: {actual} scene")
-
-    if locked_duration != st.session_state.duration:
-        st.warning(
-            f"Durasi saat ini {st.session_state.duration} berbeda dari storyboard {locked_duration}. "
-            "Jangan lanjut sebelum storyboard sesuai durasi."
-        )
-        if st.button(":material/refresh: BUAT ULANG STORYBOARD", type="primary", use_container_width=True):
-            run_storyboard()
-        return
-
-    # Never allow a 1-scene storyboard to silently turn a multi-scene project into SEO.
-    if actual != expected:
-        st.error(
-            f"Jumlah scene tidak sesuai. Durasi {locked_duration} wajib menghasilkan {expected} scene, "
-            f"tetapi storyboard hanya berisi {actual}. Scene berikutnya sengaja dikunci agar alur tidak rusak."
-        )
-        if st.button(":material/refresh: GENERATE ULANG {0} SCENE".format(expected), type="primary", use_container_width=True):
-            run_storyboard()
-        return
-
-    current = max(1, min(st.session_state.current_scene, expected))
-    # Scene progression is strictly sequential; a stale session value cannot jump over scenes.
-    st.session_state.current_scene = current
-    st.progress(current / expected)
-    st.subheader(f"SCENE {current} / {expected}")
-
-    scene = scenes[current - 1]
-    st.write(f"**Waktu:** {safe_text(scene.get('waktu'))}")
-    st.write(f"**Start state:** {safe_text(scene.get('start_state'))}")
-    st.write(f"**Cause:** {safe_text(scene.get('cause'))}")
-    st.write(f"**Action:** {safe_text(scene.get('aksi'))}")
-    st.write(f"**End state:** {safe_text(scene.get('end_state'))}")
-
-    # Scene 2+ cannot be generated until the last frame of the previous scene is supplied.
-    if current > 1:
-        st.subheader(":material/photo_camera: Continuity Frame")
-        st.info(
-            f"Upload screenshot frame terakhir Scene {current - 1}. "
-            "Frame ini menjadi acuan visual untuk memulai scene berikutnya."
-        )
-        frame = st.file_uploader(
-            f"Upload screenshot frame terakhir Scene {current - 1}",
-            type=["png", "jpg", "jpeg", "webp"],
-            key=f"frame_{current}",
-        )
-        if frame is not None:
-            st.session_state.scene_frames[current - 1] = frame
-            st.success(f"Frame terakhir Scene {current - 1} tersimpan.")
-
-    if current not in st.session_state.scene_prompts:
-        blocked = current > 1 and (current - 1 not in st.session_state.scene_frames)
-        if blocked:
-            st.warning(f"Scene {current} belum bisa dibuat. Upload dulu screenshot akhir Scene {current - 1}.")
-        else:
-            if st.button(f":material/auto_awesome: BUAT PROMPT SCENE {current}", type="primary", use_container_width=True):
-                if generate_scene_prompt(current):
-                    st.rerun()
-    else:
-        st.success(f"Prompt Scene {current} sudah dibuat.")
-        st.text_area(
-            "Prompt Flow/Veo - Bahasa Inggris",
-            value=st.session_state.scene_prompts[current],
-            height=430,
-            key=f"view_prompt_{current}",
-        )
-
-        st.divider()
-        if current < expected:
-            st.success(
-                f"SCENE {current} SELESAI. Setelah generate video di Flow/Veo dan mengambil screenshot frame terakhir, "
-                f"lanjutkan ke SCENE {current + 1}."
-            )
-            current_frame_ready = current in st.session_state.scene_frames
-            if not current_frame_ready:
-                st.warning(
-                    f"Upload screenshot frame terakhir Scene {current} sebelum membuka Scene {current + 1}."
-                )
-            if st.button(
-                f":material/arrow_forward: SELESAI SCENE {current} - LANJUT KE SCENE {current + 1}",
-                type="primary",
-                use_container_width=True,
-                disabled=not current_frame_ready,
-            ):
-                st.session_state.current_scene = current + 1
-                st.rerun()
-        else:
-            all_prompts_done = all(i in st.session_state.scene_prompts for i in range(1, expected + 1))
-            if all_prompts_done:
-                if st.button(":material/search: SEMUA SCENE SELESAI - LANJUT KE SEO", type="primary", use_container_width=True):
-                    go("seo")
             else:
                 st.info("Ini scene terakhir. SEO akan dibuka setelah semua prompt scene selesai.")
 
@@ -737,4 +564,26 @@ def render_seo():
     seo = st.session_state.seo
     for index, title in enumerate(seo.get("judul", []), 1):
         st.text_input(f"Judul {index}", str(title), key=f"title_{index}")
-    st.text_area("Deskripsi", safe_text(seo.get("
+    st.text_area("Deskripsi", safe_text(seo.get("deskripsi")), height=220)
+    st.text_area("Kata kunci", ", ".join(map(str, seo.get("kata_kunci", []))), height=100)
+    st.text_area("Hashtag", " ".join(map(str, seo.get("hashtag", []))), height=100)
+    st.text_input("Teks thumbnail", safe_text(seo.get("teks_thumbnail")))
+    st.text_area("Konsep thumbnail", safe_text(seo.get("konsep_thumbnail")), height=100)
+    st.text_area("Komentar tersemat", safe_text(seo.get("komentar_tersemat")), height=100)
+    st.text_area("Ajakan", safe_text(seo.get("ajakan")), height=100)
+    st.success("Alur proyek selesai.")
+
+
+# ============================================================
+# ROUTER
+# ============================================================
+if st.session_state.page == "home":
+    render_home()
+elif st.session_state.page == "analysis":
+    render_analysis()
+elif st.session_state.page == "storyboard":
+    render_storyboard()
+elif st.session_state.page == "scenes":
+    render_scenes()
+elif st.session_state.page == "seo":
+    render_seo()
