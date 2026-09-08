@@ -467,6 +467,7 @@ def render_analysis():
 # STORYBOARD GENERATOR - START/ACTION/END CONTRACT
 # ============================================================
 {}))
+  ^
             st.write(f"**Continuity:** {safe_text(scene.get('kontinuitas'))}")
             st.write(f"**Camera:** {safe_text(scene.get('kamera'))}")
             st.write(f"**Audio:** {safe_text(scene.get('audio'))}")
