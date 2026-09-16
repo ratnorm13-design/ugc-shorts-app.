@@ -195,7 +195,7 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
             go("analysis")
         except Exception as exc:
             st.error(f"Analisis gagal: {exc}")
-            def generate_scene_prompt(scene_number: int) -> bool:
+def generate_scene_prompt(scene_number: int) -> bool:
     client = get_client()
     if not client:
         return False
