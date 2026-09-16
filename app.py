@@ -10,7 +10,7 @@ from google.genai import types
 st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine", page_icon="🎬", layout="wide")
 
 MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "7.1 — Ultimate Aspect-Locked UGC Engine"
+APP_VERSION = "7.2 — Bright Daylight & Forward-Locked UGC Engine"
 
 DURATION_SCENES = {
     "Auto (Sesuai Video Referensi & Pacing)": 0,
@@ -184,7 +184,7 @@ TUGAS UTAMA:
 4. TETAPKAN VISUAL ANCHOR TOKEN: Buat deskripsi fisik karakter yang sangat spesifik dan konsisten agar tidak terjadi perubahan bentuk/baju di tengah scene (Visual Drift Protection).
 
 PENGATURAN:
-- Style Visual: {st.session_state.visual_style}
+- Style Visual: {st.session_state.visual_style} (Pencahayaan terang benderang siang hari bolong ala game aslinya, langit biru cerah, warna kontras tinggi, bebas dari nuansa gelap/suram)
 - Rasio Aspek Video: {st.session_state.aspect_ratio}
 - Instruksi Tambahan User: {st.session_state.custom_instruction}
 
@@ -200,7 +200,7 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
   "remixed_mutation": {{
     "runner_baru": "{chosen_runner}",
     "boss_baru": "Boss/Target unik di puncak yang aman copyright",
-    "track_baru": "Lintasan baru yang ekstrem",
+    "track_baru": "Lintasan baru yang ekstrem dengan tambahan variasi rintangan seru",
     "visual_anchor_token": "Deskripsi ketat kosmetik karakter pilihan user agar tidak berubah antar scene",
     "alasan_remix": "Alasan modifikasi"
   }},
@@ -243,19 +243,22 @@ def generate_scene_prompt(scene_number: int) -> bool:
         prev_frame_context = f"CONTINUITY REQUIREMENT (NO JUMP): Seamless transition continuing directly from the previous scene's end position (Scene {scene_number-1}). Maintain exact character position, lighting, camera angle, and environment state without jumping."
 
     if scene_number == 1:
-        camera_desc = "Extreme dynamic tracking shot, camera positioned closely behind and to the side of the runner, fast-paced movement."
-        action_desc = f"INSTANT HOOK & ACTION: The protagonist ({mutation.get('runner_baru')}) starts instantly at full sprint on {mutation.get('track_baru')}, immediately dodging obstacles with zero delay."
+        camera_desc = "Dynamic third-person tracking shot, camera positioned closely behind and slightly above the runner, maintaining forward momentum."
+        action_desc = f"FORWARD SPRINT START & VARIETY OBSTACLES: The protagonist ({mutation.get('runner_baru')}) starts instantly at a continuous forward sprint along the {mutation.get('track_baru')}. The character moves ONLY forward, avoiding any backward movement or looping. Dodging colorful rotating barriers, swinging hammers, and jumping over gaps with high energy."
     elif is_final_scene:
-        camera_desc = "Impact zoom-in camera, dramatic low angle framing shifting to dynamic slow-motion on impact."
+        camera_desc = "Impact zoom-in camera, dramatic low-angle framing shifting to dynamic slow-motion on impact."
         action_desc = f"CLIMAX PAYOFF: The protagonist reaches the final platform and forcefully delivers an explosive flying kick/hit to {mutation.get('boss_baru')}, sending multiple ragdolls flying off the ledge into physics chaos."
     else:
-        camera_desc = "Fast-paced side-scrolling tracking cam or sweeping high-angle view."
-        action_desc = f"RAPID ESCALATION: Intense parkour continuation, leaping over fast-moving hazards, maintaining maximum speed towards the top."
+        camera_desc = "Fast-paced side-scrolling tracking cam or sweeping high-angle view maintaining continuous forward speed."
+        action_desc = f"RAPID ESCALATION & EXTRA OBSTACLES: Continuous forward running, leaping over moving platforms, ducking under rotating blades, maintaining maximum forward speed towards the top."
 
     audio_cues = "Cinematic sound design: heavy impact thuds, roaring wind, screeching metal, satisfying ragdoll crunch sound effects."
 
     prompt = f"""
 Write ONE highly detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes} (approx. 8 seconds segment for Google Flow).
+
+VISUAL LIGHTING & ENVIRONMENT AESTHETICS (CRITICAL):
+- Bright daylight conditions, vivid sunny sky, clear blue sky with white fluffy clouds, high-contrast colorful graphics matching popular upbeat 3D game video style. Absolutely NO dark, gloomy, or night atmosphere.
 
 STRICT ASSETS & FORMAT LOCKING:
 - Style: {st.session_state.visual_style}
@@ -263,6 +266,9 @@ STRICT ASSETS & FORMAT LOCKING:
 - Character Identity (DO NOT CHANGE): {mutation.get('visual_anchor_token')}
 - Target Boss / Obstacle: {mutation.get('boss_baru')}
 - Environment: {mutation.get('track_baru')}
+
+MOTION & VECTOR LOCK (NO LOOPING / NO REVERSING):
+- The runner must move strictly FORWARD away from the camera. Motion vector is unidirectional forward sprinting. No reversing, no turning back, no looping.
 
 SCENE OBJECTIVE & PACING:
 - Current Scene: Scene {scene_number}/{total_scenes}
@@ -274,7 +280,7 @@ SCENE OBJECTIVE & PACING:
 RULES:
 Output ONLY the final raw English prompt without any markdown formatting, bullet points, or commentary.
 """
-    with st.spinner(f"Menyusun Prompt AI Video Scene {scene_number} / {total_scenes} (Aspect Locked & Continuity)..."):
+    with st.spinner(f"Menyusun Prompt AI Video Scene {scene_number} / {total_scenes} (Bright Daylight & Forward-Locked)..."):
         try:
             res_prompt = ask(client, prompt, json_mode=False)
             st.session_state.scene_prompts[scene_number] = res_prompt.strip()
