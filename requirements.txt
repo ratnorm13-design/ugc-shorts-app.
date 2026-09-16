@@ -1,4 +1,0 @@
-streamlit>=1.50,<2
-opencv-python-headless>=4.9,<5
-google-genai>=1.33,<2
-numpy>=1.26,<3
