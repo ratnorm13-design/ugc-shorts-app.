@@ -7,18 +7,21 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="UGC Remix Studio — 3D Parkour Engine", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine", page_icon="🎬", layout="wide")
 
 MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "6.0 — Ultimate Growth & Retention UGC Engine"
+APP_VERSION = "7.1 — Ultimate Aspect-Locked UGC Engine"
 
 DURATION_SCENES = {
-    "Auto (Sesuai Durasi Video & Pacing)": 0,
-    "8 detik (1 Scene)": 1,
-    "16 detik (2 Scene)": 2,
+    "Auto (Sesuai Video Referensi & Pacing)": 0,
+    "8 detik (1 Scene - Shorts Kilat)": 1,
+    "16 detik (2 Scene - Shorts Standar)": 2,
     "24 detik (3 Scene)": 3,
     "32 detik (4 Scene)": 4,
     "40 detik (5 Scene)": 5,
+    "60 detik (8 Scene - 1 Menit Long)": 8,
+    "120 detik (15 Scene - 2 Menit Long)": 15,
+    "180 detik (22 Scene - 3 Menit Long Full Challenge)": 22,
 }
 
 STYLE_OPTIONS = [
@@ -27,6 +30,22 @@ STYLE_OPTIONS = [
     "Unreal Engine 5 Parkour Render",
     "Sinematik Realistis 3D",
 ]
+
+# 10 Pilihan Karakter Runner (Aman Copyright + Italian Brainrot + Minecraft)
+RUNNER_PRESETS = [
+    "Custom / Ketik Sendiri",
+    "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
+    "Funny Green Frog (Katak hijau nyeleneh berkacamata hitam)",
+    "Blocky Voxel Man (Karakter balok gaya retro game independen)",
+    "Inflatable Dinosaur (Kostum dinosaurus tiup warna hijau)",
+    "Minecraft Creeper Style (Karakter makhluk hijau kotak khas Minecraft)",
+    "Gingerbread Cookie (Manusia kue jahe hidup)",
+    "Minecraft Blocky Zombie (Karakter mayat hidup kotak-kotak ala Minecraft)",
+    "Tung Tung Sahur (Karakter anomali ikonik meme sahur yang absurd)",
+    "Tralalero Tralala (Karakter absurd ala hiu bermata lebar berkaki sneakers)",
+    "Udindindun (Karakter khas Italian brainrot yang konyol dan nyeleneh)"
+]
+
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
 
 DEFAULTS = {
@@ -35,8 +54,10 @@ DEFAULTS = {
     "reference_file": None,
     "reference_text": "",
     "visual_style": STYLE_OPTIONS[0],
+    "runner_choice": RUNNER_PRESETS[1],
+    "custom_runner": "",
     "aspect_ratio": ASPECT_OPTIONS[0],
-    "duration": "Auto (Sesuai Durasi Video & Pacing)",
+    "duration": "Auto (Sesuai Video Referensi & Pacing)",
     "custom_instruction": "",
     "analysis": {},
     "storyboard": [],
@@ -149,34 +170,38 @@ def run_analysis():
         st.warning("Masukkan atau upload video/skenario referensi terlebih dahulu.")
         return
 
+    chosen_runner = st.session_state.runner_choice
+    if chosen_runner == "Custom / Ketik Sendiri":
+        chosen_runner = st.session_state.custom_runner or "Unique funny custom character"
+
     prompt = f"""
-Anda adalah AI Growth & Creative Director profesional khusus konten viral 3D Game / GTA V Parkour / Obstacle Challenge di TikTok & YouTube Shorts.
+Anda adalah AI Growth & Creative Director profesional khusus konten viral 3D Game / Parkour / Obstacle Challenge di TikTok, YouTube Shorts, & Long-Form Video.
 
 TUGAS UTAMA:
-1. Analisis video/skenario referensi secara menyeluruh (visual, tempo, rintangan, dan aksi). Tentukan durasi total video referensi dan hitung jumlah scene optimal dengan kelipatan ~8 detik per scene (contoh: 10s -> 2 scene, 20s -> 3 scene, 29s -> 4 scene).
-2. LAKUKAN CREATIVE MUTATION (De-duplication & Anti-Plagiarisme): Ubah total karakter utama (Runner), boss/target di puncak, dan jenis lintasan rintangan.
+1. Analisis video/skenario referensi secara menyeluruh (visual, tempo, rintangan, dan aksi). Hitung jumlah scene optimal dengan standar 8 detik per scene di Google Flow.
+2. GUNAKAN KARAKTER PILIHAN USER SEBAGAI RUNNER UTAMA: "{chosen_runner}". Rancang boss/target di puncak dan jenis lintasan rintangan yang cocok dan bebas dari pelanggaran hak cipta (copyright-safe).
 3. RANCANG PACING PADAT (HIGH RETENTION): Pastikan tidak ada adegan lari lambat/kosong. Setiap adegan harus penuh aksi cepat (*high-speed momentum*, *rapid obstacle dodging*). Scene terakhir **wajib** berupa aksi klimaks instan (menendang ragdoll, memukul boss, atau menghempaskan musuh berjejer dengan efek fisik memuaskan).
 4. TETAPKAN VISUAL ANCHOR TOKEN: Buat deskripsi fisik karakter yang sangat spesifik dan konsisten agar tidak terjadi perubahan bentuk/baju di tengah scene (Visual Drift Protection).
 
 PENGATURAN:
 - Style Visual: {st.session_state.visual_style}
-- Ratio: {st.session_state.aspect_ratio}
+- Rasio Aspek Video: {st.session_state.aspect_ratio}
 - Instruksi Tambahan User: {st.session_state.custom_instruction}
 
 HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
 {{
-  "video_duration_seconds": 29,
-  "calculated_scene_count": 4,
+  "video_duration_seconds": 180,
+  "calculated_scene_count": {scene_count()},
   "original_reference": {{
     "runner_asli": "Karakter utama di referensi",
     "boss_asli": "Karakter di puncak",
     "track_asli": "Jenis rintangan"
   }},
   "remixed_mutation": {{
-    "runner_baru": "Karakter baru yang unik",
-    "boss_baru": "Boss baru di puncak",
-    "track_baru": "Lintasan baru",
-    "visual_anchor_token": "Deskripsi ketat kosmetik karakter, misal: exact same character wearing bright red oversized hoodie, neon glowing sneakers, and sharp haircut",
+    "runner_baru": "{chosen_runner}",
+    "boss_baru": "Boss/Target unik di puncak yang aman copyright",
+    "track_baru": "Lintasan baru yang ekstrem",
+    "visual_anchor_token": "Deskripsi ketat kosmetik karakter pilihan user agar tidak berubah antar scene",
     "alasan_remix": "Alasan modifikasi"
   }},
   "hook_3s": "Deskripsi hook pembuka yang langsung menggebrak di 3 detik pertama",
@@ -190,8 +215,11 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
             data = extract_json(raw)
             st.session_state.analysis = data
             
-            calc_scenes = data.get("calculated_scene_count", 4)
-            st.session_state.detected_scenes = max(1, min(calc_scenes, 6))
+            if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
+                calc_scenes = data.get("calculated_scene_count", 4)
+                st.session_state.detected_scenes = max(1, min(calc_scenes, 24))
+            else:
+                st.session_state.detected_scenes = scene_count()
             
             st.session_state.storyboard = []
             st.session_state.scene_prompts = {}
@@ -212,9 +240,8 @@ def generate_scene_prompt(scene_number: int) -> bool:
 
     prev_frame_context = ""
     if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
-        prev_frame_context = f"CONTINUITY REQUIREMENT: Seamless transition continuing directly from the previous scene's end position (Scene {scene_number-1}). Maintain exact character position, lighting, camera angle, and environment state without jumping."
+        prev_frame_context = f"CONTINUITY REQUIREMENT (NO JUMP): Seamless transition continuing directly from the previous scene's end position (Scene {scene_number-1}). Maintain exact character position, lighting, camera angle, and environment state without jumping."
 
-    # Variasi Sudut Kamera & Pacing Dinamis berdasarkan Scene
     if scene_number == 1:
         camera_desc = "Extreme dynamic tracking shot, camera positioned closely behind and to the side of the runner, fast-paced movement."
         action_desc = f"INSTANT HOOK & ACTION: The protagonist ({mutation.get('runner_baru')}) starts instantly at full sprint on {mutation.get('track_baru')}, immediately dodging obstacles with zero delay."
@@ -228,11 +255,11 @@ def generate_scene_prompt(scene_number: int) -> bool:
     audio_cues = "Cinematic sound design: heavy impact thuds, roaring wind, screeching metal, satisfying ragdoll crunch sound effects."
 
     prompt = f"""
-Write ONE highly detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes}.
+Write ONE highly detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes} (approx. 8 seconds segment for Google Flow).
 
-STRICT ASSETS & CHARACTER LOCKING:
+STRICT ASSETS & FORMAT LOCKING:
 - Style: {st.session_state.visual_style}
-- Format: 9:16 vertical gameplay footage, 60fps ultra-smooth.
+- Aspect Ratio Orientation: {st.session_state.aspect_ratio} (Ensure framing matches this layout strictly)
 - Character Identity (DO NOT CHANGE): {mutation.get('visual_anchor_token')}
 - Target Boss / Obstacle: {mutation.get('boss_baru')}
 - Environment: {mutation.get('track_baru')}
@@ -247,7 +274,7 @@ SCENE OBJECTIVE & PACING:
 RULES:
 Output ONLY the final raw English prompt without any markdown formatting, bullet points, or commentary.
 """
-    with st.spinner(f"Menyusun Prompt AI Video Scene {scene_number} (Pacing Padat & Character Locked)..."):
+    with st.spinner(f"Menyusun Prompt AI Video Scene {scene_number} / {total_scenes} (Aspect Locked & Continuity)..."):
         try:
             res_prompt = ask(client, prompt, json_mode=False)
             st.session_state.scene_prompts[scene_number] = res_prompt.strip()
@@ -259,22 +286,27 @@ Output ONLY the final raw English prompt without any markdown formatting, bullet
 
 def render_home():
     st.title("🎬 UGC Remix Studio")
-    st.caption("Engine Otomasi Konten 3D Game & GTA V Parkour Challenge dengan Pacing Padat & Retensi Tinggi.")
+    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Pacing Padat, 10 Karakter Aman Copyright, & Rasio Aspek Kustom.")
 
     st.subheader("1. Referensi Video / Skenario")
-    st.file_uploader("Upload Video Referensi (Shorts/Reels/TikTok)", type=["mp4", "mov", "webm"], key="ref_file_input")
+    st.file_uploader("Upload Video Referensi (Shorts atau Long Video)", type=["mp4", "mov", "webm"], key="ref_file_input")
 
     st.caption("Atau tulis deskripsi referensi manual jika tidak ada video:")
-    st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video GTA V lari di atas kontainer rintangan ekstrem...")
+    st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video lari rintangan ekstrem...")
 
-    st.subheader("2. Pengaturan Visual & Durasi Pintar")
+    st.subheader("2. Pilihan Karakter Runner Utama (Bebas Copyright & Brainrot)")
+    st.selectbox("Pilih Preset Karakter Runner:", RUNNER_PRESETS, key="runner_choice")
+    if st.session_state.runner_choice == "Custom / Ketik Sendiri":
+        st.text_input("Tulis Deskripsi Karakter Bebas Kamu:", key="custom_runner", placeholder="Misal: Karakter anomali unik...")
+
+    st.subheader("3. Pengaturan Visual, Rasio Aspek & Target Durasi")
     col1, col2 = st.columns(2)
     with col1:
         st.selectbox("Gaya Visual", STYLE_OPTIONS, key="visual_style")
-        st.selectbox("Rasio Video", ASPECT_OPTIONS, key="aspect_ratio")
+        st.selectbox("Rasio Aspek Video", ASPECT_OPTIONS, key="aspect_ratio")
     with col2:
-        st.selectbox("Target Durasi & Scene", list(DURATION_SCENES.keys()), key="duration")
-        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Buat karakternya pakai kostum superhero...")
+        st.selectbox("Target Durasi & Jumlah Scene", list(DURATION_SCENES.keys()), key="duration")
+        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Tambahkan jebakan api...")
 
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
@@ -290,9 +322,9 @@ def render_analysis():
     orig = analysis.get("original_reference", {})
     remix = analysis.get("remixed_mutation", {})
 
-    st.success(f"⏱️ Durasi Video Terdeteksi: ~{analysis.get('video_duration_seconds', 0)} detik (Otomatis dibagi menjadi **{scene_count()} Scene** dengan pacing padat)")
+    st.success(f"⏱️ Total Target Durasi & Scene: **{scene_count()} Scene** (~{scene_count() * 8} detik total durasi video dengan pacing padat)")
 
-    st.subheader("💡 Perbandingan Mutasi (Bebas Plagiarisme)")
+    st.subheader("💡 Perbandingan Mutasi (Bebas Plagiarisme & Copyright)")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 📌 Asli (Video Referensi)")
@@ -314,7 +346,7 @@ def render_analysis():
 
 
 def render_scenes():
-    st.title("🎥 AI Video Prompt Generator (Dense Pacing)")
+    st.title("🎥 AI Video Prompt Generator (Dense Pacing & Aspect Locked)")
     n = scene_count()
     current = st.session_state.current_scene
 
@@ -326,10 +358,10 @@ def render_scenes():
             st.rerun()
 
     if current in st.session_state.scene_prompts:
-        st.text_area("Prompt AI Video (Copy-Paste ke Kling / Luma / Runway / Veo):", value=st.session_state.scene_prompts[current], height=160)
+        st.text_area("Prompt AI Video (Copy-Paste ke Google Flow / Kling / Luma):", value=st.session_state.scene_prompts[current], height=160)
 
-        st.subheader("🖼️ Last Frame Bridge (Kontinuitas Transisi Tanpa Patah)")
-        st.caption("Upload frame terakhir dari video Scene ini untuk mengunci posisi koordinat dan menyambung ke scene berikutnya secara mulus.")
+        st.subheader("🖼️ Last Frame Bridge (Estafet Frame / Anti-Jump Continuity)")
+        st.caption("Upload frame terakhir dari hasil video Scene ini ke Google Flow untuk mengunci posisi koordinat agar scene berikutnya nyambung mulus tanpa patah.")
         uploaded_frame = st.file_uploader(f"Upload Last Frame Scene {current}", type=["png", "jpg", "jpeg"], key=f"frame_{current}")
         if uploaded_frame:
             st.session_state.scene_frames[current] = uploaded_frame
@@ -348,18 +380,18 @@ def render_scenes():
 
 
 def render_seo():
-    st.title("🚀 SEO & Metadata Engine (Algoritma Shorts / TikTok)")
+    st.title("🚀 SEO & Metadata Engine (Algoritma YouTube / TikTok)")
     st.caption("Menghasilkan Judul pemancing CTR, Deskripsi tertarget, Hashtag multi-tier, dan **18 Tags Global Unik** tanpa duplikat.")
 
     if st.button("Generate Judul, Hashtag & 18 Tags Unik", type="primary"):
         client = get_client()
         if client:
             prompt = f"""
-Bertindaklah sebagai Pakar Algoritma YouTube Shorts & TikTok.
+Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
 Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
 
 Buatkan format SEO lengkap dalam bentuk JSON atau teks terstruktur dengan ketentuan:
-1. **3 Pilihan Judul:** Singkat (di bawah 50 karakter), memancing rasa penasaran ekstrem (Curiosity Gap), dan CTR tinggi.
+1. **3 Pilihan Judul:** Singkat, memancing rasa penasaran ekstrem (Curiosity Gap), dan CTR tinggi untuk video tantangan.
 2. **Deskripsi Singkat:** Mengandung kata kunci natural untuk meningkatkan SEO penelusuran.
 3. **Hashtag Multi-Tier:** Campuran niche tags, viral tags, dan algorithm boosters.
 4. **18 GLOBAL SEO TAGS (MUTLAK UNIK):** Buat tepat 18 kata kunci/tags global dalam bahasa Inggris yang berkaitan dengan game, parkour, ragdoll, dan tantangan ekstrem. **ATURAN KERAS: TIDAK BOLEH ADA KATA ATAU TAGS YANG SAMA ATAU DOUBLE (MUTUALLY EXCLUSIVE)**. Pisahkan dengan koma.
