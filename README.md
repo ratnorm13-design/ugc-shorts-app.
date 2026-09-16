@@ -1,30 +1,22 @@
-# UGC Remix Studio V5.17 RC
+# 🎬 UGC Remix Studio — GTA Parkour & 3D Challenge Engine
 
-Reference → Readability → Evidence Audit → Ground Truth → Scene Contract → Prompt → Flow/Veo → Last-frame Bridge → Next Scene
+Aplikasi web berbasis Streamlit untuk mengurai video referensi (Shorts/Reels/TikTok) dan meremix-nya secara otomatis menjadi rangkaian prompt AI Video (Veo, Kling, Runway, Luma) yang unik tanpa melanggar hak cipta.
 
-## What changed from V5.16
-- **No silent performance repair.** Every detected subject must have one complete `subject_emotion_profiles` entry from Gemini. Missing/duplicate/unknown profiles hard-fail analysis.
-- **Strict Reference Fidelity.** `reference_fidelity` is schema-required and also semantically validated locally. Empty/generic fidelity text cannot become authoritative state.
-- **Probe ↔ Full Analysis reconciliation** remains a hard gate.
-- **Temporal ↔ keyframe evidence check** is enforced when timestamped keyframes are actually included in the analysis request.
-- **Complete scene coverage gate** ensures every reference temporal beat is mapped to at least one target scene.
-- Existing cross-scene END→START, causal, and contract→prompt gates remain.
-- Removed silent subject/profile normalization that could hide incomplete Gemini analysis.
-- Added one-shot H.264/AAC MP4 transcode fallback for media-processing failures.
-- Added conservative 18 MB inline threshold to leave request overhead headroom.
-- Added ffmpeg as a declared Linux dependency for Community Cloud.
+---
 
-## Validation performed
-- Pre-flight tests were written **before** the V5.16 implementation to expose the known gaps.
-- Python compile checks passed for all Python files.
-- AST parse passed.
-- Duplicate function scan passed.
-- Deterministic validation-core tests passed.
-- Golden regression tests passed for the known driver/front-passenger/dust/prop/late-reaction continuity case.
-- Static release checks passed.
-- ZIP manifest verified after packaging.
+## 🚀 Fitur Utama
 
-## Important
-This is an RC build, not a claim of zero runtime defects. Live Gemini/Streamlit execution still depends on the deployed environment, API key, model availability, media codec, and provider limits.
+* **Video Vision Analysis**: Mengintegrasikan SDK `google-genai` untuk membedah karakter, rantai sebab-akibat, dan lintasan dari video referensi.
+* **Creative Mutation Engine**: Mengubah otomatis kombinasi karakter (Runner vs Boss) dan tipe rintangan agar hasil generasi AI berbeda dari referensi asal (de-duplication).
+* **Sequential Prompt Generator**: Memecah video menjadi alur adegan 8 detik (Hook ➔ Process ➔ Climax/Payoff) lengkap dengan format prompt bahasa Inggris berspesifikasi `9:16`.
+* **Last Frame Continuity Bridge**: Menyimpan frame terakhir dari adegan sebelumnya untuk menjaga konsistensi visual antar adegan.
+* **SEO & Metadata Generator**: Menghasilkan judul, deskripsi, dan hashtag viral otomatis untuk YouTube Shorts & TikTok.
 
-Do not put API keys into source code. For deployment, use the platform's secret/environment-variable mechanism with `GEMINI_API_KEY`.
+---
+
+## 🛠️ Cara Instalasi & Jalankan Lokal
+
+1. **Clone repository ini / unduh project:**
+   ```bash
+   git clone [https://github.com/ratnorm13-design/ugc-shorts-app.git](https://github.com/ratnorm13-design/ugc-shorts-app.git)
+   cd ugc-shorts-app
