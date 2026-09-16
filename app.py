@@ -7,10 +7,10 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v8.0", page_icon="🎬", layout="wide")
 
 MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "7.2 — Bright Daylight & Forward-Locked UGC Engine"
+APP_VERSION = "8.0 — Ultimate 1:1 Roadmap, Anti-Jump Frame Bridge & Physics Chaos Engine"
 
 DURATION_SCENES = {
     "Auto (Sesuai Video Referensi & Pacing)": 0,
@@ -31,7 +31,6 @@ STYLE_OPTIONS = [
     "Sinematik Realistis 3D",
 ]
 
-# 10 Pilihan Karakter Runner (Aman Copyright + Italian Brainrot + Minecraft)
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
     "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
@@ -175,16 +174,16 @@ def run_analysis():
         chosen_runner = st.session_state.custom_runner or "Unique funny custom character"
 
     prompt = f"""
-Anda adalah AI Growth & Creative Director profesional khusus konten viral 3D Game / Parkour / Obstacle Challenge di TikTok, YouTube Shorts, & Long-Form Video.
+Anda adalah AI Growth & Creative Director profesional khusus konten viral 3D Game / Parkour / Obstacle Challenge di TikTok & YouTube Shorts.
 
-TUGAS UTAMA:
-1. Analisis video/skenario referensi secara menyeluruh (visual, tempo, rintangan, dan aksi). Hitung jumlah scene optimal dengan standar 8 detik per scene di Google Flow.
-2. GUNAKAN KARAKTER PILIHAN USER SEBAGAI RUNNER UTAMA: "{chosen_runner}". Rancang boss/target di puncak dan jenis lintasan rintangan yang cocok dan bebas dari pelanggaran hak cipta (copyright-safe).
-3. RANCANG PACING PADAT (HIGH RETENTION): Pastikan tidak ada adegan lari lambat/kosong. Setiap adegan harus penuh aksi cepat (*high-speed momentum*, *rapid obstacle dodging*). Scene terakhir **wajib** berupa aksi klimaks instan (menendang ragdoll, memukul boss, atau menghempaskan musuh berjejer dengan efek fisik memuaskan).
-4. TETAPKAN VISUAL ANCHOR TOKEN: Buat deskripsi fisik karakter yang sangat spesifik dan konsisten agar tidak terjadi perubahan bentuk/baju di tengah scene (Visual Drift Protection).
+TUGAS UTAMA (ROADMAP CLONING 1:1):
+1. Bedah video/skenario referensi secara menyeluruh. Kloning persis struktur jalur lintasan, urutan rintangan, belokan, dan ritme waktu dari video asli secara 1:1.
+2. Jaga konsistensi objek: Ragdoll musuh, rintangan, dan properti lintasan **wajib sudah standby sejak awal (zero pop-in)**.
+3. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}", serta sesuaikan target boss/ragdoll di puncak dengan opsi yang aman hak cipta (copyright-safe).
+4. Pastikan pacing padat: 0-3 detik pertama langsung adegan aksi menghentak (hook ekstrem), berlanjut ke eskalasi rintangan, dan diakhiri klimaks tendangan ragdoll berefek fisika domino yang kocak.
 
 PENGATURAN:
-- Style Visual: {st.session_state.visual_style} (Pencahayaan terang benderang siang hari bolong ala game aslinya, langit biru cerah, warna kontras tinggi, bebas dari nuansa gelap/suram)
+- Style Visual: {st.session_state.visual_style} (Pencahayaan terang benderang siang hari bolong / noon daylight, langit biru cerah, warna kontras tinggi, bebas nuansa gelap)
 - Rasio Aspek Video: {st.session_state.aspect_ratio}
 - Instruksi Tambahan User: {st.session_state.custom_instruction}
 
@@ -200,16 +199,16 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
   "remixed_mutation": {{
     "runner_baru": "{chosen_runner}",
     "boss_baru": "Boss/Target unik di puncak yang aman copyright",
-    "track_baru": "Lintasan baru yang ekstrem dengan tambahan variasi rintangan seru",
+    "track_baru": "Lintasan 1:1 meniru referensi dengan tambahan variasi rintangan seru",
     "visual_anchor_token": "Deskripsi ketat kosmetik karakter pilihan user agar tidak berubah antar scene",
     "alasan_remix": "Alasan modifikasi"
   }},
   "hook_3s": "Deskripsi hook pembuka yang langsung menggebrak di 3 detik pertama",
-  "climax_action": "Aksi spesifik menendang/mengalahkan ragdoll di puncak pada scene akhir dengan efek benturan keras",
-  "spatial_layout": "Third-person dynamic view / tracking shot"
+  "climax_action": "Aksi spesifik menendang/memukul ragdoll di puncak pada scene akhir disertai efek fisik domino & suara teriakan panik",
+  "spatial_layout": "Third-person dynamic tracking shot with slight camera banking and speed ramping"
 }}
 """
-    with st.spinner("Membedah video, menghitung durasi optimal & merancang alur pacing padat..."):
+    with st.spinner("Membedah roadmap 1:1 video referensi & merancang struktur kloning..."):
         try:
             raw = ask(client, prompt, parts, json_mode=True)
             data = extract_json(raw)
@@ -238,37 +237,39 @@ def generate_scene_prompt(scene_number: int) -> bool:
     total_scenes = scene_count()
     is_final_scene = (scene_number == total_scenes)
 
+    # ANTI-JUMP BRIDGE LOGIC: Memastikan koordinat dan posisi kursor/kaki karakter menyambung sempurna dari frame terakhir scene sebelumnya
     prev_frame_context = ""
     if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
-        prev_frame_context = f"CONTINUITY REQUIREMENT (NO JUMP): Seamless transition continuing directly from the previous scene's end position (Scene {scene_number-1}). Maintain exact character position, lighting, camera angle, and environment state without jumping."
+        prev_frame_context = f"EXACT CONTINUITY & ZERO TELEPORT REQUIREMENT: Scene {scene_number} MUST start at the exact spatial coordinate and footing position where Scene {scene_number-1} ended. Seamlessly continue the runner's forward foot placement, camera angle, and trajectory without any backward jump, reset, or position shifting."
 
     if scene_number == 1:
-        camera_desc = "Dynamic third-person tracking shot, camera positioned closely behind and slightly above the runner, maintaining forward momentum."
-        action_desc = f"FORWARD SPRINT START & VARIETY OBSTACLES: The protagonist ({mutation.get('runner_baru')}) starts instantly at a continuous forward sprint along the {mutation.get('track_baru')}. The character moves ONLY forward, avoiding any backward movement or looping. Dodging colorful rotating barriers, swinging hammers, and jumping over gaps with high energy."
+        camera_desc = "Dynamic third-person close-tracking shot positioned slightly behind and above the runner, featuring slight camera banking and high-speed motion blur."
+        action_desc = f"EXPLOSIVE HOOK START: The protagonist ({mutation.get('runner_baru')}) instantly starts at a breakneck forward sprint along the {mutation.get('track_baru')}. Unidirectional forward motion vector only—no reversing. All obstacles, barriers, and ragdolls are fully spawned and visible right from the first frame (zero pop-in)."
     elif is_final_scene:
-        camera_desc = "Impact zoom-in camera, dramatic low-angle framing shifting to dynamic slow-motion on impact."
-        action_desc = f"CLIMAX PAYOFF: The protagonist reaches the final platform and forcefully delivers an explosive flying kick/hit to {mutation.get('boss_baru')}, sending multiple ragdolls flying off the ledge into physics chaos."
+        camera_desc = "Dramatic impact zoom-in camera, shifting to slow-motion micro-freeze on contact."
+        action_desc = f"CLIMAX PAYOFF & RAGDOLL CHAOS: The protagonist reaches the peak and forcefully kicks/hits {mutation.get('boss_baru')}, triggering an exaggerated comedy physics launch. Multiple ragdolls fly away in a domino chain reaction, accompanied by audio cues of heavy impact thuds and high-pitched ragdoll screaming."
     else:
-        camera_desc = "Fast-paced side-scrolling tracking cam or sweeping high-angle view maintaining continuous forward speed."
-        action_desc = f"RAPID ESCALATION & EXTRA OBSTACLES: Continuous forward running, leaping over moving platforms, ducking under rotating blades, maintaining maximum forward speed towards the top."
+        camera_desc = "Fast-paced sweeping tracking cam maintaining continuous forward momentum and high-octane action pacing."
+        action_desc = f"ROADMAP PROGRESSION & OBSTACLE DODGING: Continuous forward sprinting, leaping over gaps, dodging spinning traps. All objects are fully persistent without sudden loading."
 
-    audio_cues = "Cinematic sound design: heavy impact thuds, roaring wind, screeching metal, satisfying ragdoll crunch sound effects."
+    audio_cues = "Cinematic sound design: heavy impact thuds, screeching metal, roaring wind, and hilarious high-pitched ragdoll screaming sound effects."
 
     prompt = f"""
 Write ONE highly detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes} (approx. 8 seconds segment for Google Flow).
 
 VISUAL LIGHTING & ENVIRONMENT AESTHETICS (CRITICAL):
-- Bright daylight conditions, vivid sunny sky, clear blue sky with white fluffy clouds, high-contrast colorful graphics matching popular upbeat 3D game video style. Absolutely NO dark, gloomy, or night atmosphere.
+- Bright daylight conditions, vivid sunny sky, clear blue sky with fluffy white clouds, high-contrast colorful graphics matching popular upbeat 3D game video style. Absolutely NO dark, gloomy, or night atmosphere.
 
 STRICT ASSETS & FORMAT LOCKING:
 - Style: {st.session_state.visual_style}
-- Aspect Ratio Orientation: {st.session_state.aspect_ratio} (Ensure framing matches this layout strictly)
+- Aspect Ratio Orientation: {st.session_state.aspect_ratio}
 - Character Identity (DO NOT CHANGE): {mutation.get('visual_anchor_token')}
 - Target Boss / Obstacle: {mutation.get('boss_baru')}
-- Environment: {mutation.get('track_baru')}
+- Environment (1:1 Roadmap Clone): {mutation.get('track_baru')}
 
 MOTION & VECTOR LOCK (NO LOOPING / NO REVERSING):
 - The runner must move strictly FORWARD away from the camera. Motion vector is unidirectional forward sprinting. No reversing, no turning back, no looping.
+- Persistent Objects: All obstacles, structures, and ragdolls must already exist in the environment from the very first frame (zero pop-in).
 
 SCENE OBJECTIVE & PACING:
 - Current Scene: Scene {scene_number}/{total_scenes}
@@ -280,7 +281,7 @@ SCENE OBJECTIVE & PACING:
 RULES:
 Output ONLY the final raw English prompt without any markdown formatting, bullet points, or commentary.
 """
-    with st.spinner(f"Menyusun Prompt AI Video Scene {scene_number} / {total_scenes} (Bright Daylight & Forward-Locked)..."):
+    with st.spinner(f"Menyusun Prompt Scene {scene_number} / {total_scenes} (Roadmap 1:1 & Anti-Jump Locked)..."):
         try:
             res_prompt = ask(client, prompt, json_mode=False)
             st.session_state.scene_prompts[scene_number] = res_prompt.strip()
@@ -291,14 +292,14 @@ Output ONLY the final raw English prompt without any markdown formatting, bullet
 
 
 def render_home():
-    st.title("🎬 UGC Remix Studio")
-    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Pacing Padat, 10 Karakter Aman Copyright, & Rasio Aspek Kustom.")
+    st.title("🎬 UGC Remix Studio v8.0")
+    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Kloning Roadmap 1:1, Anti-Jump Last Frame Bridge, & Physics Chaos.")
 
     st.subheader("1. Referensi Video / Skenario")
     st.file_uploader("Upload Video Referensi (Shorts atau Long Video)", type=["mp4", "mov", "webm"], key="ref_file_input")
 
     st.caption("Atau tulis deskripsi referensi manual jika tidak ada video:")
-    st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video lari rintangan ekstrem...")
+    st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video lari naik kontainer lalu menendang minion...")
 
     st.subheader("2. Pilihan Karakter Runner Utama (Bebas Copyright & Brainrot)")
     st.selectbox("Pilih Preset Karakter Runner:", RUNNER_PRESETS, key="runner_choice")
@@ -312,14 +313,14 @@ def render_home():
         st.selectbox("Rasio Aspek Video", ASPECT_OPTIONS, key="aspect_ratio")
     with col2:
         st.selectbox("Target Durasi & Jumlah Scene", list(DURATION_SCENES.keys()), key="duration")
-        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Tambahkan jebakan api...")
+        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Tambahkan efek ledakan api...")
 
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
 
 
 def render_analysis():
-    st.title("🔍 Hasil De-duplication & Creative Remix")
+    st.title("🔍 Hasil Roadmap De-duplication & Creative Remix")
     analysis = st.session_state.get("analysis", {})
     if not analysis:
         st.info("Belum ada data analisis. Silakan upload referensi di Beranda.")
@@ -330,7 +331,7 @@ def render_analysis():
 
     st.success(f"⏱️ Total Target Durasi & Scene: **{scene_count()} Scene** (~{scene_count() * 8} detik total durasi video dengan pacing padat)")
 
-    st.subheader("💡 Perbandingan Mutasi (Bebas Plagiarisme & Copyright)")
+    st.subheader("💡 Perbandingan Mutasi Roadmap 1:1 (Anti Plagiarisme)")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 📌 Asli (Video Referensi)")
@@ -339,24 +340,24 @@ def render_analysis():
         st.write(f"**Lintasan Asli:** {orig.get('track_asli', '-')}")
 
     with col2:
-        st.markdown("### 🚀 Hasil Remix AI (Anti-Drift)")
+        st.markdown("### 🚀 Hasil Remix AI (Anti-Drift & Zero Pop-in)")
         st.write(f"**Runner Baru:** `{remix.get('runner_baru', '-')}`")
         st.write(f"**Boss Baru:** `{remix.get('boss_baru', '-')}`")
         st.write(f"**Lintasan Baru:** `{remix.get('track_baru', '-')}`")
 
     st.info(f"🔒 **Visual Anchor Token (Anti Karakter Berubah):** `{remix.get('visual_anchor_token', '-')}`")
-    st.warning(f"💥 **Aksi Klimaks Puncak:** {analysis.get('climax_action', '-')}")
+    st.warning(f"💥 **Aksi Klimaks & Fisika Ragdoll:** {analysis.get('climax_action', '-')}")
 
     if st.button("LANJUT KELOLA PROMPT ADEGAN", type="primary", use_container_width=True):
         go("scenes")
 
 
 def render_scenes():
-    st.title("🎥 AI Video Prompt Generator (Dense Pacing & Aspect Locked)")
+    st.title("🎥 AI Video Prompt Generator (Roadmap 1:1 & Last Frame Locked)")
     n = scene_count()
     current = st.session_state.current_scene
 
-    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS TENDANGAN/RAGDOLL)" if current == n else " ⚡ (FAST-PACED ACTION)"))
+    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS TENDANGAN & RAGDOLL CHAOS)" if current == n else " ⚡ (FAST-PACED ACTION)"))
 
     if current not in st.session_state.scene_prompts:
         if st.button(f"Generate Prompt Scene {current}", type="primary"):
@@ -367,11 +368,11 @@ def render_scenes():
         st.text_area("Prompt AI Video (Copy-Paste ke Google Flow / Kling / Luma):", value=st.session_state.scene_prompts[current], height=160)
 
         st.subheader("🖼️ Last Frame Bridge (Estafet Frame / Anti-Jump Continuity)")
-        st.caption("Upload frame terakhir dari hasil video Scene ini ke Google Flow untuk mengunci posisi koordinat agar scene berikutnya nyambung mulus tanpa patah.")
+        st.caption("UPLOAD SCREENSHOT FRAME TERAKHIR dari video hasil Scene ini. Ini wajib di-upload agar Scene berikutnya tidak mengalami loncatan posisi (teleport) dan koordinatnya menyambung mulus 100%.")
         uploaded_frame = st.file_uploader(f"Upload Last Frame Scene {current}", type=["png", "jpg", "jpeg"], key=f"frame_{current}")
         if uploaded_frame:
             st.session_state.scene_frames[current] = uploaded_frame
-            st.success(f"Frame Scene {current} tersimpan! Prompt Scene {current+1} akan disesuaikan dengan posisi akhir ini.")
+            st.success(f"Frame Scene {current} tersimpan! Prompt Scene {current+1} terkunci pada koordinat posisi ini.")
 
         st.divider()
         col1, col2 = st.columns(2)
@@ -412,7 +413,7 @@ Buatkan format SEO lengkap dalam bentuk JSON atau teks terstruktur dengan ketent
 
 def main():
     with st.sidebar:
-        st.title("UGC Studio")
+        st.title("UGC Studio v8.0")
         st.caption(f"App Version: {APP_VERSION}")
         st.text_input("Gemini API Key", type="password", key="api_key", placeholder="AIzaSy...")
         st.divider()
