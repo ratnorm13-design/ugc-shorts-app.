@@ -34,6 +34,14 @@ STYLE_OPTIONS = [
 # REVISI 1: FORMASI 4 KARAKTER BARU (Anti-Copyright & Kocak)
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
+    # 6 Karakter Lama Asli dari GitHub Lu:
+    "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
+    "Funny Green Frog (Katak hijau nyeleneh berkacamata hitam)",
+    "Blocky Voxel Man (Karakter balok gaya retro game independen)",
+    "Inflatable Dinosaur (Kostum dinosaurus tiup warna hijau)",
+    "Minecraft Creeper Style (Karakter makhluk hijau kotak khas Minecraft)",
+    "Gingerbread Cookie (Manusia kue jahe hidup)",
+    # 4 Karakter Baru Pilihan Kita:
     "Pocong Gesit (Hantu Lokal Melompat Absurd)",
     "Bebek Karet Raksasa (Licin & Membal)",
     "Karakter Roblox / Blocky Noob (Balok Pecah Maksimal)",
