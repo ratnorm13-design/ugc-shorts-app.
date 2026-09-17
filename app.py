@@ -31,18 +31,13 @@ STYLE_OPTIONS = [
     "Sinematik Realistis 3D",
 ]
 
+# REVISI 1: FORMASI 4 KARAKTER BARU (Anti-Copyright & Kocak)
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
-    "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
-    "Funny Green Frog (Katak hijau nyeleneh berkacamata hitam)",
-    "Blocky Voxel Man (Karakter balok gaya retro game independen)",
-    "Inflatable Dinosaur (Kostum dinosaurus tiup warna hijau)",
-    "Minecraft Creeper Style (Karakter makhluk hijau kotak khas Minecraft)",
-    "Gingerbread Cookie (Manusia kue jahe hidup)",
-    "Minecraft Blocky Zombie (Karakter mayat hidup kotak-kotak ala Minecraft)",
-    "Tung Tung Sahur (Karakter anomali ikonik meme sahur yang absurd)",
-    "Tralalero Tralala (Karakter absurd ala hiu bermata lebar berkaki sneakers)",
-    "Udindindun (Karakter khas Italian brainrot yang konyol dan nyeleneh)"
+    "Pocong Gesit (Hantu Lokal Melompat Absurd)",
+    "Bebek Karet Raksasa (Licin & Membal)",
+    "Karakter Roblox / Blocky Noob (Balok Pecah Maksimal)",
+    "Sktetelons / Tengkorak Gila (Tulang Copot & Ragdoll Mantap)"
 ]
 
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
@@ -156,6 +151,8 @@ def reference_parts(client, file_uploader_obj):
     if st.session_state.reference_text.strip():
         return [types.Part.from_text(text=st.session_state.reference_text)]
     return []
+
+
 def run_analysis():
     client = get_client()
     if not client:
@@ -328,8 +325,6 @@ def render_home():
 
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
-
-
 def render_analysis():
     st.title("🔍 Hasil Roadmap De-duplication & Storyboard Mapping")
     analysis = st.session_state.get("analysis", {})
@@ -398,57 +393,54 @@ def render_scenes():
                 st.session_state.current_scene -= 1
                 st.rerun()
         with col2:
-            if current < n and st.button("Adegan Berikutnya →", type="primary"):
-                st.session_state.current_scene += 1
-                st.rerun()
+            if current < n:
+                if st.button("Adegan Berikutnya →", type="primary"):
+                    st.session_state.current_scene += 1
+                    st.rerun()
+            else:
+                # ==========================================
+                # REVISI 2 & 3: TOMBOL SEO DINAMIS DI AKHIR SCENE APAPUN (Main Body)
+                # ==========================================
+                st.markdown("---")
+                st.success(f"✨ Selesai! Seluruh {n} scene telah tercapai.")
+                st.markdown("### 🎯 SEO & Metadata Engine (Algoritma YouTube / TikTok)")
+                st.caption("Menghasilkan Judul pemancing CTR, Deskripsi tertarget lengkap dengan CTA, dan 18 Tags Global Unik tanpa duplikat.")
 
-
-def render_seo():
-    st.title("🚀 SEO & Metadata Engine (Algoritma YouTube / TikTok)")
-    st.caption("Menghasilkan Judul pemancing CTR, Deskripsi tertarget, Hashtag multi-tier, dan **18 Tags Global Unik** tanpa duplikat.")
-
-    if st.button("Generate Judul, Hashtag & 18 Tags Unik", type="primary"):
-        client = get_client()
-        if client:
-            prompt = f"""
+                # Tombol SEO utama di main body dengan pengaman error handling (try-except)
+                if st.button("🚀 Generate Judul, Hashtag & 18 Tags Unik", type="primary", use_container_width=True):
+                    try:
+                        client = get_client()
+                        if client:
+                            with st.spinner("Meracik metadata cerdas sesuai durasi & jumlah scene..."):
+                                prompt = f"""
 Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
 Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
 
 Buatkan format SEO lengkap dalam bentuk JSON atau teks terstruktur dengan ketentuan:
 1. **3 Pilihan Judul:** Singkat, memancing rasa penasaran ekstrem (Curiosity Gap), dan CTR tinggi untuk video tantangan.
-2. **Deskripsi Singkat:** Mengandung kata kunci natural untuk meningkatkan SEO penelusuran.
+2. **Deskripsi Singkat:** Mengandung kata kunci natural untuk meningkatkan SEO penelusuran, lengkap dengan ajakan interaksi (Like, Comment, Subscribe, dan bunyikan lonceng).
 3. **Hashtag Multi-Tier:** Campuran niche tags, viral tags, dan algorithm boosters.
-4. **18 GLOBAL SEO TAGS (MUTLAK UNIK):** Buat tepat 18 kata kunci/tags global dalam bahasa Inggris yang berkaitan dengan game, parkour, ragdoll, dan tantangan ekstrem. **ATURAN KERAS: TIDAK BOLEH ADA KATA ATAU TAGS YANG SAMA ATAU DOUBLE**. Pisahkan dengan koma.
+4. **18 Tags Global Unik:** Dipisahkan dengan koma untuk YouTube Studio tags.
 """
-            with st.spinner("Meracik strategi SEO agresif & 18 tags unik..."):
-                res = ask(client, prompt)
-                st.session_state.seo = {"text": res}
+                                res_seo = ask(client, prompt, json_mode=False)
+                                st.session_state.seo = {"raw_output": res_seo}
+                                st.success("✨ Metadata & SEO Berhasil Digenerate!")
+                    except Exception as e:
+                        st.error(f"⚠️ Terjadi kendala sesaat pada sistem. Silakan klik tombol sekali lagi. (Detail: {e})")
 
-    if "text" in st.session_state.seo:
-        st.markdown(st.session_state.seo["text"])
-
-
-def main():
-    with st.sidebar:
-        st.title("UGC Studio v9.2")
-        st.caption(f"App Version: {APP_VERSION}")
-        st.text_input("Gemini API Key", type="password", key="api_key", placeholder="AIzaSy...")
-        st.divider()
-        if st.button("Beranda / Upload", use_container_width=True): go("home")
-        if st.button("Hasil Remix Analisis", use_container_width=True): go("analysis")
-        if st.button("Prompt Adegan AI", use_container_width=True): go("scenes")
-        if st.button("SEO & 18 Tags Unik", use_container_width=True): go("seo")
-
-    page = st.session_state.get("page", "home")
-    if page == "home":
-        render_home()
-    elif page == "analysis":
-        render_analysis()
-    elif page == "scenes":
-        render_scenes()
-    elif page == "seo":
-        render_seo()
+                # Tampilkan hasil SEO jika sudah ada di session_state
+                if "seo" in st.session_state and st.session_state.seo.get("raw_output"):
+                    st.markdown("#### 📋 Hasil Metadata SEO:")
+                    st.markdown(st.session_state.seo["raw_output"])
 
 
-if __name__ == "__main__":
-    main()
+# ==========================================
+# ROUTER UTAMA APLIKASI
+# ==========================================
+page = st.session_state.get("page", "home")
+if page == "home":
+    render_home()
+elif page == "analysis":
+    render_analysis()
+elif page == "scenes":
+    render_scenes()
