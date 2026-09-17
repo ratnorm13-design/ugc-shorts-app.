@@ -7,10 +7,10 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.1", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.2", page_icon="🎬", layout="wide")
 
 MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "9.1 — Ultimate 1:1 Roadmap, Spatial Path Locking & Active Living NPCs"
+APP_VERSION = "9.2 — Ultimate 1:1 Roadmap, Permanent Multi-Container Entities & Object Persistence"
 
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
@@ -174,15 +174,14 @@ def run_analysis():
     prompt = f"""
 Anda adalah AI Master Creative Director khusus konten viral 3D Game / Parkour / Obstacle Challenge di TikTok & YouTube Shorts.
 
-TUGAS UTAMA (ROADMAP CLONING 1:1 & STORYBOARD MAPPING):
-1. Bedah video referensi secara menyeluruh. Kloning persis struktur jalur lintasan, urutan rintangan, belokan, dan ritme waktu dari video asli secara 1:1.
-2. Jaga konsistensi objek: Ragdoll musuh, NPC aktif, dan properti rintangan **wajib sudah ada/berdiri di tempatnya sejak frame pertama (zero pop-in)** dan bergerak aktif (tidak kaku seperti patung).
-3. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}", serta sesuaikan target boss/ragdoll di puncak dengan opsi yang aman hak cipta (copyright-safe).
-4. Pecah alur cerita ke dalam format Storyboard per scene (durasi ~8 detik per scene). Jika durasi referensi pendek, sesuaikan jumlah scene dengan tambahan aksi lanjutan yang tetap nyambung.
-5. Pastikan setiap scene memiliki pemicu aksi yang jelas (target objek ragdoll yang berdiri di depan jalur lari untuk ditendang/dipukul, di mana runner wajib berbelok mengikuti jalur kontainer, TIDAK BOLEH ikut terjun ke laut).
+TUGAS UTAMA (ROADMAP CLONING 1:1 & MULTI-ACTION DENSITY):
+1. Bedah video referensi secara menyeluruh. Kloning persis struktur jalur kontainer dan ritme waktunya secara 1:1.
+2. PERMANENT OBJECT PERSISTENCE & MULTI-ACTION: Setiap kotak kontainer di sepanjang jalur **wajib terisi objek/boneka target sejak frame pertama (zero pop-in)**. Dalam durasi 1 scene (~8 detik), rancang agar runner melakukan **minimal 2 aksi berturut-turut** (contoh: menendang boneka pertama di kontainer awal, lalu langsung maju beberapa langkah untuk memukul/menendang boneka kedua yang berdiri sejajar di depannya sebelum berbelok).
+3. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}", serta sesuaikan target boss/ragdoll dengan opsi yang aman hak cipta (copyright-safe).
+4. Pastikan jalur lari terkunci di atas kontainer (tidak terjun ke laut), dan ada transisi belokan yang mulus setelah aksi ganda selesai.
 
 PENGATURAN:
-- Style Visual: {st.session_state.visual_style} (Pencahayaan terang benderang siang hari bolong / noon daylight, langit biru cerah, warna kontras tinggi, bebas nuansa gelap)
+- Style Visual: {st.session_state.visual_style} (Pencahayaan terang benderang siang hari bolong / noon daylight, langit biru cerah, warna kontras tinggi)
 - Rasio Aspek Video: {st.session_state.aspect_ratio}
 - Instruksi Tambahan User: {st.session_state.custom_instruction}
 
@@ -197,21 +196,21 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
   }},
   "remixed_mutation": {{
     "runner_baru": "{chosen_runner}",
-    "boss_baru": "Boss/Target ragdoll unik di ujung yang sudah ada sejak awal dan bergerak aktif",
-    "track_baru": "Lintasan 1:1 meniru referensi dengan objek ragdoll target yang berdiri di jalur kontainer",
+    "boss_baru": "Deretan boneka/target ragdoll unik yang berdiri berurutan di setiap kontainer sejak awal dan aktif bergerak",
+    "track_baru": "Lintasan kontainer 1:1 dengan boneka ganda yang berderet rapi tanpa ada kontainer kosong",
     "visual_anchor_token": "Deskripsi ketat kosmetik karakter pilihan user agar konsisten",
     "alasan_remix": "Alasan modifikasi"
   }},
   "storyboard_plan": [
-    {{"scene": 1, "fokus_aksi": "Lari awal di jalur kontainer, menendang objek ke bawah lalu berbelok tajam ke kanan menyusuri kontainer sejajar."}},
-    {{"scene": 2, "fokus_aksi": "Melompati rintangan berikutnya dan mendekati posisi ragdoll target."}},
-    {{"scene": 3, "fokus_aksi": "Klimaks menendang ragdoll target, efek fisika domino & teriakan panik."}}
+    {{"scene": 1, "fokus_aksi": "Runner berlari, melakukan aksi ganda: menendang boneka pertama di kontainer awal, lalu langsung maju cepat untuk memukul boneka kedua di kontainer berikutnya sebelum berbelok tajam."}},
+    {{"scene": 2, "fokus_aksi": "Melanjutkan rintangan berikutnya dengan deretan boneka aktif selanjutnya."}},
+    {{"scene": 3, "fokus_aksi": "Klimaks aksi ganda penutupan dan efek fisika ragdoll massal."}}
   ],
-  "climax_action": "Aksi spesifik menendang/memukul ragdoll target di ujung dengan efek fisik domino & suara teriakan",
-  "spatial_layout": "Third-person dynamic tracking shot with strict surface confinement and sharp right-turn path transitions"
+  "climax_action": "Aksi ganda menendang dan memukul dua boneka berurutan dengan efek fisika domino",
+  "spatial_layout": "Third-person dynamic tracking shot with persistent multi-object placement on every container surface"
 }}
 """
-    with st.spinner("Membedah roadmap 1:1 video referensi & menyusun storyboard presisi..."):
+    with st.spinner("Membedah roadmap 1:1 & menyusun skema multi-action boneka permanen..."):
         try:
             raw = ask(client, prompt, parts, json_mode=True)
             data = extract_json(raw)
@@ -243,48 +242,49 @@ def generate_scene_prompt(scene_number: int) -> bool:
     total_scenes = scene_count()
     is_final_scene = (scene_number == total_scenes)
 
-    scene_focus = "Melanjutkan aksi lari dan rintangan di atas jalur kontainer."
+    scene_focus = "Melanjutkan aksi lari dan rangkaian rintangan di atas jalur kontainer."
     if storyboard and len(storyboard) >= scene_number:
         scene_focus = storyboard[scene_number - 1].get("fokus_aksi", scene_focus)
 
     prev_frame_context = ""
     if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
-        prev_frame_context = f"STRICT CONTINUITY & SPATIAL LOCK: Scene {scene_number} MUST start precisely at the exact spatial coordinates, container surface level, and camera angle where Scene {scene_number-1} ended. Zero teleportation, zero position resetting, seamless forward flow."
+        prev_frame_context = f"STRICT CONTINUITY & SPATIAL LOCK: Scene {scene_number} MUST start precisely at the exact spatial coordinates and container surface level where Scene {scene_number-1} ended. Zero teleportation, seamless continuation."
 
     if scene_number == 1:
-        camera_desc = "Dynamic third-person trailing camera locked tightly behind the runner, maintaining a consistent elevated perspective above the container structures."
+        camera_desc = "Dynamic third-person trailing camera locked tightly behind the runner, keeping all container surfaces clearly visible."
         action_desc = f"""
-CRITICAL PATH & PHYSICS RULES FOR SCENE 1:
-1. The protagonist ({mutation.get('runner_baru')}) sprints strictly FORWARD along the top surface of the metal container path. 
-2. SURFACE CONFINEMENT & NO FALLING: The runner's feet are magnetically locked to the container roof. The runner MUST NOT fall, jump, or dive into the water/ocean under any circumstances.
-3. KICK & SHARP RIGHT TURN TRANSITION: The runner kicks a target object downward off the edge into the sea, BUT the runner's body momentum immediately pivots/turns sharply to the RIGHT onto the adjacent parallel container path to continue running forward. Zero downward dive or falling for the runner.
-4. ZERO POP-IN & ACTIVE LIVING NPCS: All target ragdolls and NPCs ({mutation.get('boss_baru')}) are fully persistent from frame one, displaying active idle movements (breathing, swaying, shifting weight, twitching)—completely dynamic entities, never static statues.
+CRITICAL MULTI-ACTION & PERMANENT OBJECT RULES FOR SCENE 1:
+1. PERSISTENT GRID OBJECTS (NO EMPTY CONTAINERS): Every single metal container along the path is pre-populated with active, living target dolls/dummies ({mutation.get('boss_baru')}) standing fully visible right from frame one (zero pop-in, zero empty spaces).
+2. DUAL-ACTION PACING (2 ACTIONS IN 8 SECONDS): Within this 8-second clip, the runner ({mutation.get('runner_baru')}) must execute TWO distinct interactions sequentially: 
+   - Action A: Sprint and kick the first target doll off the container edge.
+   - Action B: Immediately take a few fast strides forward to punch or kick the second target doll standing on the next consecutive container before executing a sharp right turn.
+3. SURFACE CONFINEMENT: The runner's feet stay locked to the container tops. No falling into the water.
 """
     elif is_final_scene:
-        camera_desc = "Dramatic close-up tracking zoom, shifting into cinematic slow-motion on impact."
-        action_desc = f"CLIMAX IMPACT PAYOFF: The runner reaches the final target ({mutation.get('boss_baru')}) which has been standing actively on the platform since the start, delivers a high-impact kick triggering an exaggerated ragdoll physics reaction, sending multiple objects flying in a domino effect with loud audio thuds and comedic screaming."
+        camera_desc = "Dramatic close-up tracking zoom, shifting into cinematic slow-motion on final impact."
+        action_desc = f"CLIMAX DUAL-ACTION PAYOFF: The runner reaches the final section, executing a powerful double-hit combo on the remaining active targets, triggering an exaggerated chain-reaction ragdoll physics explosion with comedic sound cues."
     else:
         camera_desc = "High-octane sweeping third-person tracking shot across the obstacle course."
-        action_desc = f"ROADMAP CONTINUATION: {scene_focus}. The runner maintains strict surface discipline on the containers without falling off. All obstacles and ragdolls are fully animated and active from the start."
+        action_desc = f"ROADMAP CONTINUATION: {scene_focus}. Multiple target entities are fully populated and active across all containers from the start."
 
-    audio_cues = "Immersive game audio: heavy footfalls on corrugated metal, satisfying impact thuds, roaring ocean wind, and dynamic ragdoll physics sound cues."
+    audio_cues = "Immersive game audio: heavy footfalls on corrugated metal, consecutive impact thuds, roaring ocean wind, and dynamic ragdoll physics sound cues."
 
     prompt = f"""
 Write ONE ultra-detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes} (approx. 8 seconds segment).
 
 ENVIRONMENT & AESTHETICS:
-- Bright daytime lighting, vivid sunny sky, clear blue atmosphere with soft white clouds, high-contrast colorful 3D game aesthetics (Unreal Engine / GTA V mod style). NO dark, gloomy, or night environments.
+- Bright daytime lighting, vivid sunny sky, clear blue atmosphere with soft white clouds, high-contrast colorful 3D game aesthetics (Unreal Engine / GTA V mod style). NO dark or gloomy environments.
 
-ASSETS & ENTITIES LOCK:
+ASSETS & PERMANENT ENTITIES LOCK:
 - Style: {st.session_state.visual_style}
 - Aspect Ratio: {st.session_state.aspect_ratio}
 - Runner Character: {mutation.get('visual_anchor_token')}
-- Target Entities (Active, moving, living animations, zero pop-in): {mutation.get('boss_baru')}
+- Target Entities (Multiple active dolls/dummies standing permanently on every container from frame one, zero empty containers): {mutation.get('boss_baru')}
 - Environment Path: {mutation.get('track_baru')}
 
-PHYSICS & MOVEMENT LAWS (MANDATORY):
-- Surface confinement: Runner stays strictly on top of container roofs. No falling into the water. After kicking an object down, runner must pivot/turn right to continue on the parallel container path.
-- Action focus: {action_desc}
+PHYSICS & MULTI-ACTION LAWS (MANDATORY):
+- Multi-action density: The 8-second video must contain TWO distinct hits/kicks in sequence (e.g., kicking the first doll, then immediately punching/kicking the second doll placed closely ahead).
+- Surface confinement: Runner stays strictly on container roofs, executing a sharp right turn transition after the second action. No falling into the water.
 - Camera: {camera_desc}
 - Audio: {audio_cues}
 {prev_frame_context}
@@ -292,7 +292,7 @@ PHYSICS & MOVEMENT LAWS (MANDATORY):
 RULES:
 Output ONLY the final raw English prompt without any markdown formatting, bullet points, or extra text.
 """
-    with st.spinner(f"Menyusun Ulang Logika Spasial & Prompt Scene {scene_number}..."):
+    with st.spinner(f"Menyusun Ulang Multi-Action & Boneka Permanen Scene {scene_number}..."):
         try:
             res_prompt = ask(client, prompt, json_mode=False)
             st.session_state.scene_prompts[scene_number] = res_prompt.strip()
@@ -303,14 +303,14 @@ Output ONLY the final raw English prompt without any markdown formatting, bullet
 
 
 def render_home():
-    st.title("🎬 UGC Remix Studio v9.1")
-    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Kloning Roadmap 1:1, Spatial Path Locking, & Active Living NPCs.")
+    st.title("🎬 UGC Remix Studio v9.2")
+    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Multi-Action Density & Permanent Multi-Container Entities.")
 
     st.subheader("1. Referensi Video / Skenario")
     st.file_uploader("Upload Video Referensi (Shorts atau Long Video)", type=["mp4", "mov", "webm"], key="ref_file_input")
 
     st.caption("Atau tulis deskripsi referensi manual jika tidak ada video:")
-    st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video lari naik kontainer lalu menendang minion...")
+    st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video lari menendang dua boneka berurutan di kontainer...")
 
     st.subheader("2. Pilihan Karakter Runner Utama (Bebas Copyright & Brainrot)")
     st.selectbox("Pilih Preset Karakter Runner:", RUNNER_PRESETS, key="runner_choice")
@@ -324,7 +324,7 @@ def render_home():
         st.selectbox("Rasio Aspek Video", ASPECT_OPTIONS, key="aspect_ratio")
     with col2:
         st.selectbox("Target Durasi & Jumlah Scene", list(DURATION_SCENES.keys()), key="duration")
-        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Tambahkan efek ledakan api...")
+        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Buat jarak antar boneka lebih dekat...")
 
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
@@ -341,7 +341,7 @@ def render_analysis():
     remix = analysis.get("remixed_mutation", {})
     storyboard = analysis.get("storyboard_plan", [])
 
-    st.success(f"⏱️ Total Target Durasi & Scene: **{scene_count()} Scene** (~{scene_count() * 8} detik total durasi video dengan pacing padat)")
+    st.success(f"⏱️ Total Target Durasi & Scene: **{scene_count()} Scene** (~{scene_count() * 8} detik total durasi video dengan aksi ganda)")
 
     st.subheader("💡 Perbandingan Mutasi Roadmap 1:1 (Anti Plagiarisme)")
     col1, col2 = st.columns(2)
@@ -352,16 +352,16 @@ def render_analysis():
         st.write(f"**Lintasan Asli:** {orig.get('track_asli', '-')}")
 
     with col2:
-        st.markdown("### 🚀 Hasil Remix AI (Active Living NPCs & Spatial Lock)")
+        st.markdown("### 🚀 Hasil Remix AI (Multi-Action & Permanent Objects)")
         st.write(f"**Runner Baru:** `{remix.get('runner_baru', '-')}`")
-        st.write(f"**Boss/Target Baru:** `{remix.get('boss_baru', '-')}`")
+        st.write(f"**Target Baru:** `{remix.get('boss_baru', '-')}`")
         st.write(f"**Lintasan Baru:** `{remix.get('track_baru', '-')}`")
 
     st.info(f"🔒 **Visual Anchor Token (Anti Karakter Berubah):** `{remix.get('visual_anchor_token', '-')}`")
     st.warning(f"💥 **Aksi Klimaks & Fisika Ragdoll:** {analysis.get('climax_action', '-')}")
 
     if storyboard:
-        st.subheader("📋 Storyboard Terstruktur (Per 8 Detik)")
+        st.subheader("📋 Storyboard Terstruktur (Per 8 Detik dengan Aksi Ganda)")
         for item in storyboard:
             st.write(f"• **Scene {item.get('scene', 1)}:** {item.get('fokus_aksi', '-')}")
 
@@ -370,11 +370,11 @@ def render_analysis():
 
 
 def render_scenes():
-    st.title("🎥 AI Video Prompt Generator (Roadmap 1:1 & Spatial Locked)")
+    st.title("🎥 AI Video Prompt Generator (Multi-Action & Persistent Grid)")
     n = scene_count()
     current = st.session_state.current_scene
 
-    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS TENDANGAN & RAGDOLL CHAOS)" if current == n else " ⚡ (FAST-PACED ACTION)"))
+    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS AKSI GANDA & RAGDOLL CHAOS)" if current == n else " ⚡ (FAST-PACED DUAL ACTION)"))
 
     if current not in st.session_state.scene_prompts:
         if st.button(f"Generate Prompt Scene {current}", type="primary"):
@@ -385,7 +385,7 @@ def render_scenes():
         st.text_area("Prompt AI Video (Copy-Paste ke Google Flow / Kling / Luma):", value=st.session_state.scene_prompts[current], height=160)
 
         st.subheader("🖼️ Last Frame Bridge (Estafet Frame / Anti-Jump Continuity)")
-        st.caption("UPLOAD SCREENSHOT FRAME TERAKHIR dari video hasil Scene ini. Ini wajib di-upload agar Scene berikutnya tidak mengalami loncatan posisi (teleport) dan koordinatnya menyambung mulus 100%.")
+        st.caption("UPLOAD SCREENSHOT FRAME TERAKHIR dari video hasil Scene ini. Ini wajib di-upload agar Scene berikutnya tidak mengalami loncatan posisi.")
         uploaded_frame = st.file_uploader(f"Upload Last Frame Scene {current}", type=["png", "jpg", "jpeg"], key=f"frame_{current}")
         if uploaded_frame:
             st.session_state.scene_frames[current] = uploaded_frame
@@ -418,7 +418,7 @@ Buatkan format SEO lengkap dalam bentuk JSON atau teks terstruktur dengan ketent
 1. **3 Pilihan Judul:** Singkat, memancing rasa penasaran ekstrem (Curiosity Gap), dan CTR tinggi untuk video tantangan.
 2. **Deskripsi Singkat:** Mengandung kata kunci natural untuk meningkatkan SEO penelusuran.
 3. **Hashtag Multi-Tier:** Campuran niche tags, viral tags, dan algorithm boosters.
-4. **18 GLOBAL SEO TAGS (MUTLAK UNIK):** Buat tepat 18 kata kunci/tags global dalam bahasa Inggris yang berkaitan dengan game, parkour, ragdoll, dan tantangan ekstrem. **ATURAN KERAS: TIDAK BOLEH ADA KATA ATAU TAGS YANG SAMA ATAU DOUBLE (MUTUALLY EXCLUSIVE)**. Pisahkan dengan koma.
+4. **18 GLOBAL SEO TAGS (MUTLAK UNIK):** Buat tepat 18 kata kunci/tags global dalam bahasa Inggris yang berkaitan dengan game, parkour, ragdoll, dan tantangan ekstrem. **ATURAN KERAS: TIDAK BOLEH ADA KATA ATAU TAGS YANG SAMA ATAU DOUBLE**. Pisahkan dengan koma.
 """
             with st.spinner("Meracik strategi SEO agresif & 18 tags unik..."):
                 res = ask(client, prompt)
@@ -430,7 +430,7 @@ Buatkan format SEO lengkap dalam bentuk JSON atau teks terstruktur dengan ketent
 
 def main():
     with st.sidebar:
-        st.title("UGC Studio v9.1")
+        st.title("UGC Studio v9.2")
         st.caption(f"App Version: {APP_VERSION}")
         st.text_input("Gemini API Key", type="password", key="api_key", placeholder="AIzaSy...")
         st.divider()
