@@ -34,20 +34,21 @@ STYLE_OPTIONS = [
 # REVISI 1: FORMASI 4 KARAKTER BARU (Anti-Copyright & Kocak)
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
-    # 6 Karakter Lama Asli dari GitHub Lu:
+    # Karakter Lama yang Dipertahankan (Manusia Jahe & Blocky Voxel Man sudah dihapus):
     "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
     "Funny Green Frog (Katak hijau nyeleneh berkacamata hitam)",
-    "Blocky Voxel Man (Karakter balok gaya retro game independen)",
     "Inflatable Dinosaur (Kostum dinosaurus tiup warna hijau)",
     "Minecraft Creeper Style (Karakter makhluk hijau kotak khas Minecraft)",
-    "Gingerbread Cookie (Manusia kue jahe hidup)",
-    # 4 Karakter Baru Pilihan Kita:
+    "Minecraft Blocky Zombie (Karakter mayat hidup kotak-kotak ala Minecraft)",
+    "Tung Tung Sahur (Karakter anomali ikonik meme sahur yang absurd)",
+    "Tralalero Tralala (Karakter absurd ala hiu bermata lebar berkaki sneakers)",
+    "Udindi (Karakter khas Italian brainrot, yang konyol dan nyeleneh)",
+    # 4 Karakter Baru Tambahan:
     "Pocong Gesit (Hantu Lokal Melompat Absurd)",
     "Bebek Karet Raksasa (Licin & Membal)",
     "Karakter Roblox / Blocky Noob (Balok Pecah Maksimal)",
     "Sktetelons / Tengkorak Gila (Tulang Copot & Ragdoll Mantap)"
 ]
-
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
 
 DEFAULTS = {
