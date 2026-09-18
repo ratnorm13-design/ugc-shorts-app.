@@ -50,9 +50,18 @@ RUNNER_PRESETS = [
     "Udindindun (Karakter khas Italian brainrot yang konyol dan nyeleneh)"
 ]
 
+# KAMUS OPTIONS RINTANGAN & NAVIGASI DINAMIS (SIAP DISUNTIKKAN KE PROMPT VEO)
+OBSTACLE_OPTIONS = {
+    "None / Lari Datar": "",
+    "🪜 Steep Staircase (Naik Tangga Besi)": "MANDATORY NAVIGATIONAL ACTION: Runner approaches and rapidly climbs up a steep metal staircase/ladder to reach a higher elevated container platform.",
+    "🛝 Glass Pipe Slide (Meluncur Perosotan)": "MANDATORY NAVIGATIONAL ACTION: Runner slides down a transparent glass pipe/slide at high speed before landing gracefully.",
+    "🎯 Bounce Pad / Trampolin (Pelontar Vertikal)": "MANDATORY NAVIGATIONAL ACTION: Runner steps onto a high-impulse launch pad and bounces high up into the air to the next platform.",
+    "🌉 Thin Steel Beam (Jembatan Besi Sempit)": "MANDATORY NAVIGATIONAL ACTION: Runner carefully sprints across a narrow steel beam balancing high over open water.",
+    "🪢 Zipline / Swing Rope (Bergelayut Tali)": "MANDATORY NAVIGATIONAL ACTION: Runner leaps off the edge, grabs an overhead zip-line/rope, and swings across a massive gap.",
+    "⛓️ Swinging Pendulum (Menghindari Palu)": "ENVIRONMENT MECHANIC: Giant swinging pendulums obstruct the path; runner must weave and dodge around them skillfully."
+}
 
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
-
 DEFAULTS = {
     "page": "home",
     "api_key": "",
