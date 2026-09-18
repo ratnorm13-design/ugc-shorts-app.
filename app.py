@@ -8,10 +8,10 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.2", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.3", page_icon="🎬", layout="wide")
 
 MODEL_NAME = "gemini-2.5-flash"
-APP_VERSION = "9.2 — Ultimate 1:1 Roadmap, Permanent Multi-Container Entities & Object Persistence"
+APP_VERSION = "9.3 — Ultimate 1:1 Roadmap, Permanent Multi-Container Entities, Multi-Action & SEO Suite"
 
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
@@ -175,48 +175,51 @@ def run_analysis():
     prompt = f"""
 Anda adalah AI Master Creative Director khusus konten viral 3D Game / Parkour / Obstacle Challenge di TikTok & YouTube Shorts.
 
-TUGAS UTAMA (ROADMAP CLONING 1:1 & MULTI-ACTION DENSITY):
-1. Bedah referensi secara menyeluruh (jika ada file/teks). Kloning struktur jalur kontainer dan ritme waktunya secara 1:1.
-2. PERMANENT OBJECT PERSISTENCE & MULTI-ACTION: Setiap kotak kontainer di sepanjang jalur wajib terisi objek/boneka target sejak frame pertama (zero pop-in). Dalam durasi 1 scene (~8 detik), rancang agar runner melakukan minimal 2 aksi berturut-turut.
-3. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}", serta sesuaikan target boss/ragdoll dengan opsi yang aman hak cipta.
-4. Pastikan jalur lari terkunci di atas kontainer dan transisi mulus.
+TUGAS UTAMA:
+1. Bedah referensi secara menyeluruh dan buat roadmap kloning 1:1.
+2. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}".
+3. Buat paket SEO viral (judul, deskripsi menarik, dan hashtag populer).
 
 PENGATURAN:
-- Style Visual: {st.session_state.visual_style} (Pencahayaan terang benderang siang hari, langit biru cerah, kontras tinggi)
-- Rasio Aspek Video: {st.session_state.aspect_ratio}
-- Instruksi Tambahan User: {st.session_state.custom_instruction}
+- Style Visual: {st.session_state.visual_style}
+- Rasio Aspek: {st.session_state.aspect_ratio}
+- Instruksi User: {st.session_state.custom_instruction}
 
-HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
+HASILKAN JSON PRESISI:
 {{
   "video_duration_seconds": 24,
   "calculated_scene_count": {scene_count()},
   "original_reference": {{
     "runner_asli": "Karakter utama di referensi",
-    "boss_asli": "Karakter/Ragdoll target di ujung",
-    "track_asli": "Jenis rintangan & jalur di referensi"
+    "boss_asli": "Target ragdoll di ujung",
+    "track_asli": "Jalur di referensi"
   }},
   "remixed_mutation": {{
     "runner_baru": "{chosen_runner}",
-    "boss_baru": "Deretan boneka/target ragdoll unik yang berdiri berurutan di setiap kontainer sejak awal",
-    "track_baru": "Lintasan kontainer 1:1 dengan boneka ganda",
-    "visual_anchor_token": "Deskripsi ketat kosmetik karakter pilihan user",
+    "boss_baru": "Deretan boneka/target ragdoll unik",
+    "track_baru": "Lintasan kontainer 1:1",
+    "visual_anchor_token": "Deskripsi ketat kosmetik karakter",
     "alasan_remix": "Alasan modifikasi"
   }},
   "storyboard_plan": [
-    {{"scene": 1, "fokus_aksi": "Runner berlari, melakukan aksi ganda menendang boneka pertama dan memukul boneka kedua."}},
-    {{"scene": 2, "fokus_aksi": "Melanjutkan rintangan berikutnya dengan deretan boneka aktif selanjutnya."}},
-    {{"scene": 3, "fokus_aksi": "Klimaks aksi ganda penutupan dan efek fisika ragdoll massal."}}
+    {{"scene": 1, "fokus_aksi": "Runner berlari dan menendang rintangan pertama."}},
+    {{"scene": 2, "fokus_aksi": "Melanjutkan rintangan berikutnya."}},
+    {{"scene": 3, "fokus_aksi": "Klimaks aksi penutupan dan ragdoll physics."}}
   ],
-  "climax_action": "Aksi ganda menendang dan memukul dua boneka berurutan",
-  "spatial_layout": "Third-person dynamic tracking shot with persistent multi-object placement"
+  "seo_package": {{
+    "judul_viral": "Judul video yang bikin penasaran dan klik tinggi",
+    "deskripsi": "Deskripsi singkat penjelas video untuk TikTok/YouTube",
+    "hashtag": ["#parkour", "#gaming", "#viral", "#foryou", "#ugc"]
+  }}
 }}
 """
-    with st.spinner("Membedah roadmap 1:1 & menyusun skema multi-action..."):
+    with st.spinner("Membedah roadmap & menyusun paket SEO viral..."):
         try:
             raw = ask(client, prompt, parts, json_mode=True)
             data = extract_json(raw)
             st.session_state.analysis = data
             st.session_state.storyboard = data.get("storyboard_plan", [])
+            st.session_state.seo = data.get("seo_package", {})
             
             if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
                 calc_scenes = data.get("calculated_scene_count", len(st.session_state.storyboard) or 3)
@@ -243,23 +246,16 @@ def generate_scene_prompt(scene_number: int) -> bool:
     total_scenes = scene_count()
     is_final_scene = (scene_number == total_scenes)
 
-    scene_focus = "Melanjutkan aksi lari dan rangkaian rintangan di atas jalur kontainer."
+    scene_focus = "Melanjutkan aksi lari dan rintangan."
     if storyboard and len(storyboard) >= scene_number:
         scene_focus = storyboard[scene_number - 1].get("fokus_aksi", scene_focus)
 
-    prev_frame_context = ""
-    if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
-        prev_frame_context = f"STRICT CONTINUITY: Scene {scene_number} MUST start precisely at the exact spatial coordinates where Scene {scene_number-1} ended."
-
     if scene_number == 1:
         camera_desc = "Dynamic third-person trailing camera locked tightly behind the runner."
-        action_desc = f"CRITICAL MULTI-ACTION: Runner ({mutation.get('runner_baru')}) executes TWO distinct interactions sequentially (kick first doll, punch second doll)."
     elif is_final_scene:
         camera_desc = "Dramatic close-up tracking zoom in cinematic slow-motion."
-        action_desc = "CLIMAX DUAL-ACTION PAYOFF: Powerful double-hit combo triggering ragdoll physics explosion."
     else:
         camera_desc = "High-octane sweeping third-person tracking shot."
-        action_desc = f"ROADMAP CONTINUATION: {scene_focus}."
 
     prompt = f"""
 Write ONE ultra-detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes} (approx. 8 seconds segment).
@@ -275,13 +271,12 @@ ASSETS & PERMANENT ENTITIES LOCK:
 - Environment Path: {mutation.get('track_baru', 'Container path')}
 
 PHYSICS & MULTI-ACTION LAWS:
-- Multi-action density: Two distinct hits/kicks in sequence.
-- Surface confinement: Runner stays strictly on container roofs, sharp right turn.
+- Focus action: {scene_focus}
+- Surface confinement: Runner stays strictly on container roofs.
 - Camera: {camera_desc}
-{prev_frame_context}
 
 RULES:
-Output ONLY the final raw English prompt without any markdown formatting, bullet points, or extra text.
+Output ONLY the final raw English prompt without any markdown formatting or extra text.
 """
     with st.spinner(f"Menyusun Prompt Scene {scene_number}..."):
         try:
@@ -291,8 +286,6 @@ Output ONLY the final raw English prompt without any markdown formatting, bullet
         except Exception as exc:
             st.error(f"Gagal menyusun prompt: {exc}")
             return False
-
-
 with st.sidebar:
     st.title("Konfigurasi Sistem")
     st.session_state.api_key = st.text_input("Gemini API Key", value=st.session_state.api_key, type="password", placeholder="AIzaSy...")
@@ -302,8 +295,8 @@ with st.sidebar:
 
 
 def render_home():
-    st.title("UGC Remix Studio v9.2")
-    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Multi-Action Density.")
+    st.title("UGC Remix Studio v9.3")
+    st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Paket SEO Lengkap.")
 
     st.subheader("1. Referensi Video / Skenario")
     st.file_uploader("Upload Video Referensi", type=["mp4", "mov", "webm"], key="ref_file_input")
@@ -328,8 +321,8 @@ def render_home():
 
 
 def render_analysis():
-    st.title("Hasil Bedah 1:1 Roadmap & Multi-Action Density")
-    st.caption("Roadmap pemetaan struktur jalur kontainer, objek permanen, dan ritme aksi ganda.")
+    st.title("Hasil Bedah Roadmap & Paket SEO Viral")
+    st.caption("Roadmap struktur jalur, objek permanen, dan paket optimasi media sosial.")
 
     analysis = st.session_state.get("analysis", {})
     if not analysis:
@@ -340,6 +333,7 @@ def render_analysis():
 
     mut = analysis.get("remixed_mutation", {})
     ref = analysis.get("original_reference", {})
+    seo = analysis.get("seo_package", st.session_state.get("seo", {}))
 
     c1, c2 = st.columns(2)
     with c1:
@@ -355,7 +349,15 @@ def render_analysis():
 
     st.info(f"Alasan Remix: {mut.get('alasan_remix', '-')}")
 
-    st.markdown("### Storyboard & Rencana Multi-Action per Scene")
+    st.markdown("---")
+    st.subheader("📊 Paket SEO & Judul Viral Otomatis")
+    st.text_input("Judul Video Viral:", value=seo.get("judul_viral", ""), key="seo_title_box")
+    st.text_area("Deskripsi Video:", value=seo.get("deskripsi", ""), height=80, key="seo_desc_box")
+    hashtags = seo.get("hashtag", [])
+    st.text_input("Hashtag Populer:", value=" ".join(hashtags) if isinstance(hashtags, list) else str(hashtags), key="seo_tags_box")
+
+    st.markdown("---")
+    st.markdown("### Storyboard & Rencana Aksi per Scene")
     storyboard = st.session_state.get("storyboard", [])
     for idx, item in enumerate(storyboard):
         s_num = item.get("scene", idx + 1)
@@ -395,7 +397,6 @@ def render_generator():
             st.success(f"Prompt Scene {current} berhasil dibuat!")
             st.rerun()
 
-    # Pastikan data terhubung langsung ke session state tanpa keyword argument ganda
     prompts_dict = st.session_state.setdefault("scene_prompts", {})
     current_prompt = prompts_dict.get(current, "")
 
@@ -429,16 +430,18 @@ def render_generator():
 
 def render_export():
     st.title("Ekspor Hasil UGC Remix Studio")
-    st.caption("Salin atau unduh seluruh rangkaian prompt dan roadmap video Anda.")
+    st.caption("Salin atau unduh seluruh rangkaian prompt, roadmap, dan paket SEO video Anda.")
 
     analysis = st.session_state.get("analysis", {})
     prompts = st.session_state.get("scene_prompts", {})
+    seo = st.session_state.get("seo", {})
     total_scenes = scene_count()
 
     full_report = [
-        "# UGC REMIX STUDIO v9.2 — ROADMAP & PROMPT REPORT\n",
-        f"## Analisis & Mutasi\n{json.dumps(analysis, indent=2)}\n",
-        "## Daftar Prompt Scene\n"
+        "# UGC REMIX STUDIO v9.3 — ROADMAP, SEO & PROMPT REPORT\n",
+        f"## Paket SEO Viral\n- Judul: {seo.get('judul_viral', '-')}\n- Deskripsi: {seo.get('deskripsi', '-')}\n- Hashtag: {' '.join(seo.get('hashtag', []))}\n",
+        f"\n## Analisis & Mutasi\n{json.dumps(analysis, indent=2)}\n",
+        "\n## Daftar Prompt Scene\n"
     ]
 
     for i in range(1, total_scenes + 1):
@@ -447,12 +450,12 @@ def render_export():
 
     report_text = "\n".join(full_report)
 
-    st.text_area("Salin Seluruh Laporan & Prompt:", value=report_text, height=300)
+    st.text_area("Salin Seluruh Laporan & Paket SEO:", value=report_text, height=300)
     
     st.download_button(
-        label="Download Paket Prompt (.txt)",
+        label="Download Paket Prompt & SEO (.txt)",
         data=report_text,
-        file_name="ugc_remix_prompts.txt",
+        file_name="ugc_remix_prompts_and_seo.txt",
         mime="text/plain",
         type="primary",
         use_container_width=True,
