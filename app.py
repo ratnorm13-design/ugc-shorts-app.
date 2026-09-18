@@ -159,7 +159,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
             if attempt == 2:
                 raise RuntimeError(f"Gagal terhubung ke Gemini: {exc}")
             time.sleep(1.5)
-    def reference_parts(client, file_uploader_obj):
+def reference_parts(client, file_uploader_obj):
     if file_uploader_obj is not None:
         try:
             data = file_uploader_obj.getvalue()
