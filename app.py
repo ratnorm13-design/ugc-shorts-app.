@@ -33,7 +33,7 @@ STYLE_OPTIONS = [
 
 # REVISI 1: KARAKTER UTAMA BARU (100% SAFE COPYRIGHT & KOCAK)
 RUNNER_PRESETS = [
-      "Custom / Ketik Sendiri",
+    "Custom / Ketik Sendiri",
     "Pocong Gesit (Hantu lokal berbalut kain kafan putih melompat absurd & kencang)",
     "Bebek Karet Raksasa (Mainan bebek mandi kuning licin membal dengan kaki robotik)",
     "Karakter Roblox / Blocky Noob (Karakter balok ikonik gaya voxel yang pecah pas kena pukul)",
@@ -62,6 +62,7 @@ OBSTACLE_OPTIONS = {
 }
 
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
+
 DEFAULTS = {
     "page": "home",
     "api_key": "",
@@ -73,6 +74,7 @@ DEFAULTS = {
     "aspect_ratio": ASPECT_OPTIONS[0],
     "duration": "Auto (Sesuai Durasi & Video Referensi)",
     "custom_instruction": "",
+    "user_scene_obstacles": {},
     "analysis": {},
     "storyboard": [],
     "scene_prompts": {},
@@ -157,9 +159,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
             if attempt == 2:
                 raise RuntimeError(f"Gagal terhubung ke Gemini: {exc}")
             time.sleep(1.5)
-
-
-def reference_parts(client, file_uploader_obj):
+    def reference_parts(client, file_uploader_obj):
     if file_uploader_obj is not None:
         try:
             data = file_uploader_obj.getvalue()
@@ -236,7 +236,7 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
             
             if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
                 calc_scenes = data.get("calculated_scene_count", len(st.session_state.storyboard) or 3)
-                st.session_state.detected_scenes = max(1, min(calc_scenes, 24))
+                st.session_state.detected_scenes = max(1, min(calc_scenes, 50))
             else:
                 st.session_state.detected_scenes = scene_count()
             
@@ -262,6 +262,12 @@ def generate_scene_prompt(scene_number: int) -> bool:
     scene_focus = "Melanjutkan aksi lari dan rangkaian rintangan di atas jalur kontainer."
     if storyboard and len(storyboard) >= scene_number:
         scene_focus = storyboard[scene_number - 1].get("fokus_aksi", scene_focus)
+
+    # PEMBACAAN RINTANGAN OPSIONAL USER PER SCENE
+    custom_obstacle_instruction = st.session_state.user_scene_obstacles.get(scene_number, "")
+    obstacle_inject_str = ""
+    if custom_obstacle_instruction:
+        obstacle_inject_str = f"SPECIAL SCENE OBSTACLE MECHANIC: {custom_obstacle_instruction}"
 
     prev_frame_context = ""
     if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
@@ -299,9 +305,12 @@ ASSETS & PERMANENT ENTITIES LOCK:
 - Target Entities (Multiple active dolls/dummies standing permanently on every container from frame one, zero empty containers): {mutation.get('boss_baru')}
 - Environment Path: {mutation.get('track_baru')}
 
+NAVIGATIONAL ACTION OVERRIDE:
+{obstacle_inject_str}
+
 PHYSICS & MULTI-ACTION LAWS (MANDATORY):
 - Multi-action density: The 8-second video must contain TWO distinct hits/kicks in sequence (e.g., kicking the first doll, then immediately punching/kicking the second doll placed closely ahead).
-- Surface confinement: Runner stays strictly on container roofs, executing a sharp right turn transition after the second action. No falling into the water.
+- Surface confinement: Runner stays strictly on container roofs or specified obstacle path, executing a sharp right turn transition after the second action. No falling into the water.
 - Camera: {camera_desc}
 - Audio: {audio_cues}
 {prev_frame_context}
@@ -317,6 +326,8 @@ Output ONLY the final raw English prompt without any markdown formatting, bullet
         except Exception as exc:
             st.error(f"Gagal menyusun prompt: {exc}")
             return False
+
+
 def render_home():
     st.title("🎬 UGC Remix Studio v9.2")
     st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Multi-Action Density & Permanent Multi-Container Entities.")
@@ -341,10 +352,32 @@ def render_home():
         st.selectbox("Target Durasi & Jumlah Scene", list(DURATION_SCENES.keys()), key="duration")
         st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Buat jarak antar boneka lebih dekat...")
 
+    # INTEGRASI FITUR DINAMIS DROPDOWN RINTANGAN PER-SCENE (OPSIONAL)
+    st.markdown("---")
+    st.subheader("🧭 Navigasi & Rintangan Jalur Per-Scene (Opsional)")
+    st.caption("Pilih rintangan khusus hanya pada scene yang kamu inginkan. Jika dibiarkan 'None / Lari Datar', runner hanya lari biasa di atas kontainer.")
+
+    calculated_scenes = DURATION_SCENES.get(st.session_state.duration, 0)
+    if calculated_scenes == 0:
+        calculated_scenes = st.session_state.get("detected_scenes", 4)
+
+    st.write(f"**Total Dynamic Scene Settings:** {calculated_scenes} Scene ({calculated_scenes * 8} Detik Total)")
+
+    cols = st.columns(2)
+    for i in range(1, calculated_scenes + 1):
+        col_idx = (i - 1) % 2
+        with cols[col_idx]:
+            chosen_obs = st.selectbox(
+                f"Scene {i} Obstacle:",
+                options=list(OBSTACLE_OPTIONS.keys()),
+                index=0,
+                key=f"obstacle_select_scene_{i}"
+            )
+            st.session_state.user_scene_obstacles[i] = OBSTACLE_OPTIONS[chosen_obs]
+
+    st.markdown("---")
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
-
-
 def render_analysis():
     st.title("🔍 Hasil Roadmap De-duplication & Storyboard Mapping")
     analysis = st.session_state.get("analysis", {})
@@ -418,6 +451,7 @@ def render_scenes():
                 st.session_state.current_scene += 1
                 st.rerun()
 
+        
         # JIKA BERADA DI SCENE TERAKHIR (DINAMIS SIKAP BERAPAPUN TOTAL SCENE-NYA), TAMPILKAN TOMBOL SEO DI MAIN BODY
         if current == n:
             st.markdown("---")
