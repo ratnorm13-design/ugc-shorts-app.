@@ -102,12 +102,27 @@ def get_client():
 
 def extract_json(text: str):
     text = (text or "").strip()
+    
+    # Bersihkan markdown block jika ada
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
     text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+    
+    # Coba langsung parse
     try:
         return json.loads(text)
     except Exception:
         pass
+
+    # Cari kurung kurawal atau kurung siku terluar
+    match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except Exception:
+            pass
+
+    raise ValueError(f"Respons AI tidak dapat diparse sebagai JSON. Teks diterima: {text[:100]}...")
 
     starts = [p for p in (text.find("{"), text.find("[")) if p >= 0]
     if not starts:
