@@ -10,7 +10,7 @@ from google.genai import types
 
 st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.3", page_icon="🎬", layout="wide")
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6"
 APP_VERSION = "9.3 — Ultimate 1:1 Roadmap, Permanent Multi-Container Entities, Multi-Action & SEO Suite"
 
 DURATION_SCENES = {
