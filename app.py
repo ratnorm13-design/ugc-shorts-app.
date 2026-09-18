@@ -404,10 +404,11 @@ def render_generator():
     st.markdown(f"---")
     st.subheader(f"⚙️ Pengaturan Scene {current} dari {total_scenes}")
 
-    # Tombol generate otomatis untuk scene aktif
+        # Tombol generate otomatis untuk scene aktif
     if st.button(f"✨ Generate Prompt Scene {current}", type="primary"):
-        generate_scene_prompt(current)
-        st.rerun()
+        sukses = generate_scene_prompt(current)
+        if sukses:
+            st.rerun()
 
     prompts = st.session_state.get("scene_prompts", {})
     current_prompt = prompts.get(current, "")
