@@ -8,10 +8,10 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.3", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio — Ultimate 3D Parkour Engine v9.4", page_icon="🎬", layout="wide")
 
-MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "9.3 — Ultimate 1:1 Roadmap, Permanent Multi-Container Entities, Multi-Action & SEO Suite"
+MODEL_NAME = "gemini-2.5-flash"
+APP_VERSION = "9.4 — Ultimate Fixed Multi-Scene, Prompt Generator & SEO Suite"
 
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
@@ -64,7 +64,6 @@ DEFAULTS = {
     "analysis": {},
     "storyboard": [],
     "scene_prompts": {},
-    "scene_frames": {},
     "current_scene": 1,
     "detected_scenes": 4,
     "seo": {},
@@ -102,19 +101,14 @@ def get_client():
 
 def extract_json(text: str):
     text = (text or "").strip()
-    
-    # Bersihkan markdown block jika ada
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
     text = re.sub(r"\s*```$", "", text)
     text = text.strip()
-    
-    # Coba langsung parse
     try:
         return json.loads(text)
     except Exception:
         pass
 
-    # Cari kurung kurawal atau kurung siku terluar
     match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
     if match:
         try:
@@ -122,18 +116,7 @@ def extract_json(text: str):
         except Exception:
             pass
 
-    raise ValueError(f"Respons AI tidak dapat diparse sebagai JSON. Teks diterima: {text[:100]}...")
-
-    starts = [p for p in (text.find("{"), text.find("[")) if p >= 0]
-    if not starts:
-        raise ValueError("Respons AI tidak berisi JSON yang valid.")
-    start = min(starts)
-    for end in range(len(text), start, -1):
-        try:
-            return json.loads(text[start:end].strip())
-        except Exception:
-            continue
-    raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
+    raise ValueError(f"Respons AI tidak dapat diparse sebagai JSON. Teks: {text[:100]}...")
 
 
 def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
@@ -243,7 +226,6 @@ HASILKAN JSON PRESISI:
                 st.session_state.detected_scenes = scene_count()
             
             st.session_state.scene_prompts = {}
-            st.session_state.scene_frames = {}
             st.session_state.current_scene = 1
             go("analysis")
         except Exception as exc:
@@ -296,12 +278,17 @@ Output ONLY the final raw English prompt without any markdown formatting or extr
     with st.spinner(f"Menyusun Prompt Scene {scene_number}..."):
         try:
             res_prompt = ask(client, prompt, json_mode=False)
-            st.session_state.scene_prompts[scene_number] = res_prompt.strip()
+            res_prompt = re.sub(r"^```(?:text)?\s*", "", res_prompt.strip(), flags=re.I)
+            res_prompt = re.sub(r"\s*```$", "", res_prompt).strip()
+            
+            if not st.session_state.get("scene_prompts"):
+                st.session_state.scene_prompts = {}
+            st.session_state.scene_prompts[scene_number] = res_prompt
             return True
         except Exception as exc:
             st.error(f"Gagal menyusun prompt: {exc}")
             return False
-with st.sidebar:
+        with st.sidebar:
     st.title("Konfigurasi Sistem")
     st.session_state.api_key = st.text_input("Gemini API Key", value=st.session_state.api_key, type="password", placeholder="AIzaSy...")
     st.markdown("---")
@@ -310,7 +297,7 @@ with st.sidebar:
 
 
 def render_home():
-    st.title("UGC Remix Studio v9.3")
+    st.title("UGC Remix Studio v9.4")
     st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Paket SEO Lengkap.")
 
     st.subheader("1. Referensi Video / Skenario")
@@ -329,7 +316,7 @@ def render_home():
         st.selectbox("Rasio Aspek Video", ASPECT_OPTIONS, key="aspect_ratio")
     with col2:
         st.selectbox("Target Durasi & Jumlah Scene", list(DURATION_SCENES.keys()), key="duration")
-        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Buat jarak antar boneka lebih dekat...")
+        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Buat jarak antar boneka dekat...")
 
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
@@ -412,18 +399,20 @@ def render_generator():
             st.success(f"Prompt Scene {current} berhasil dibuat!")
             st.rerun()
 
-    prompts_dict = st.session_state.setdefault("scene_prompts", {})
-    current_prompt = prompts_dict.get(current, "")
+    if "scene_prompts" not in st.session_state:
+        st.session_state.scene_prompts = {}
+
+    current_prompt = st.session_state.scene_prompts.get(current, "")
 
     edited_prompt = st.text_area(
         f"Prompt Video untuk Scene {current} (Bisa diedit manual):",
         value=current_prompt,
-        height=150,
+        height=180,
         key=f"prompt_box_{current}",
     )
     
     if edited_prompt != current_prompt:
-        prompts_dict[current] = edited_prompt
+        st.session_state.scene_prompts[current] = edited_prompt
 
     st.markdown("---")
     col_nav1, col_nav2 = st.columns(2)
@@ -453,7 +442,7 @@ def render_export():
     total_scenes = scene_count()
 
     full_report = [
-        "# UGC REMIX STUDIO v9.3 — ROADMAP, SEO & PROMPT REPORT\n",
+        "# UGC REMIX STUDIO v9.4 — ROADMAP, SEO & PROMPT REPORT\n",
         f"## Paket SEO Viral\n- Judul: {seo.get('judul_viral', '-')}\n- Deskripsi: {seo.get('deskripsi', '-')}\n- Hashtag: {' '.join(seo.get('hashtag', []))}\n",
         f"\n## Analisis & Mutasi\n{json.dumps(analysis, indent=2)}\n",
         "\n## Daftar Prompt Scene\n"
