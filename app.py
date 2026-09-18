@@ -31,10 +31,8 @@ STYLE_OPTIONS = [
     "Sinematik Realistis 3D",
 ]
 
-# REVISI 1: FORMASI 4 KARAKTER BARU (Anti-Copyright & Kocak)
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
-    # Karakter Lama yang Dipertahankan (Manusia Jahe & Blocky Voxel Man sudah dihapus):
     "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
     "Funny Green Frog (Katak hijau nyeleneh berkacamata hitam)",
     "Inflatable Dinosaur (Kostum dinosaurus tiup warna hijau)",
@@ -43,12 +41,12 @@ RUNNER_PRESETS = [
     "Tung Tung Sahur (Karakter anomali ikonik meme sahur yang absurd)",
     "Tralalero Tralala (Karakter absurd ala hiu bermata lebar berkaki sneakers)",
     "Udindi (Karakter khas Italian brainrot, yang konyol dan nyeleneh)",
-    # 4 Karakter Baru Tambahan:
     "Pocong Gesit (Hantu Lokal Melompat Absurd)",
     "Bebek Karet Raksasa (Licin & Membal)",
     "Karakter Roblox / Blocky Noob (Balok Pecah Maksimal)",
     "Sktetelons / Tengkorak Gila (Tulang Copot & Ragdoll Mantap)"
 ]
+
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
 
 DEFAULTS = {
@@ -308,6 +306,14 @@ Output ONLY the final raw English prompt without any markdown formatting, bullet
             return False
 
 
+with st.sidebar:
+    st.title("⚙️ Konfigurasi Sistem")
+    st.session_state.api_key = st.text_input("Gemini API Key", value=st.session_state.api_key, type="password", placeholder="AIzaSy...")
+    st.markdown("---")
+    st.info("💡 **Panduan Cepat:**\n1. Masukkan API Key di atas.\n2. Upload referensi video / isi deskripsi.\n3. Pilih karakter runner.\n4. Klik Proses Remix.")
+    st.markdown(f"**Versi:** {APP_VERSION}")
+
+
 def render_home():
     st.title("🎬 UGC Remix Studio v9.2")
     st.caption("Engine Otomasi Konten 3D Game & Parkour Challenge dengan Multi-Action Density & Permanent Multi-Container Entities.")
@@ -335,121 +341,146 @@ def render_home():
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
 def render_analysis():
-    st.title("🔍 Hasil Roadmap De-duplication & Storyboard Mapping")
+    st.title("📊 Hasil Bedah 1:1 Roadmap & Multi-Action Density")
+    st.caption("Roadmap pemetaan struktur jalur kontainer, objek permanen, dan ritme aksi ganda.")
+
     analysis = st.session_state.get("analysis", {})
     if not analysis:
-        st.info("Belum ada data analisis. Silakan upload referensi di Beranda.")
+        st.warning("Belum ada data analisis. Silakan kembali ke Beranda.")
+        if st.button("⬅️ Kembali ke Beranda"):
+            go("home")
         return
 
-    orig = analysis.get("original_reference", {})
-    remix = analysis.get("remixed_mutation", {})
-    storyboard = analysis.get("storyboard_plan", [])
+    mut = analysis.get("remixed_mutation", {})
+    ref = analysis.get("original_reference", {})
 
-    st.success(f"⏱️ Total Target Durasi & Scene: **{scene_count()} Scene** (~{scene_count() * 8} detik total durasi video dengan aksi ganda)")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("### 🔍 Referensi Asli")
+        st.markdown(f"- **Runner Asli:** {ref.get('runner_asli', '-')}")
+        st.markdown(f"- **Boss/Target Asli:** {ref.get('boss_asli', '-')}")
+        st.markdown(f"- **Track Asli:** {ref.get('track_asli', '-')}")
+    with c2:
+        st.markdown("### 🚀 Hasil Remix & Mutasi 1:1")
+        st.markdown(f"- **Runner Baru:** {mut.get('runner_baru', '-')}")
+        st.markdown(f"- **Target Boneka Permanen:** {mut.get('boss_baru', '-')}")
+        st.markdown(f"- **Track Kontainer:** {mut.get('track_baru', '-')}")
 
-    st.subheader("💡 Perbandingan Mutasi Roadmap 1:1 (Anti Plagiarisme)")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("### 📌 Asli (Video Referensi)")
-        st.write(f"**Runner Asli:** {orig.get('runner_asli', '-')}")
-        st.write(f"**Boss/Ragdoll Asli:** {orig.get('boss_asli', '-')}")
-        st.write(f"**Lintasan Asli:** {orig.get('track_asli', '-')}")
+    st.info(f"💡 **Alasan Remix:** {mut.get('alasan_remix', '-')}")
 
-    with col2:
-        st.markdown("### 🚀 Hasil Remix AI (Multi-Action & Permanent Objects)")
-        st.write(f"**Runner Baru:** `{remix.get('runner_baru', '-')}`")
-        st.write(f"**Target Baru:** `{remix.get('boss_baru', '-')}`")
-        st.write(f"**Lintasan Baru:** `{remix.get('track_baru', '-')}`")
+    st.markdown("### 📋 Storyboard & Rencana Multi-Action per Scene")
+    storyboard = st.session_state.get("storyboard", [])
+    for idx, item in enumerate(storyboard):
+        s_num = item.get("scene", idx + 1)
+        fokus = item.get("fokus_aksi", "Aksi lari dan rintangan.")
+        st.markdown(f"**Scene {s_num}:** {fokus}")
 
-    st.info(f"🔒 **Visual Anchor Token (Anti Karakter Berubah):** `{remix.get('visual_anchor_token', '-')}`")
-    st.warning(f"💥 **Aksi Klimaks & Fisika Ragdoll:** {analysis.get('climax_action', '-')}")
-
-    if storyboard:
-        st.subheader("📋 Storyboard Terstruktur (Per 8 Detik dengan Aksi Ganda)")
-        for item in storyboard:
-            st.write(f"• **Scene {item.get('scene', 1)}:** {item.get('fokus_aksi', '-')}")
-
-    if st.button("LANJUT KELOLA PROMPT ADEGAN", type="primary", use_container_width=True):
-        go("scenes")
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("⬅️ Ulangi Pengaturan (Home)", use_container_width=True):
+            go("home")
+    with col_btn2:
+        if st.button("🎬 Lanjut ke Generator Prompt Scene", type="primary", use_container_width=True):
+            go("generator")
 
 
-def render_scenes():
-    st.title("🎥 AI Video Prompt Generator (Multi-Action & Persistent Grid)")
-    n = scene_count()
-    current = st.session_state.current_scene
+def render_generator():
+    st.title("🎬 Multi-Scene & Multi-Action Prompt Generator")
+    st.caption("Generate prompt video berkualitas tinggi untuk setiap scene dengan transisi dan objek permanen yang konsisten.")
 
-    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS AKSI GANDA & RAGDOLL CHAOS)" if current == n else " ⚡ (FAST-PACED DUAL ACTION)"))
+    total_scenes = scene_count()
+    current = st.session_state.get("current_scene", 1)
 
-    if current not in st.session_state.scene_prompts:
-        if st.button(f"Generate Prompt Scene {current}", type="primary"):
-            generate_scene_prompt(current)
-            st.rerun()
-
-    if current in st.session_state.scene_prompts:
-        st.text_area("Prompt AI Video (Copy-Paste ke Google Flow / Kling / Luma):", value=st.session_state.scene_prompts[current], height=160)
-
-        st.subheader("🖼️ Last Frame Bridge (Estafet Frame / Anti-Jump Continuity)")
-        st.caption("UPLOAD SCREENSHOT FRAME TERAKHIR dari video hasil Scene ini. Ini wajib di-upload agar Scene berikutnya tidak mengalami loncatan posisi.")
-        uploaded_frame = st.file_uploader(f"Upload Last Frame Scene {current}", type=["png", "jpg", "jpeg"], key=f"frame_{current}")
-        if uploaded_frame:
-            st.session_state.scene_frames[current] = uploaded_frame
-            st.success(f"Frame Scene {current} tersimpan! Prompt Scene {current+1} terkunci pada koordinat posisi ini.")
-
-        st.divider()
-        col1, col2 = st.columns(2)
-        with col1:
-            if current > 1 and st.button("← Adegan Sebelumnya"):
-                st.session_state.current_scene -= 1
+    # Navigasi tab mini per scene
+    cols = st.columns(min(total_scenes, 8))
+    for i in range(1, total_scenes + 1):
+        with cols[(i - 1) % 8]:
+            btn_type = "primary" if current == i else "secondary"
+            if st.button(f"Scene {i}", key=f"btn_scene_{i}", type=btn_type, use_container_width=True):
+                st.session_state.current_scene = i
                 st.rerun()
-        with col2:
-            if current < n:
-                if st.button("Adegan Berikutnya →", type="primary"):
-                    st.session_state.current_scene += 1
-                    st.rerun()
-            else:
-                # ==========================================
-                # REVISI 2 & 3: TOMBOL SEO DINAMIS DI AKHIR SCENE APAPUN (Main Body)
-                # ==========================================
-                st.markdown("---")
-                st.success(f"✨ Selesai! Seluruh {n} scene telah tercapai.")
-                st.markdown("### 🎯 SEO & Metadata Engine (Algoritma YouTube / TikTok)")
-                st.caption("Menghasilkan Judul pemancing CTR, Deskripsi tertarget lengkap dengan CTA, dan 18 Tags Global Unik tanpa duplikat.")
 
-                # Tombol SEO utama di main body dengan pengaman error handling (try-except)
-                if st.button("🚀 Generate Judul, Hashtag & 18 Tags Unik", type="primary", use_container_width=True):
-                    try:
-                        client = get_client()
-                        if client:
-                            with st.spinner("Meracik metadata cerdas sesuai durasi & jumlah scene..."):
-                                prompt = f"""
-Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
-Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
+    st.markdown(f"---")
+    st.subheader(f"⚙️ Pengaturan Scene {current} dari {total_scenes}")
 
-Buatkan format SEO lengkap dalam bentuk JSON atau teks terstruktur dengan ketentuan:
-1. **3 Pilihan Judul:** Singkat, memancing rasa penasaran ekstrem (Curiosity Gap), dan CTR tinggi untuk video tantangan.
-2. **Deskripsi Singkat:** Mengandung kata kunci natural untuk meningkatkan SEO penelusuran, lengkap dengan ajakan interaksi (Like, Comment, Subscribe, dan bunyikan lonceng).
-3. **Hashtag Multi-Tier:** Campuran niche tags, viral tags, dan algorithm boosters.
-4. **18 Tags Global Unik:** Dipisahkan dengan koma untuk YouTube Studio tags.
-"""
-                                res_seo = ask(client, prompt, json_mode=False)
-                                st.session_state.seo = {"raw_output": res_seo}
-                                st.success("✨ Metadata & SEO Berhasil Digenerate!")
-                    except Exception as e:
-                        st.error(f"⚠️ Terjadi kendala sesaat pada sistem. Silakan klik tombol sekali lagi. (Detail: {e})")
+    # Tombol generate otomatis untuk scene aktif
+    if st.button(f"✨ Generate Prompt Scene {current}", type="primary"):
+        generate_scene_prompt(current)
+        st.rerun()
 
-                # Tampilkan hasil SEO jika sudah ada di session_state
-                if "seo" in st.session_state and st.session_state.seo.get("raw_output"):
-                    st.markdown("#### 📋 Hasil Metadata SEO:")
-                    st.markdown(st.session_state.seo["raw_output"])
+    prompts = st.session_state.get("scene_prompts", {})
+    current_prompt = prompts.get(current, "")
+
+    edited_prompt = st.text_area(
+        f"Prompt Video untuk Scene {current} (Bisa diedit manual):",
+        value=current_prompt,
+        height=150,
+        key=f"text_prompt_{current}",
+    )
+    if edited_prompt != current_prompt:
+        st.session_state.scene_prompts[current] = edited_prompt
+
+    st.markdown("---")
+    st.subheader(f"🖼️ Simulasi / Catatan Visual Frame & Aksi Ganda Scene {current}")
+    
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        if current > 1:
+            if st.button("⬅️ Scene Sebelumnya"):
+                st.session_state.current_scene = current - 1
+                st.rerun()
+    with col_nav2:
+        if current < total_scenes:
+            if st.button("Scene Berikutnya ➡️"):
+                st.session_state.current_scene = current + 1
+                st.rerun()
+
+    st.markdown("---")
+    if st.button("📦 Ekspor Semua Prompt ke Format Teks / Paket Lengkap", use_container_width=True):
+        go("export")
 
 
-# ==========================================
-# ROUTER UTAMA APLIKASI
-# ==========================================
+def render_export():
+    st.title("📦 Ekspor Hasil UGC Remix Studio")
+    st.caption("Salin atau unduh seluruh rangkaian prompt dan roadmap video Anda.")
+
+    analysis = st.session_state.get("analysis", {})
+    prompts = st.session_state.get("scene_prompts", {})
+    total_scenes = scene_count()
+
+    full_report = []
+    full_report.append("# UGC REMIX STUDIO v9.2 — ROADMAP & PROMPT REPORT\n")
+    full_report.append(f"## Analisis & Mutasi\n{json.dumps(analysis, indent=2)}\n")
+    full_report.append("## Daftar Prompt Scene\n")
+
+    for i in range(1, total_scenes + 1):
+        p = prompts.get(i, "[Belum digenerate]")
+        full_report.append(f"### Scene {i}\n{p}\n")
+
+    report_text = "\n".join(full_report)
+
+    st.text_area("Salin Seluruh Laporan & Prompt:", value=report_text, height=300)
+    
+    st.download_button(
+        label="📥 Download Paket Prompt (.txt)",
+        data=report_text,
+        file_name="ugc_remix_prompts.txt",
+        mime="text/plain",
+        type="primary",
+        use_container_width=True,
+    )
+
+    if st.button("🔄 Kembali ke Halaman Utama"):
+        go("home")
+
+
+# Routing halaman utama Streamlit
 page = st.session_state.get("page", "home")
 if page == "home":
     render_home()
 elif page == "analysis":
     render_analysis()
-elif page == "scenes":
-    render_scenes()
+elif page == "generator":
+    render_generator()
+elif page == "export":
+    render_export()
