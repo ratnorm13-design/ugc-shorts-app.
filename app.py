@@ -22,14 +22,15 @@ if "user_scene_obstacles" not in st.session_state:
     st.session_state.user_scene_obstacles = {}
 
 def get_client():
-    api_key = st.sidebar.text_input("Gemini API Key:", type="password")
+    api_key = st.session_state.get("main_api_key", "")
     if not api_key:
-        st.sidebar.info("Masukkan API Key Gemini untuk melanjutkan.")
+        st.warning("⚠️ Masukkan Gemini API Key terlebih dahulu di bagian atas sebelum melanjutkan.")
         return None
     try:
-        return genai.Client(api_key=api_key)
+        client = genai.Client(api_key=api_key)
+        return client
     except Exception as e:
-        st.sidebar.error(f"Error API Key: {e}")
+        st.error(f"❌ Error Inisialisasi Gemini Client: {e}")
         return None
 
 def scene_count():
@@ -160,6 +161,20 @@ Output ONLY the final raw English prompt without markdown formatting or extra te
 # HEADER & TAMPILAN UTAMA APLIKASI
 st.title("🎮 GTA V Remixer & Scene Prompt Engine")
 st.caption(f"Engine Version: {config.APP_VERSION}")
+
+# INPUT API KEY UTAMA (AWAL TAMPILAN HALAMAN)
+st.subheader("🔑 Autentikasi Gemini API Key")
+col_api1, col_api2 = st.columns([3, 1])
+with col_api1:
+    api_input = st.text_input("Masukkan Gemini API Key Kamu:", type="password", key="main_api_key")
+with col_api2:
+    st.write("### Log Status API")
+    if api_input:
+        st.success("🟢 API Key Terpasang")
+    else:
+        st.error("🔴 API Key Belum Ada")
+
+st.divider()
 
 # SIDEBAR CONTROLS
 st.sidebar.header("⚙️ Pengaturan Prompt & Scene")
