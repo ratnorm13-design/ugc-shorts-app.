@@ -4,7 +4,8 @@ import time
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash"
+# Menggunakan versi model Gemini 3.6 Flash
+MODEL_NAME = "gemini-3.6-flash"
 APP_VERSION = "10.0 — Full Map/Prop Overrides, Multi-Action Climax & Zero Pop-In Engine"
 
 DURATION_SCENES = {
@@ -144,5 +145,5 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
             return text
         except Exception as exc:
             if attempt == 2:
-                raise RuntimeError(f"Gagal terhubung ke Gemini: {exc}")
+                raise RuntimeError(f"Gagal terhubung ke Gemini ({MODEL_NAME}): {exc}")
             time.sleep(1.5)
