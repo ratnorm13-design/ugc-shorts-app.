@@ -1,12 +1,9 @@
 import json
 import re
 import time
-from google import genai
 from google.genai import types
 
-# Menggunakan versi model Gemini 3.6 Flash
-MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "10.0 — Full Map/Prop Overrides, Multi-Action Climax & Zero Pop-In Engine"
+APP_VERSION = "v10.0 — Ultimate 3D Parkour & UGC Remix Studio"
 
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
@@ -27,6 +24,45 @@ STYLE_OPTIONS = [
     "Sinematik Realistis 3D",
 ]
 
+MAP_OPTIONS = [
+    "Auto (Ikuti Remix UGC)",
+    "Container Roofs High Above Ocean (Siang Bolong)",
+    "Rooftop City Skyscraper Parkour",
+    "Neon Cyberpunk Highway Container",
+    "Tropical Island Obstacle Track",
+    "Industrial Factory Roofs",
+    "Desert Canyons Suspension Bridge",
+    "Snowy Mountain Cliffside Containers",
+    "Futuristic Space Station Walkway",
+    "Retro Arcade Neon City Grid"
+]
+
+PROP_STAND_OPTIONS = [
+    "Auto (Ikuti Remix UGC)",
+    "Container Roofs",
+    "Steel Beams Platform",
+    "Wooden Plank Bridge",
+    "Glass Rooftop Walkway",
+    "Narrow Scaffold Poles",
+    "Bouncy Trampoline Mesh",
+    "Industrial Conveyor Belts",
+    "Floating Neon Grid Panels",
+    "Rusted Pipeline Surfaces"
+]
+
+CLIMAX_ACTION_OPTIONS = [
+    "Auto (Ikuti Remix UGC)",
+    "Double-hit combo and chaotic ragdoll collapse",
+    "Spinning hurricane kick knocking all target dolls off the edge",
+    "High-speed tackle causing domino effect ragdoll explosion",
+    "Sliding tackle launching multiple obstacles into the air",
+    "Aerial dive-kick triggering massive chain-reaction collapse",
+    "Backflip stomp shattering the final platform structure",
+    "Shoulder-charge impact sending targets flying off-screen",
+    "Power-slide sweep knocking down all remaining obstacles",
+    "Dramatic final leap with slow-motion multi-target impact"
+]
+
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
     "Pocong Gesit (Hantu lokal berbalut kain kafan putih melompat absurd & kencang)",
@@ -45,60 +81,14 @@ RUNNER_PRESETS = [
     "Udindindun (Karakter khas Italian brainrot yang konyol dan nyeleneh)"
 ]
 
-MAP_OPTIONS = [
-    "Auto (Ikuti Remix UGC)",
-    "Maze Bank Tower Rooftop (Downtown Los Santos Skyscraper)",
-    "Mount Chiliad Mega Ramp & Ridge (High Mountain Canyon)",
-    "Pacific Ocean Docks & Shipping Containers (Sea Port)",
-    "Sky-High Cloud Ramp (Floating Infinite Cloud Void)",
-    "Alamo Sea Desert Airfield Ramp (Sandy Shores Valley)",
-    "Del Perro Pier Coastal Boardwalk (Beach Ferris Wheel View)",
-    "Fort Zancudo Military Airbase Overhead (Jet Base View)",
-    "Zancudo River Canyon Bridge (Red Rock River)",
-    "Neon City Cyberpunk Night (Glow Los Santos Nightlife)",
-    "Lava Volcano Caldera Arena (Active Volcano Lava Pit)"
-]
-
-PROP_STAND_OPTIONS = [
-    "Auto (Ikuti Remix UGC)",
-    "Direct Concrete Rooftop / Flat Container Surface",
-    "Giant Yoga / Exercise Fitness Balls (Colored Balls)",
-    "Wooden Cargo Barrels & Metal Oil Drums",
-    "Stacked Rubber Tires & Wheels",
-    "Vertical Trampoline Impulse Pads",
-    "Glass Ice Cubes & Translucent Pillars",
-    "Rotating Wooden Cylinder Log Rollers",
-    "High Concrete Construction Blocks",
-    "Floating Pool Inflatable Donuts",
-    "Steel Spring Coil Platforms"
-]
-
-CLIMAX_ACTION_OPTIONS = [
-    "Auto (Ikuti Remix UGC)",
-    "Double Hit Combo + Sacrifice Fall (Runner hits 2 targets & falls off edge together)",
-    "Flying Knee Jump Kick + Domino Ragdoll Collapse",
-    "360 Spinning Backfist + Abyss Drag Drop",
-    "Double Dropkick + Explosion Bounce Sacrifice Fall",
-    "Superman Punch & Barrel Destruction + Full Ragdoll Fall",
-    "Tackle & Hug Fall (Kamikaze Drag off the cliff)",
-    "High-Velocity Running Sweep Kick + Terpelanting Off-Limit",
-    "Consecutive Punch-Kick Combo (3 Hits) + Edge Slurry Fall",
-    "Trampoline Launch Overhead Smash + Surface Collapse Fall",
-    "Sliding Tackle Multi-Target Clear + Edge Overshoot Fall"
-]
-
 OBSTACLE_OPTIONS = {
     "None / Lari Datar": "",
-    "⛓️ Swinging Giant Pendulums & Hammers": "ENVIRONMENT MECHANIC: Giant swinging pendulums and massive hammers obstruct the path; runner must weave and dodge around them skillfully.",
-    "🔥 Flamethrower & Fire Jet Gates": "ENVIRONMENT MECHANIC: Periodic intense fire jets shoot up from the platform surface; runner timing must be precise.",
-    "🌀 Rotating Spike Rollers": "ENVIRONMENT MECHANIC: Fast-spinning spiked cylinders block the middle path; runner must leap over them cleanly.",
-    "💣 Explosive Red Barrels": "ENVIRONMENT MECHANIC: Highly unstable red explosive barrels line the edges; accidental contact triggers physics blast.",
-    "🪓 Oscillating Guillotine Blades": "ENVIRONMENT MECHANIC: Massive razor-sharp guillotine blades drop up and down rapidly across the lane.",
-    "🧱 Crushing Hydraulic Pistons": "ENVIRONMENT MECHANIC: Heavy concrete hydraulic blocks punch horizontally across the runner's path.",
-    "🌉 Narrow Crumbling Bridge / Glass Tiles": "ENVIRONMENT MECHANIC: Fragile glass tiles and crumbling concrete blocks shatter 1 second after being stepped on.",
-    "⚡ Electrified Fence & Laser Barriers": "ENVIRONMENT MECHANIC: High-voltage flickering electric laser barriers force the runner to slide or jump high.",
-    "🌀 High-Speed Wind Turbine Fans": "ENVIRONMENT MECHANIC: Industrial wind turbine fans blow strong lateral gusts threatening to push runner off the edge.",
-    "🪜 Sky-High Spiral Metal Ladder": "MANDATORY NAVIGATIONAL ACTION: Runner rapidly climbs a steep spiral metal ladder hovering high over open air."
+    "🪜 Steep Staircase (Naik Tangga Besi)": "MANDATORY NAVIGATIONAL ACTION: Runner approaches and rapidly climbs up a steep metal staircase/ladder to reach a higher elevated platform.",
+    "🛝 Glass Pipe Slide (Meluncur Perosotan)": "MANDATORY NAVIGATIONAL ACTION: Runner slides down a transparent glass pipe/slide at high speed before landing gracefully.",
+    "🎯 Bounce Pad / Trampolin (Pelontar Vertikal)": "MANDATORY NAVIGATIONAL ACTION: Runner steps onto a high-impulse launch pad and bounces high up into the air to the next platform.",
+    "🌉 Thin Steel Beam (Jembatan Besi Sempit)": "MANDATORY NAVIGATIONAL ACTION: Runner carefully sprints across a narrow steel beam balancing high over open gaps.",
+    "🪢 Zipline / Swing Rope (Bergelayut Tali)": "MANDATORY NAVIGATIONAL ACTION: Runner leaps off the edge, grabs an overhead zip-line/rope, and swings across a massive gap.",
+    "⛓️ Swinging Pendulum (Menghindari Palu)": "ENVIRONMENT MECHANIC: Giant swinging pendulums obstruct the path; runner must weave and dodge around them skillfully."
 }
 
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
@@ -123,7 +113,7 @@ def extract_json(text: str):
             continue
     raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
 
-def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
+def ask(client, prompt: str, parts=None, json_mode: bool = False, model_name: str = "gemini-3.6-flash") -> str:
     media_parts = list(parts or [])
     content_parts = media_parts + [types.Part.from_text(text=prompt)]
     contents = [types.Content(role="user", parts=content_parts)]
@@ -135,7 +125,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
     for attempt in range(3):
         try:
             response = client.models.generate_content(
-                model=MODEL_NAME,
+                model=model_name,
                 contents=contents,
                 config=types.GenerateContentConfig(**config_kwargs),
             )
@@ -145,5 +135,5 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
             return text
         except Exception as exc:
             if attempt == 2:
-                raise RuntimeError(f"Gagal terhubung ke Gemini ({MODEL_NAME}): {exc}")
+                raise RuntimeError(f"Gagal terhubung ke Gemini: {exc}")
             time.sleep(1.5)
