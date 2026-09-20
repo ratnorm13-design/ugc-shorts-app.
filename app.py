@@ -24,12 +24,12 @@ if "user_scene_obstacles" not in st.session_state:
 def get_client():
     api_key = st.sidebar.text_input("Gemini API Key:", type="password")
     if not api_key:
-        st.info("Silakan masukkan API Key Gemini di sidebar sebelah kiri untuk memulai.")
+        st.sidebar.info("Masukkan API Key Gemini untuk melanjutkan.")
         return None
     try:
         return genai.Client(api_key=api_key)
     except Exception as e:
-        st.error(f"Gagal inisialisasi API Key: {e}")
+        st.sidebar.error(f"Error API Key: {e}")
         return None
 
 def scene_count():
@@ -156,11 +156,12 @@ Output ONLY the final raw English prompt without markdown formatting or extra te
         except Exception as exc:
             st.error(f"Gagal menyusun prompt Scene {scene_number}: {exc}")
             return False
-# HEADER APLIKASI
-st.title("🎬 GTA V Remixer & Scene Prompt Engine")
+
+# HEADER & TAMPILAN UTAMA APLIKASI
+st.title("🎮 GTA V Remixer & Scene Prompt Engine")
 st.caption(f"Engine Version: {config.APP_VERSION}")
 
-# SIDEBAR CONFIGURATION
+# SIDEBAR CONTROLS
 st.sidebar.header("⚙️ Pengaturan Prompt & Scene")
 st.session_state.selected_duration = st.sidebar.selectbox("Pilih Durasi Video:", list(config.DURATION_SCENES.keys()), index=1)
 st.session_state.selected_style = st.sidebar.selectbox("Gaya Visual:", config.STYLE_OPTIONS)
@@ -172,95 +173,94 @@ st.sidebar.divider()
 st.sidebar.subheader("📐 Aspect Ratio")
 selected_aspect = st.sidebar.radio("Ukuran Format Video:", config.ASPECT_OPTIONS)
 
-# TAB INTERFACE
-tab1, tab2, tab3 = st.tabs(["⚡ Fast Generator (Tanpa Media)", "🖼️ Remix Media (Upload Referensi)", "📋 Storyboard & Results"])
+# TAMPILAN UTAMA PERTAMA: FAST GENERATOR / MANUAL OVERRIDE
+st.subheader("1. Konfigurasi Fast Generator")
+col_a, col_b = st.columns(2)
+with col_a:
+    runner_choice = st.selectbox("Pilih Character / Runner Utama:", config.RUNNER_PRESETS)
+    if runner_choice == "Custom / Ketik Sendiri":
+        custom_runner = st.text_input("Deskripsi Runner Custom:", "Pocong melompat cepat memakai sepatu kets")
+    else:
+        custom_runner = runner_choice
 
-with tab1:
-    st.subheader("1. Konfigurasi Karakter & Target")
-    col1, col2 = st.columns(2)
-    with col1:
-        runner_choice = st.selectbox("Pilih Character / Runner Utama:", config.RUNNER_PRESETS)
-        if runner_choice == "Custom / Ketik Sendiri":
-            custom_runner = st.text_input("Deskripsi Runner Custom:", "Pocong melompat cepat memakai sepatu kets")
-        else:
-            custom_runner = runner_choice
+with col_b:
+    target_dolls = st.text_input("Target / Boneka Rintangan:", "Boneka Badut Warna-warni di atas drum bekas")
 
-    with col2:
-        target_dolls = st.text_input("Target / Boneka Rintangan:", "Boneka Badut Warna-warni di atas drum bekas")
+st.subheader("2. Tambahkan Rintangan Khusus Per Scene")
+num_scenes = scene_count()
+for i in range(1, num_scenes + 1):
+    obs_label = list(config.OBSTACLE_OPTIONS.keys())
+    selected_obs = st.selectbox(f"Rintangan Khusus Scene {i}:", obs_label, key=f"obs_select_main_{i}")
+    st.session_state.user_scene_obstacles[i] = config.OBSTACLE_OPTIONS[selected_obs]
 
-    st.subheader("2. Tambahkan Rintangan Khusus Per Scene")
-    num_scenes = scene_count()
-    for i in range(1, num_scenes + 1):
-        obs_label = list(config.OBSTACLE_OPTIONS.keys())
-        selected_obs = st.selectbox(f"Rintangan Khusus Scene {i}:", obs_label, key=f"obs_select_tab1_{i}")
-        st.session_state.user_scene_obstacles[i] = config.OBSTACLE_OPTIONS[selected_obs]
+if st.button("🚀 Buat Prompt Semua Scene", type="primary"):
+    client = get_client()
+    if client:
+        st.session_state.analysis = {
+            "remixed_mutation": {
+                "runner_baru": custom_runner,
+                "boss_baru": target_dolls,
+                "map_environment": st.session_state.selected_map,
+                "prop_stand": st.session_state.selected_prop_stand
+            },
+            "climax_action": st.session_state.selected_climax_action,
+            "storyboard_plan": [{"fokus_aksi": f"Runner beraksi melewati rintangan di scene {idx}"} for idx in range(1, num_scenes + 1)]
+        }
+        
+        st.session_state.scene_prompts = {}
+        for sc in range(1, num_scenes + 1):
+            generate_scene_prompt(sc)
 
-    if st.button("🚀 Buat Prompt Semua Scene (Fast Mode)", type="primary"):
-        client = get_client()
-        if client:
-            st.session_state.analysis = {
-                "remixed_mutation": {
-                    "runner_baru": custom_runner,
-                    "boss_baru": target_dolls,
-                    "map_environment": st.session_state.selected_map,
-                    "prop_stand": st.session_state.selected_prop_stand
-                },
-                "climax_action": st.session_state.selected_climax_action,
-                "storyboard_plan": [{"fokus_aksi": f"Runner beraksi melewati rintangan di scene {idx}"} for idx in range(1, num_scenes + 1)]
-            }
+st.divider()
+
+# TAMPILAN KEDUA: VISION REMIX / UPLOAD REFERENSI
+st.subheader("🖼️ Remix Media (Upload Referensi)")
+uploaded_file = st.file_uploader("Upload Tangkapan Layar / Video Game:", type=["jpg", "jpeg", "png", "mp4"])
+custom_notes = st.text_area("Catatan Tambahan untuk AI Remix:", "Buat pergerakan lebih ekstrem dan dinamis.")
+
+if st.button("🔍 Analisis & Remix Media"):
+    client = get_client()
+    if client:
+        file_part = None
+        if uploaded_file:
+            bytes_data = uploaded_file.getvalue()
+            file_part = types.Part.from_bytes(data=bytes_data, mime_type=uploaded_file.type)
+        
+        with st.spinner("Menganalisis media & menyusun storyboard..."):
+            try:
+                result = analyze_reference(client, file_part, custom_notes)
+                st.session_state.analysis = result
+                st.success("Analisis Berhasil!")
+            except Exception as e:
+                st.error(f"Gagal melakukan analisis: {e}")
+
+st.divider()
+
+# TAMPILAN HASIL & STORYBOARD
+st.subheader("📋 Dashboard Storyboard & Hasil Prompt")
+if st.session_state.analysis:
+    st.write("### 🧬 Parameter Remix Terdeteksi:")
+    st.json(st.session_state.analysis)
+
+    st.divider()
+    st.write("### 🎬 Prompt Per Scene untuk Video Generator:")
+
+    total_sc = scene_count()
+    for sc in range(1, total_sc + 1):
+        with st.expander(f"📌 Scene {sc} of {total_sc} Prompt", expanded=True):
+            if sc in st.session_state.scene_prompts:
+                st.code(st.session_state.scene_prompts[sc], language="text")
+            else:
+                st.warning("Prompt belum dibuat.")
             
-            st.session_state.scene_prompts = {}
-            for sc in range(1, num_scenes + 1):
+            if st.button(f"🔄 Regenerate Scene {sc}", key=f"regen_{sc}"):
                 generate_scene_prompt(sc)
-            st.success("Semua Prompt Scene Berhasil Dibuat! Cek Tab 'Storyboard & Results'.")
+                st.rerun()
 
-with tab2:
-    st.subheader("Upload Gambar/Video Referensi")
-    uploaded_file = st.file_uploader("Upload Tangkapan Layar / Video Game:", type=["jpg", "jpeg", "png", "mp4"])
-    custom_notes = st.text_area("Catatan Tambahan untuk AI Remix:", "Buat pergerakan lebih ekstrem dan dinamis.")
-
-    if st.button("🔍 Analisis & Remix Media", type="primary"):
-        client = get_client()
-        if client:
-            file_part = None
-            if uploaded_file:
-                bytes_data = uploaded_file.getvalue()
-                file_part = types.Part.from_bytes(data=bytes_data, mime_type=uploaded_file.type)
-            
-            with st.spinner("Menganalisis media & menyusun storyboard..."):
-                try:
-                    result = analyze_reference(client, file_part, custom_notes)
-                    st.session_state.analysis = result
-                    st.success("Analisis Berhasil!")
-                except Exception as e:
-                    st.error(f"Gagal melakukan analisis: {e}")
-
-with tab3:
-    st.subheader("📋 Dashboard Storyboard & Hasil Prompt")
-    
-    if st.session_state.analysis:
-        st.write("### 🧬 Parameter Remix Terdeteksi:")
-        st.json(st.session_state.analysis)
-
-        st.divider()
-        st.write("### 🎬 Prompt Per Scene untuk Video Generator:")
-
-        total_sc = scene_count()
-        for sc in range(1, total_sc + 1):
-            with st.expander(f"📌 Scene {sc} of {total_sc} Prompt", expanded=True):
-                if sc in st.session_state.scene_prompts:
-                    st.code(st.session_state.scene_prompts[sc], language="text")
-                else:
-                    st.warning("Prompt belum dibuat.")
-                
-                if st.button(f"🔄 Regenerate Scene {sc}", key=f"regen_{sc}"):
-                    generate_scene_prompt(sc)
-                    st.rerun()
-
-                st.subheader(f"🖼️ Reference Last Frame for Continuity Scene {sc}")
+            st.subheader(f"🖼️ Reference Last Frame for Continuity Scene {sc}")
                 uploaded_frame = st.file_uploader(f"Upload Tangkapan Akhir Video Scene {sc} (opsional):", type=["jpg", "png"], key=f"frame_up_{sc}")
                 if uploaded_frame:
                     st.session_state.scene_frames[sc] = uploaded_frame.name
                     st.info(f"Frame Scene {sc} tersimpan untuk menjaga kontinuitas ke Scene {sc+1}.")
-    else:
-        st.info("Belum ada data prompt. Silakan buat melalui Tab 'Fast Generator' atau 'Remix Media'.")
+else:
+    st.info("Belum ada data prompt. Silakan klik tombol '🚀 Buat Prompt Semua Scene' atau 'Analisis & Remix Media'.")
