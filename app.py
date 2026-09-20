@@ -101,7 +101,7 @@ def generate_scene_prompt(scene_number: int) -> bool:
     if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
         prev_frame_context = f"STRICT CONTINUITY & SPATIAL LOCK: Scene {scene_number} MUST start precisely at the exact spatial coordinates where Scene {scene_number-1} ended."
 
-    # KONTROL AKSI PER SCENE (Mencegah Runner jatuh terlalu cepat di Scene awal)
+    # KONTROL AKSI PER SCENE
     if is_final_scene:
         action_rules = f"""
 ULTIMATE CLIMAX & SACRIFICE FALL (FINAL SCENE {scene_number} ONLY):
@@ -158,35 +158,44 @@ Output ONLY the final raw English prompt without markdown formatting or extra te
             st.error(f"Gagal menyusun prompt Scene {scene_number}: {exc}")
             return False
 
-# HEADER & TAMPILAN UTAMA APLIKASI
-st.title("🎮 GTA V Remixer & Scene Prompt Engine")
-st.caption(f"Engine Version: {config.APP_VERSION}")
+# ================= SIDEBAR (HANYA BERANDA & LOG API KEY) =================
+st.sidebar.title("🏠 Beranda")
+st.sidebar.caption(f"Engine Version: {config.APP_VERSION}")
+st.sidebar.divider()
+st.sidebar.subheader("📋 Log Status API Key")
 
-# INPUT API KEY UTAMA (AWAL TAMPILAN HALAMAN)
+api_check = st.session_state.get("main_api_key", "")
+if api_check:
+    st.sidebar.success("🟢 API Key Connected")
+else:
+    st.sidebar.error("🔴 API Key Missing")
+
+# ================= TAMPILAN UTAMA (HALAMAN DEPAN) =================
+st.title("🎮 GTA V Remixer & Scene Prompt Engine")
+
+# INPUT API KEY UTAMA
 st.subheader("🔑 Autentikasi Gemini API Key")
-col_api1, col_api2 = st.columns([3, 1])
-with col_api1:
-    api_input = st.text_input("Masukkan Gemini API Key Kamu:", type="password", key="main_api_key")
-with col_api2:
-    st.write("### Log Status API")
-    if api_input:
-        st.success("🟢 API Key Terpasang")
-    else:
-        st.error("🔴 API Key Belum Ada")
+st.text_input("Masukkan Gemini API Key Kamu:", type="password", key="main_api_key")
 
 st.divider()
 
-# SIDEBAR CONTROLS
-st.sidebar.header("⚙️ Pengaturan Prompt & Scene")
-st.session_state.selected_duration = st.sidebar.selectbox("Pilih Durasi Video:", list(config.DURATION_SCENES.keys()), index=1)
-st.session_state.selected_style = st.sidebar.selectbox("Gaya Visual:", config.STYLE_OPTIONS)
-st.session_state.selected_map = st.sidebar.selectbox("Pilih Map / Lingkungan:", config.MAP_OPTIONS)
-st.session_state.selected_prop_stand = st.sidebar.selectbox("Tumpuan / Alas Panggung:", config.PROP_STAND_OPTIONS)
-st.session_state.selected_climax_action = st.sidebar.selectbox("Aksi Klimaks (Scene Akhir):", config.CLIMAX_ACTION_OPTIONS)
+# PENGATURAN SCENE & RASIO ASPEK (DIPINDAHKAN KE DALAM)
+st.subheader("⚙️ Pengaturan Scene & Rasio Aspek")
+col_set1, col_set2, col_set3 = st.columns(3)
 
-st.sidebar.divider()
-st.sidebar.subheader("📐 Aspect Ratio")
-selected_aspect = st.sidebar.radio("Ukuran Format Video:", config.ASPECT_OPTIONS)
+with col_set1:
+    st.session_state.selected_duration = st.selectbox("Pilih Durasi Video:", list(config.DURATION_SCENES.keys()), index=1)
+    st.session_state.selected_style = st.selectbox("Gaya Visual:", config.STYLE_OPTIONS)
+
+with col_set2:
+    st.session_state.selected_map = st.selectbox("Pilih Map / Lingkungan:", config.MAP_OPTIONS)
+    st.session_state.selected_prop_stand = st.selectbox("Tumpuan / Alas Panggung:", config.PROP_STAND_OPTIONS)
+
+with col_set3:
+    st.session_state.selected_climax_action = st.selectbox("Aksi Klimaks (Scene Akhir):", config.CLIMAX_ACTION_OPTIONS)
+    selected_aspect = st.radio("Format Video / Rasio Aspek:", config.ASPECT_OPTIONS, horizontal=True)
+
+st.divider()
 
 # TAMPILAN UTAMA PERTAMA: FAST GENERATOR / MANUAL OVERRIDE
 st.subheader("1. Konfigurasi Fast Generator")
@@ -236,6 +245,49 @@ custom_notes = st.text_area("Catatan Tambahan untuk AI Remix:", "Buat pergerakan
 if st.button("🔍 Analisis & Remix Media"):
     client = get_client()
     if client:
+        file_part = None
+        if uploaded_file:
+            bytes_data = uploaded_file.getvalue()
+            file_part = types.Part.from_bytes(data=bytes_data, mime_type=uploaded_file.type)
+        
+        with st.spinner("Menganalisis media & menyusun storyboard..."):
+            try:
+                result = analyze_reference(client, file_part, custom_notes)
+                st.session_state.analysis = result
+                st.success("Analisis Berhasil!")
+            except Exception as e:
+                st.error(f"Gagal melakukan analisis: {e}")
+
+st.divider()
+
+# TAMPILAN HASIL & STORYBOARD
+st.subheader("📋 Dashboard Storyboard & Hasil Prompt")
+if st.session_state.analysis:
+    st.write("### 🧬 Parameter Remix Terdeteksi:")
+    st.json(st.session_state.analysis)
+
+    st.divider()
+    st.write("### 🎬 Prompt Per Scene untuk Video Generator:")
+
+    total_sc = scene_count()
+    for sc in range(1, total_sc + 1):
+        with st.expander(f"📌 Scene {sc} of {total_sc} Prompt", expanded=True):
+            if sc in st.session_state.scene_prompts:
+                st.code(st.session_state.scene_prompts[sc], language="text")
+            else:
+                st.warning("Prompt belum dibuat.")
+            
+            if st.button(f"🔄 Regenerate Scene {sc}", key=f"regen_{sc}"):
+                generate_scene_prompt(sc)
+                st.rerun()
+
+            st.subheader(f"🖼️ Reference Last Frame for Continuity Scene {sc}")
+            uploaded_frame = st.file_uploader(f"Upload Tangkapan Akhir Video Scene {sc} (opsional):", type=["jpg", "png"], key=f"frame_up_{sc}")
+            if uploaded_frame:
+                st.session_state.scene_frames[sc] = uploaded_frame.name
+                st.info(f"Frame Scene {sc} tersimpan untuk menjaga kontinuitas ke Scene {sc+1}.")
+else:
+    st.info("Belum ada data prompt. Silakan klik tombol '🚀 Buat Prompt Semua Scene' atau 'Analisis & Remix Media'.") if client:
         file_part = None
         if uploaded_file:
             bytes_data = uploaded_file.getvalue()
