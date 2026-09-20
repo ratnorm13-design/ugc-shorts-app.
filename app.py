@@ -258,9 +258,9 @@ if st.session_state.analysis:
                 st.rerun()
 
             st.subheader(f"🖼️ Reference Last Frame for Continuity Scene {sc}")
-                uploaded_frame = st.file_uploader(f"Upload Tangkapan Akhir Video Scene {sc} (opsional):", type=["jpg", "png"], key=f"frame_up_{sc}")
-                if uploaded_frame:
-                    st.session_state.scene_frames[sc] = uploaded_frame.name
-                    st.info(f"Frame Scene {sc} tersimpan untuk menjaga kontinuitas ke Scene {sc+1}.")
+            uploaded_frame = st.file_uploader(f"Upload Tangkapan Akhir Video Scene {sc} (opsional):", type=["jpg", "png"], key=f"frame_up_{sc}")
+            if uploaded_frame:
+                st.session_state.scene_frames[sc] = uploaded_frame.name
+                st.info(f"Frame Scene {sc} tersimpan untuk menjaga kontinuitas ke Scene {sc+1}.")
 else:
     st.info("Belum ada data prompt. Silakan klik tombol '🚀 Buat Prompt Semua Scene' atau 'Analisis & Remix Media'.")
