@@ -8,10 +8,14 @@ from google import genai
 from google.genai import types
 
 # ==========================================
-# CONSTANTS & CONFIGURATION
+# CONSTANTS & CONFIGURATION (MODEL FIX)
 # ==========================================
-MODEL_NAME = "gemini-3.6-flash"
-FALLBACK_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"]
+MODEL_NAME = "gemini-2.5-flash"
+FALLBACK_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b"
+]
 APP_VERSION = "14.2 — Comedic Parkour & Maximum Viral Hook Engine"
 
 MAX_FILE_SIZE_MB = 15
