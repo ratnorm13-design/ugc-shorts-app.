@@ -8,12 +8,12 @@ from google import genai
 from google.genai import types
 
 # ==========================================
-# CONSTANTS & CONFIGURATION
+# CONSTANTS & CONFIGURATION (KEMBALIKAN KE 3.6)
 # ==========================================
-MODEL_NAME = "gemini-2.5-flash"        # <--- ADA DI SEKITAR BARIS 11-12
-FALLBACK_MODELS = [                    # <--- ADA DI SEKITAR BARIS 13-16
-    "gemini-2.0-flash",
-    "gemini-1.5-flash"
+MODEL_NAME = "gemini-3.6-flash"
+FALLBACK_MODELS = [
+    "gemini-3.5-flash",
+    "gemini-3.7-flash"
 ]
 APP_VERSION = "14.2 — Comedic Parkour & Maximum Viral Hook Engine"
 
