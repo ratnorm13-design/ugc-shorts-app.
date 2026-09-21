@@ -257,7 +257,6 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
                 time.sleep(1.0)
 
     raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
-
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
