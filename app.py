@@ -10,9 +10,9 @@ from google.genai import types
 # ==========================================
 # CONSTANTS & CONFIGURATION
 # ==========================================
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6-flash"
 FALLBACK_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"]
-APP_VERSION = "14.1 — Math-Ceil Pacing & Full Multimodal Pipeline Engine"
+APP_VERSION = "14.2 — Comedic Parkour & Maximum Viral Hook Engine"
 
 MAX_FILE_SIZE_MB = 15
 
@@ -149,6 +149,34 @@ CLIMAX_ACTION_OPTIONS = [
     "10. Sliding Tackle Multi-Target Clear + Edge Overshoot Fall"
 ]
 
+MANEUVER_OPTIONS = [
+    "Auto / Lari Standar (Otomatis Penyesuaian AI)",
+    "1. ⚠️ Terpeleset Hampir Jatuh (Near-Miss Clutch & Recovery)",
+    "2. 🧗 Lari Miring di Dinding (Wall Run & Bounce)",
+    "3. 🛹 Meluncur Rendah di Floor (Sliding Tackle & Slide)",
+    "4. 🚀 Melambung Trampolin & Injak dari Udara (Trampoline Vault & Smash)",
+    "5. 🛹 Grind di Pipa / Pagar (Rail Balance Grinding)",
+    "6. 🕺 Joget & Ejekan Sambil Lari (Mid-Run Emote & Taunt)",
+    "7. 🪂 Meluncur Tali Zipline (Zipline Speed Drop)",
+    "8. 🥊 Menunduk & Dodge Serangan Target (Target Counter & Dodge)",
+    "9. ⚡ Injak Karpet Speed Boost (Nitro Dash Acceleration)",
+    "10. 🧱 Melompat Presisi Antar Pilar (Precision Pillar Vaulting)"
+]
+
+MANEUVER_PROMPT_MAP = {
+    "Auto / Lari Standar (Otomatis Penyesuaian AI)": "",
+    "1. ⚠️ Terpeleset Hampir Jatuh (Near-Miss Clutch & Recovery)": "MANEUVER ACTION: Runner stumbles clumsily near the edge, almost falling into the void in panic, but dramatically catches the ledge with one hand and pulls up back onto the track.",
+    "2. 🧗 Lari Miring di Dinding (Wall Run & Bounce)": "MANEUVER ACTION: Runner wall-runs vertically along the adjacent container side wall before leaping diagonally back onto the platform.",
+    "3. 🛹 Meluncur Rendah di Floor (Sliding Tackle & Slide)": "MANEUVER ACTION: Runner performs a fast low-angle baseball slide underneath high obstacles while sweeping forward.",
+    "4. 🚀 Melambung Trampolin & Injak dari Udara (Trampoline Vault & Smash)": "MANEUVER ACTION: Runner hits a glowing launch pad, soaring high into the air with a comedic acrobatic flip before landing on the path.",
+    "5. 🛹 Grind di Pipa / Pagar (Rail Balance Grinding)": "MANEUVER ACTION: Runner leaps onto a narrow side railing, balancing on one foot while grinding forward at high speed.",
+    "6. 🕺 Joget & Ejekan Sambil Lari (Mid-Run Emote & Taunt)": "MANEUVER ACTION: Runner executes a hilarious 1-second taunt emote (pointing, hip sway, finger snap) mid-sprint without slowing down.",
+    "7. 🪂 Meluncur Tali Zipline (Zipline Speed Drop)": "MANEUVER ACTION: Runner grabs an overhead zipline handle, zipping rapidly over a gap before dropping precisely onto the track.",
+    "8. 🥊 Menunduk & Dodge Serangan Target (Target Counter & Dodge)": "MANEUVER ACTION: Target entity tosses a comedic object; runner duck-slides under it and instantly counters with a heavy kick.",
+    "9. ⚡ Injak Karpet Speed Boost (Nitro Dash Acceleration)": "MANEUVER ACTION: Runner steps on a glowing neon speed pad, gaining instant nitro boost speed with motion blur effect.",
+    "10. 🧱 Melompat Presisi Antar Pilar (Precision Pillar Vaulting)": "MANEUVER ACTION: Runner rapidly vaults across a series of narrow, disconnected concrete pillars over open air."
+}
+
 OBSTACLE_OPTIONS = {
     "None / Lari Datar": "",
     "1. ⛓️ Swinging Giant Pendulums & Hammers": "ENVIRONMENT MECHANIC: Giant swinging pendulums and massive hammers obstruct the path; runner must weave and dodge around them skillfully.",
@@ -227,7 +255,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
 
     raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
 
-st.set_page_config(page_title="UGC Remix Studio v14.1", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
     "page": "home",
@@ -247,6 +275,7 @@ DEFAULTS = {
     "duration": "Auto (Sesuai Durasi & Video Referensi)",
     "custom_instruction": "",
     "user_scene_obstacles": {},
+    "user_scene_maneuvers": {},
     "analysis": {},
     "storyboard": [],
     "scene_prompts": {},
@@ -389,8 +418,8 @@ HASILKAN JSON SANGAT RINGKAS:
     "alasan_remix": "Penggabungan otomatis berbasis hirarki UI"
   }},
   "storyboard_plan": [
-    {{"scene": 1, "fokus_aksi": "Runner berlari kencang, menendang Target A jatuh dari dudukan, lalu lanjut lari stabil di lintasan."}},
-    {{"scene": 2, "fokus_aksi": "Runner melewati rintangan, menendang Target B jatuh, dan bersiap untuk aksi klimaks."}}
+    {{"scene": 1, "fokus_aksi": "Runner meluncur dengan akselerasi kaget, menendang Target A jatuh dari dudukan, lalu lanjut lari stabil di lintasan."}},
+    {{"scene": 2, "fokus_aksi": "Runner melakukan manuver parkour konyol melewati rintangan, menendang Target B jatuh, dan bersiap untuk aksi klimaks."}}
   ],
   "climax_action": "{cfg['climax_act']}",
   "spatial_layout": "Third-person tracking shot"
@@ -406,8 +435,6 @@ HASILKAN JSON SANGAT RINGKAS:
             # --- PEMBULATAN MATEMATIKA PASTI 8 DETIK (CEILING FUNCTION) ---
             raw_seconds = data.get("video_duration_seconds", 16)
             if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
-                # Contoh: 14s / 8 = 1.75 -> ceil -> 2 Scene (16s)
-                # Contoh: 20s / 8 = 2.50 -> ceil -> 3 Scene (24s)
                 calculated_scenes = math.ceil(raw_seconds / 8)
                 st.session_state.detected_scenes = max(1, min(calculated_scenes, 50))
             else:
@@ -445,8 +472,10 @@ def generate_scene_prompt(scene_number: int) -> bool:
     else:
         frame_context = "No previous frame image attached."
 
-    # Fallback Penentuan Fokus Aksi (Mencegah Scene Bolong)
+    # Fallback Penentuan Fokus Aksi
     custom_obstacle = st.session_state.user_scene_obstacles.get(scene_number, "")
+    custom_maneuver = st.session_state.user_scene_maneuvers.get(scene_number, "")
+    
     scene_focus = ""
     if storyboard and len(storyboard) >= scene_number:
         scene_focus = storyboard[scene_number - 1].get("fokus_aksi", "")
@@ -460,13 +489,14 @@ def generate_scene_prompt(scene_number: int) -> bool:
             scene_focus = f"Runner berlari kencang melewati {obs_desc}, menendang target ragdoll hingga terpelanting, lalu melanjutkan lari di atas track."
 
     obstacle_str = f"OBSTACLE MECHANIC: {custom_obstacle}" if custom_obstacle else ""
+    maneuver_str = MANEUVER_PROMPT_MAP.get(custom_maneuver, "")
 
     if scene_number == 1 and not is_final_scene:
         action_instructions = f"""
-- PHASE 1 (0-2s): Target entities ({cfg['target_desc']}) are visible standing on {cfg['prop_stand']} from Frame 1 performing idle motion ({cfg['idle_style']}).
-- PHASE 2 (2-4s): Runner ({cfg['runner']}) sprints forward from third-person angle and kicks Target Entity A.
-- PHASE 3 (4-8s): Target A flies off platform into open void. 
-- CRITICAL FOOTING LOCK: Runner MUST land safely and firmly on the platform track, maintain upright balance, and sprint continuously forward. DO NOT let the runner fall in Scene 1.
+- PHASE 1 (0-2s) MAXIMUM VIRAL VISUAL HOOK: High-contrast comedic opening. In Frame 1, target entities ({cfg['target_desc']}) perform absurd high-energy idle antics on {cfg['prop_stand']}. The runner ({cfg['runner']}) executes a dramatic, funny acceleration start with dynamic camera punch-in, creating instant visual suspense.
+- PHASE 2 (2-4s) HIGH-IMPACT COLLISION: Runner sprints at full momentum and delivers a heavy, comedic impact kick directly into Target Entity A.
+- PHASE 3 (4-8s) AFTERMATH & CONTINUITY: Target A is catapulted off the platform into the void with loose ragdoll physics.
+- CRITICAL FOOTING LOCK: Runner MUST land safely and firmly on the track surface, maintain perfect upright balance, and sprint continuously forward toward the next section. DO NOT let the runner fall in Scene 1.
 """
     elif is_final_scene:
         action_instructions = f"""
@@ -477,6 +507,7 @@ def generate_scene_prompt(scene_number: int) -> bool:
     else:
         action_instructions = f"""
 - SCENE {scene_number} ACTION: {scene_focus}.
+{f"- {maneuver_str}" if maneuver_str else ""}
 - ACTION: Runner ({cfg['runner']}) strikes target entity ({cfg['target_desc']}) off {cfg['prop_stand']}.
 - CRITICAL FOOTING LOCK: Runner MUST land safely on the track surface, maintain balance, and continue sprinting forward along the path. DO NOT fall in this middle scene.
 """
@@ -514,8 +545,8 @@ Provide ONLY the final direct prompt text in clear English. Do not write markdow
 # RENDER VIEWS
 # ==========================================
 def render_home():
-    st.title("🎬 UGC Remix Studio v14.1")
-    st.caption("Engine Otomasi Konten 3D Game Challenge dengan Target Idle Motion, Multimodal Continuity Bridge, & Flow AI No-Edit Engine.")
+    st.title("🎬 UGC Remix Studio v14.2")
+    st.caption("Engine Otomasi Konten 3D Game Challenge dengan Comedic Parkour Maneuvers, Multimodal Continuity Bridge, & Flow AI No-Edit Engine.")
 
     st.subheader("1. Referensi Video / Skenario")
     st.file_uploader(f"Upload Video Referensi (Maks {MAX_FILE_SIZE_MB}MB)", type=["mp4", "mov", "webm"], key="ref_file_input")
@@ -532,7 +563,7 @@ def render_home():
     with col_k3:
         st.selectbox("🎭 Gaya Gerakan Idle Target (Sebelum Ditendang):", TARGET_IDLE_PRESETS, key="target_idle_choice")
 
-    st.subheader("3. Modifikasi Manual Map, Dudukan & Aksi Klimaks (10 Options)")
+    st.subheader("3. Modifikasi Manual Map, Dudukan & Aksi Klimaks")
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
         st.selectbox("🗺️ Map Environment Background:", MAP_OPTIONS, key="selected_map")
@@ -552,16 +583,19 @@ def render_home():
         st.text_area("📝 Instruksi Tambahan (Opsional)", key="custom_instruction", height=80, placeholder="Misal: Buat jarak antar boneka lebih dekat...")
 
     st.markdown("---")
-    st.subheader("🧭 Navigasi & Rintangan Jalur Per-Scene (10 Options)")
+    st.subheader("🧭 Navigasi Rintangan & Manuver Parkour Konyol Per-Scene")
     calculated_scenes = DURATION_SCENES.get(st.session_state.duration, 0) or st.session_state.get("detected_scenes", 4)
     st.write(f"**Total Dynamic Scene Settings:** {calculated_scenes} Scene ({calculated_scenes * 8} Detik Total)")
 
-    cols = st.columns(2)
     for i in range(1, calculated_scenes + 1):
-        col_idx = (i - 1) % 2
-        with cols[col_idx]:
-            chosen_obs = st.selectbox(f"Scene {i} Obstacle:", options=list(OBSTACLE_OPTIONS.keys()), index=0, key=f"obstacle_select_scene_{i}")
+        st.markdown(f"**📍 Pengaturan Scene {i}:**")
+        col_s1, col_s2 = st.columns(2)
+        with col_s1:
+            chosen_obs = st.selectbox(f"Scene {i} Rintangan Track:", options=list(OBSTACLE_OPTIONS.keys()), index=0, key=f"obstacle_select_scene_{i}")
             st.session_state.user_scene_obstacles[i] = OBSTACLE_OPTIONS[chosen_obs]
+        with col_s2:
+            chosen_man = st.selectbox(f"Scene {i} Manuver Parkour Konyol:", options=MANEUVER_OPTIONS, index=0, key=f"maneuver_select_scene_{i}")
+            st.session_state.user_scene_maneuvers[i] = chosen_man
 
     st.markdown("---")
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
