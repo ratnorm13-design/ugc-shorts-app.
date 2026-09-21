@@ -9,7 +9,7 @@ from google.genai import types
 # ==========================================
 # CONSTANTS & CONFIGURATION (Single File)
 # ==========================================
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6-flash"
 APP_VERSION = "12.0 — Flow AI No-Edit Engine (Footing Lock & Copyright-Safe Target Presets)"
 
 DURATION_SCENES = {
