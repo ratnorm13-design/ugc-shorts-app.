@@ -9,8 +9,8 @@ from google.genai import types
 # ==========================================
 # CONSTANTS & CONFIGURATION (Single File)
 # ==========================================
-MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "11.0 — Flow AI No-Edit UI Engine (Camera Choice & Object Stability Lock)"
+MODEL_NAME = "gemini-2.5-flash"
+APP_VERSION = "12.0 — Flow AI No-Edit Engine (Footing Lock & Copyright-Safe Target Presets)"
 
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
@@ -63,6 +63,45 @@ TARGET_IDLE_PRESETS = [
     "😎 Sombong & Ngeledek (Chest Slap, Taunting Gesture, Pointing)",
     "🗿 Mode Diam / Patung (Classic Static Stance)"
 ]
+
+TARGET_DOLL_PRESETS = [
+    "Auto / Random Mix (Otomatis Campur 10 Karakter Unik)",
+    "1. Kapsul Kuning Mata Goggle (Parodi Minion)",
+    "2. Astronaut Kapsul Tanpa Tangan (Parodi Among Us)",
+    "3. Jelly Bean Kapsul Imut (Parodi Fall Guys)",
+    "4. Alien Berantena Warna-Warni (Parodi Teletubbies)",
+    "5. Kepala Konyol Toilet Putih (Parodi Skibidi)",
+    "6. Monster Bulu Biru Senyum Lebar (Parodi Huggy Wuggy)",
+    "7. Mini-Figure Balok Plastik (Parodi Lego)",
+    "8. Ogre Hijau Gemuk Baju Cokelat (Parodi Shrek)",
+    "9. Bebek Karet Kuning Raksasa (Rubber Duck)",
+    "10. Tengkorak Kerangka Gila (Ragdoll Skeleton)",
+]
+
+TARGET_DOLL_PROMPT_MAP = {
+    "Auto / Random Mix (Otomatis Campur 10 Karakter Unik)": 
+        "a lineup of unique non-humanoid comedic ragdoll entities including yellow capsule beans, porcelain toilet heads, fuzzy blue monsters, and armless space beans",
+    "1. Kapsul Kuning Mata Goggle (Parodi Minion)": 
+        "a row of funny yellow capsule-shaped bean creatures wearing round metallic goggles and blue dungarees",
+    "2. Astronaut Kapsul Tanpa Tangan (Parodi Among Us)": 
+        "a row of vibrant armless astronaut space bean dolls wearing glassy visor helmets",
+    "3. Jelly Bean Kapsul Imut (Parodi Fall Guys)": 
+        "a row of cute chubby jelly bean character dolls in bright neon pastel colors",
+    "4. Alien Berantena Warna-Warni (Parodi Teletubbies)": 
+        "a row of colorful plush alien bean dolls with uniquely shaped head antennas in red, yellow, green, and purple",
+    "5. Kepala Konyol Toilet Putih (Parodi Skibidi)": 
+        "a row of funny cartoon head entities sticking out from shiny white porcelain toilet bowls",
+    "6. Monster Bulu Biru Senyum Lebar (Parodi Huggy Wuggy)": 
+        "a row of tall fuzzy blue monster plush dolls with long lanky arms and wide toothy grins",
+    "7. Mini-Figure Balok Plastik (Parodi Lego)": 
+        "a row of yellow plastic block mini-figures with rigid snap-on limbs and square torsos",
+    "8. Ogre Hijau Gemuk Baju Cokelat (Parodi Shrek)": 
+        "a row of chubby green ogre-like creature dolls wearing rustic brown burlap vests",
+    "9. Bebek Karet Kuning Raksasa (Rubber Duck)": 
+        "a row of oversized squeaky yellow rubber duckies with round glossy eyes",
+    "10. Tengkorak Kerangka Gila (Ragdoll Skeleton)": 
+        "a row of funny goofy 3D skeleton bone ragdolls with loose floppy physics",
+}
 
 MAP_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
@@ -170,7 +209,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
                 raise RuntimeError(f"Gagal terhubung ke Gemini: {exc}")
             time.sleep(1.5)
 
-st.set_page_config(page_title="UGC Remix Studio v11.0", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio v12.0", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
     "page": "home",
@@ -181,6 +220,7 @@ DEFAULTS = {
     "selected_camera": CAMERA_OPTIONS[0],
     "runner_choice": RUNNER_PRESETS[1],
     "target_idle_choice": TARGET_IDLE_PRESETS[0],
+    "target_doll_choice": TARGET_DOLL_PRESETS[0],
     "custom_runner": "",
     "selected_map": MAP_OPTIONS[0],
     "selected_prop_stand": PROP_STAND_OPTIONS[0],
@@ -255,17 +295,20 @@ def run_analysis():
     if chosen_runner == "Custom / Ketik Sendiri":
         chosen_runner = st.session_state.custom_runner or "Unique funny custom character"
 
+    chosen_target_doll = st.session_state.target_doll_choice
+
     prompt = f"""
 Anda adalah AI Master Creative Director khusus konten viral 3D Game / Parkour / Obstacle Challenge di TikTok & YouTube Shorts.
 
 TUGAS UTAMA (ROADMAP CLONING 1:1 & MULTI-ACTION DENSITY):
 1. Bedah video referensi secara menyeluruh. Kloning persis struktur jalur kontainer dan ritme waktunya secara 1:1.
-2. PERMANENT OBJECT INITIAL PLACEMENT & IN-PLACE IDLE MOTION: Setiap pilar/dudukan ({st.session_state.selected_prop_stand}) terisi boneka target sejak Frame 1. Setiap boneka target memiliki gaya gerakan idle diam di tempat.
-3. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}", serta sesuaikan target boss/ragdoll dengan opsi copyright-safe.
+2. PERMANENT OBJECT INITIAL PLACEMENT & IN-PLACE IDLE MOTION: Setiap pilar/dudukan ({st.session_state.selected_prop_stand}) terisi boneka target ({chosen_target_doll}) sejak Frame 1. Setiap boneka target memiliki gaya gerakan idle diam di tempat.
+3. Rancang mutasi karakter runner utama menjadi: "{chosen_runner}", serta sesuaikan target boss/ragdoll dengan opsi copyright-safe ({chosen_target_doll}).
 4. Sediakan skenario klimaks dramatis di mana runner dan target mengalami ragdoll chaos.
 
 PENGATURAN MANUAL OVERRIDE (JIKA DISUAP):
 - Camera Movement Style: {st.session_state.selected_camera}
+- Target Doll Character Choice: {chosen_target_doll}
 - Target Idle Motion Override: {st.session_state.target_idle_choice}
 - Map Environment Override: {st.session_state.selected_map}
 - Target Prop Stand Override: {st.session_state.selected_prop_stand}
@@ -285,7 +328,7 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
   }},
   "remixed_mutation": {{
     "runner_baru": "{chosen_runner}",
-    "boss_baru": "Deretan boneka target ragdoll unik yang berdiri & beratraksi idle di atas pijakan sejak awal",
+    "boss_baru": "{chosen_target_doll}",
     "target_idle_behavior": "{st.session_state.target_idle_choice}",
     "camera_movement": "{st.session_state.selected_camera}",
     "track_baru": "Lintasan kontainer/pijakan 1:1 dengan boneka ganda",
@@ -295,8 +338,8 @@ HASILKAN JSON SANGAT RINGKAS DAN PRESISI:
     "alasan_remix": "Alasan modifikasi"
   }},
   "storyboard_plan": [
-    {{"scene": 1, "fokus_aksi": "Runner berlari cepat di atas lintasan. Boneka target melakukan gerakan idle konyol di atas drum sebelum ditendang jatuh."}},
-    {{"scene": 2, "fokus_aksi": "Melanjutkan navigasi rintangan berikutnya dengan target aktif selanjutnya."}},
+    {{"scene": 1, "fokus_aksi": "Runner berlari cepat di atas lintasan. Target A ditendang jatuh, Runner mendarat aman di atap."}},
+    {{"scene": 2, "fokus_aksi": "Melanjutkan lari di atap, menendang Target B, Runner tetap bertahan di lintasan."}},
     {{"scene": 3, "fokus_aksi": "Klimaks aksi ganda penutupan, hantaman beruntun, dan runner ikut terjun jatuh bebas (ragdoll sacrifice fall)."}}
   ],
   "climax_action": "{st.session_state.selected_climax_action if st.session_state.selected_climax_action != 'Auto (Ikuti Remix UGC)' else 'Multi-hit combo with sacrifice fall'}",
@@ -334,6 +377,13 @@ def generate_scene_prompt(scene_number: int) -> bool:
     total_scenes = scene_count()
     is_final_scene = (scene_number == total_scenes)
 
+    # Ambil deskripsi copyright-safe target
+    chosen_target = st.session_state.get("target_doll_choice", TARGET_DOLL_PRESETS[0])
+    target_doll_description = TARGET_DOLL_PROMPT_MAP.get(
+        chosen_target, 
+        "a row of silly non-humanoid 3D game ragdoll entities"
+    )
+
     map_env = st.session_state.selected_map
     if map_env == "Auto (Ikuti Remix UGC)":
         map_env = mutation.get("map_environment", "Vivid 3D Game Environment")
@@ -358,15 +408,15 @@ def generate_scene_prompt(scene_number: int) -> bool:
 
     idle_style = st.session_state.target_idle_choice
     if idle_style == "Auto / Random Mix (Otomatis Bervariasi per Target)":
-        idle_desc = "Target doll A performs an absurd in-place TikTok dance; Target doll B on the next stand is frantically trembling in panic."
+        idle_desc = "Target Entity A performs an absurd in-place TikTok dance; Target Entity B on the next stand is frantically trembling in panic."
     elif "Joget" in idle_style:
-        idle_desc = "Target dolls perform absurd in-place idle dances (swaying hips, funny body movements) while strictly anchored on top of their platforms."
+        idle_desc = "Target entities perform absurd in-place idle dances (swaying hips, funny body movements) while strictly anchored on top of their platforms."
     elif "Panik" in idle_style:
-        idle_desc = "Target dolls display funny shivering and frantic hand-waving panic animations while anchored on top of their platforms."
+        idle_desc = "Target entities display funny shivering and frantic hand-waving panic animations while anchored on top of their platforms."
     elif "Sombong" in idle_style:
-        idle_desc = "Target dolls perform hilarious taunting gestures (slapping chest, pointing fingers) anchored on top of their platforms."
+        idle_desc = "Target entities perform hilarious taunting gestures (slapping chest, pointing fingers) anchored on top of their platforms."
     else:
-        idle_desc = "Target dolls stand still in a classic idle pose anchored on top of their platforms."
+        idle_desc = "Target entities stand still in a classic idle pose anchored on top of their platforms."
 
     scene_focus = "Melanjutkan aksi lari dan rintangan di atas jalur."
     if storyboard and len(storyboard) >= scene_number:
@@ -381,26 +431,28 @@ def generate_scene_prompt(scene_number: int) -> bool:
     if scene_number > 1 and (scene_number - 1) in st.session_state.scene_frames:
         prev_frame_context = f"STRICT CONTINUITY: Scene {scene_number} starts at the exact position where Scene {scene_number-1} ended."
 
-    if scene_number == 1:
+    if scene_number == 1 and not is_final_scene:
         action_desc = f"""
 TIME PHASING & FLOW AI STRICT PHYSICS (ONE-WAY MOMENTUM):
-- SETUP PHASE (0s - 2s): Target dolls ({mutation.get('boss_baru')}) are initially visible from Frame 1 on top of {prop_stand}. {idle_desc}
-- IMPACT PHASE (2s - 4s): Runner ({mutation.get('runner_baru')}) sprints forward and delivers a heavy kick into the first target doll.
-- AFTERMATH & UNCONSTRAINED FALL (4s - 8s): Upon impact, target doll INSTANTLY CANCELS its idle animation, transitioning into a loose ragdoll physics object. It flies off {prop_stand} and tumbles down into the void. The camera actively tracks past the platform as objects fall.
-- STRICT FLOW AI ANTI-LOOPING RULE: Motion is strictly PERMANENT and ONE-WAY forward. Target doll and platform MUST remain fallen / knocked down. DO NOT reset position, bounce back, or return to initial standing pose.
+- SETUP PHASE (0s - 2s): Target entities ({target_doll_description}) are initially visible from Frame 1 on top of {prop_stand}. {idle_desc}
+- IMPACT PHASE (2s - 4s): Runner ({mutation.get('runner_baru')}) sprints forward and delivers a heavy kick into Target Entity A.
+- AFTERMATH & UNCONSTRAINED FALL (4s - 8s): Upon impact, Target Entity A INSTANTLY CANCELS its idle animation, transitioning into loose ragdoll physics as it flies off {prop_stand} and tumbles into the open sky void.
+- CRITICAL RUNNER FOOTING LOCK: The runner MUST land safely and firmly on the rooftop platform track, maintain perfect upright balance, and continuously sprint forward along the track toward the next target. DO NOT let the runner fall off the cliff in Scene 1.
+- STRICT FLOW AI ANTI-LOOPING RULE: Motion is strictly PERMANENT and ONE-WAY forward. Target entities stay fallen.
 """
     elif is_final_scene:
         action_desc = f"""
 ULTIMATE MULTI-ACTION CLIMAX & SACRIFICE FALL:
 - Final Combo Executed: {climax_act}.
-- Action Sequence: Runner ({mutation.get('runner_baru')}) strikes remaining target dolls ({mutation.get('boss_baru')}) standing on {prop_stand}.
-- Sacrifice Fall (MUST HAPPEN): Runner loses balance and FALLS OFF THE EDGE TOGETHER WITH TARGET DOLLS, tumbling continuously downward into {map_env}.
+- Action Sequence: Runner ({mutation.get('runner_baru')}) strikes remaining target entities ({target_doll_description}) standing on {prop_stand}.
+- SACRIFICE FALL (MUST HAPPEN IN THIS FINAL SCENE): Runner loses balance and FALLS OFF THE EDGE TOGETHER WITH TARGET ENTITIES, tumbling continuously downward into {map_env}.
 - STRICT FLOW AI ANTI-LOOPING RULE: Continuous downward tumbling motion. Never loop or reset position back to the top platform.
 """
     else:
         action_desc = f"""
 ROADMAP CONTINUATION: {scene_focus}. 
-Target entities are initially placed on {prop_stand} performing in-place micro-animations ({idle_desc}) before being struck down permanently with irreversible physics.
+Target entities ({target_doll_description}) are initially placed on {prop_stand} performing in-place micro-animations ({idle_desc}).
+CRITICAL RUNNER FOOTING LOCK: Runner ({mutation.get('runner_baru')}) strikes the target entity off the platform, BUT runner MUST land safely and firmly on the track, maintain upright balance, and continue sprinting forward along the path toward the next obstacle. DO NOT let the runner fall off the cliff in this scene.
 """
 
     audio_cues = "Immersive game audio: heavy footfalls, impact thuds, roaring wind, comedic screams, and dynamic ragdoll sound cues."
@@ -411,13 +463,13 @@ Write ONE ultra-detailed AI video generation prompt in ENGLISH for Scene {scene_
 ENVIRONMENT & INITIAL SETUP (FLOW AI OBJECT PERSISTENCE):
 - MAP BACKGROUND: {map_env} (Bright daytime lighting, vivid sunny sky, high-contrast colorful 3D game aesthetics).
 - STATIC ENVIRONMENT LOCK: Bridges, containers, platforms ({prop_stand}), and background scenery maintain exact shapes, colors, and rigid structure with ZERO morphing, popping, flickering, or background deformation.
-- INITIAL OBJECT PLACEMENT: Target dolls are fully visible in Frame 1.
+- INITIAL OBJECT PLACEMENT: Target entities are fully visible in Frame 1 along the track.
 
 ASSETS & ENTITIES:
 - Style: {st.session_state.visual_style}
 - Aspect Ratio: {st.session_state.aspect_ratio}
 - Runner Character: {mutation.get('visual_anchor_token')} (Consistent visual identity, locked outfit and colors).
-- Target Entities (Initially placed on {prop_stand}): {mutation.get('boss_baru')}
+- Target Entities (Initially placed on {prop_stand}): {target_doll_description}
 - Environment Path: {mutation.get('track_baru')}
 
 NAVIGATIONAL ACTION OVERRIDE:
@@ -444,20 +496,22 @@ Output ONLY the final raw English prompt without markdown formatting or extra te
 # RENDER VIEWS
 # ==========================================
 def render_home():
-    st.title("🎬 UGC Remix Studio v11.0")
+    st.title("🎬 UGC Remix Studio v12.0")
     st.caption("Engine Otomasi Konten 3D Game Challenge dengan Target Idle Motion, Opsi Kamera UI, & Flow AI No-Edit Engine.")
 
     st.subheader("1. Referensi Video / Skenario")
     st.file_uploader("Upload Video Referensi (Shorts atau Long Video)", type=["mp4", "mov", "webm"], key="ref_file_input")
     st.text_area("Deskripsi Referensi Manual", key="reference_text", height=80, placeholder="Contoh: Video lari menendang dua boneka berurutan...")
 
-    st.subheader("2. Pilihan Karakter Runner & Animasi Target Idle")
-    col_k1, col_k2 = st.columns(2)
+    st.subheader("2. Pilihan Karakter Runner & Target Ragdoll (Copyright-Safe)")
+    col_k1, col_k2, col_k3 = st.columns(3)
     with col_k1:
-        st.selectbox("Pilih Preset Karakter Runner:", RUNNER_PRESETS, key="runner_choice")
+        st.selectbox("🏃 Pilih Preset Karakter Runner:", RUNNER_PRESETS, key="runner_choice")
         if st.session_state.runner_choice == "Custom / Ketik Sendiri":
             st.text_input("Tulis Deskripsi Karakter Bebas Kamu:", key="custom_runner", placeholder="Misal: Karakter anomali unik...")
     with col_k2:
+        st.selectbox("🎯 Pilih Karakter Target / Ragdoll (Copyright-Safe):", TARGET_DOLL_PRESETS, key="target_doll_choice")
+    with col_k3:
         st.selectbox("🎭 Gaya Gerakan Idle Target (Sebelum Ditendang):", TARGET_IDLE_PRESETS, key="target_idle_choice")
 
     st.subheader("3. Modifikasi Manual Map, Dudukan & Aksi Klimaks (10 Options)")
@@ -518,7 +572,7 @@ def render_analysis():
     with col2:
         st.markdown("### 🚀 Hasil Remix AI (Flow AI No-Edit Optimized)")
         st.write(f"**Runner Baru:** `{remix.get('runner_baru', '-')}`")
-        st.write(f"**Target Baru:** `{remix.get('boss_baru', '-')}`")
+        st.write(f"**Target Baru (Safe):** `{remix.get('boss_baru', '-')}`")
         st.write(f"**Gaya Idle Target:** `{remix.get('target_idle_behavior', '-')}`")
         st.write(f"**Gaya Kamera:** `{remix.get('camera_movement', '-')}`")
         st.write(f"**Map Background:** `{remix.get('map_environment', '-')}`")
@@ -540,7 +594,7 @@ def render_scenes():
     n = scene_count()
     current = st.session_state.current_scene
 
-    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS COMBO & SACRIFICE FALL)" if current == n else " ⚡ (FAST-PACED DUAL ACTION & IDLE TARGET)"))
+    st.write(f"### Adegan {current} dari {n}" + (" 💥 (SCENE KLIMAKS COMBO & SACRIFICE FALL)" if current == n else " ⚡ (FAST-PACED DUAL ACTION & FOOTING LOCK)"))
 
     if current not in st.session_state.scene_prompts:
         if st.button(f"Generate Prompt Scene {current}", type="primary"):
