@@ -8,10 +8,10 @@ from google import genai
 from google.genai import types
 
 # ==========================================
-# CONSTANTS & CONFIGURATION (PASTI BISA)
+# CONSTANTS & CONFIGURATION
 # ==========================================
-MODEL_NAME = "gemini-3.6-flash"
-FALLBACK_MODELS = [
+MODEL_NAME = "gemini-2.5-flash"        # <--- ADA DI SEKITAR BARIS 11-12
+FALLBACK_MODELS = [                    # <--- ADA DI SEKITAR BARIS 13-16
     "gemini-2.0-flash",
     "gemini-1.5-flash"
 ]
