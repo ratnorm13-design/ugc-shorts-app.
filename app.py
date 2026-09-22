@@ -242,7 +242,6 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
 
-    # Ambil model dari sidebar jika diisi user, atau gunakan daftar model
     selected_model = st.session_state.get("custom_model_input", DEFAULT_MODEL)
     models_to_try = [selected_model] + [m for m in FALLBACK_MODELS if m != selected_model]
     
@@ -263,7 +262,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
                 last_exception = exc
                 time.sleep(1.5)
 
-    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}"
+    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
