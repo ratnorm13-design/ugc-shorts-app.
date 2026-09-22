@@ -12,7 +12,7 @@ from google.genai import types
 # ==========================================
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6-flash"
 FALLBACK_MODELS = [
     "gemini-2.0-flash",
     "gemini-1.5-flash"
