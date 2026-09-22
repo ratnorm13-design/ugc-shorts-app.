@@ -11,12 +11,12 @@ import google.generativeai as genai
 # ==========================================
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.7-flash"
 FALLBACK_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash"
+    "gemini-3.6-flash",
+    "gemini-2.5-flash"
 ]
-APP_VERSION = "14.2 — Comedic Parkour Engine"
+APP_VERSION = "14.2 — Comedic Parkour Engine (Gemini 3.7 & 3.6 Flash)"
 MAX_FILE_SIZE_MB = 15
 
 DURATION_SCENES = {
@@ -254,7 +254,6 @@ def configure_api():
         st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
         return False
     
-    # Konfigurasi resmi library google-generativeai
     genai.configure(api_key=key)
     return True
 
