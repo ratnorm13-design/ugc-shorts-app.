@@ -293,7 +293,11 @@ def get_client():
         st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
         return None
     try:
-        return genai.Client(api_key=key)
+        # Memaksa SDK mengirimkan kunci sebagai API Key (Header x-goog-api-key)
+        return genai.Client(
+            api_key=key,
+            http_options={'api_version': 'v1beta', 'headers': {'x-goog-api-key': key}}
+        )
     except Exception as exc:
         st.error(f"Gagal membuat koneksi Gemini API: {exc}")
         return None
