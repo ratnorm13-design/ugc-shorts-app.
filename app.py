@@ -4,8 +4,7 @@ import os
 import re
 import time
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # ==========================================
 # CONSTANTS & CONFIGURATION (FLEXIBLE MODEL)
@@ -223,46 +222,51 @@ def extract_json(text: str):
             continue
     raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
 
-def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
-    media_parts = list(parts or [])
-    content_parts = media_parts + [types.Part.from_text(text=prompt)]
-    contents = [types.Content(role="user", parts=content_parts)]
+def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
+    # 1. Ambil API Key dari Secrets, Environment, atau Sidebar Input
+    key = (
+        st.session_state.get("api_key", "") 
+        or os.getenv("GEMINI_API_KEY") 
+        or st.secrets.get("GEMINI_API_KEY", "")
+    ).strip().strip("`\"' ")
 
-    safety_settings = [
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-    ]
+    if not key:
+        raise ValueError("🔑 API Key belum diisi! Masukkan Gemini API Key Anda di Sidebar atau Streamlit Secrets.")
 
-    config_kwargs = {
+    # 2. Konfigurasi SDK resmi
+    genai.configure(api_key=key)
+
+    # 3. Urutan model yang dicoba
+    custom_model = st.session_state.get("custom_model_input", "gemini-1.5-flash").strip()
+    models_to_try = [custom_model, "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
+    
+    # Filter duplikat nama model
+    seen = set()
+    models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+    # 4. Format isi pesan & konfigurasi
+    contents = list(parts or []) + [prompt]
+    gen_config = {
         "temperature": 0.35,
-        "safety_settings": safety_settings
     }
     if json_mode:
-        config_kwargs["response_mime_type"] = "application/json"
+        gen_config["response_mime_type"] = "application/json"
 
-    selected_model = st.session_state.get("custom_model_input", DEFAULT_MODEL)
-    models_to_try = [selected_model] + [m for m in FALLBACK_MODELS if m != selected_model]
-    
     last_exception = None
 
-    for model_candidate in models_to_try:
-        for attempt in range(2):
-            try:
-                response = client.models.generate_content(
-                    model=model_candidate,
-                    contents=contents,
-                    config=types.GenerateContentConfig(**config_kwargs),
-                )
-                text = getattr(response, "text", None)
-                if text and text.strip():
-                    return text
-            except Exception as exc:
-                last_exception = exc
-                time.sleep(1.5)
+    # 5. Eksekusi pemanggilan
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(contents, generation_config=gen_config)
+            
+            if response and response.text and response.text.strip():
+                return response.text
+        except Exception as exc:
+            last_exception = exc
+            time.sleep(1.0)
 
-    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
+    raise RuntimeError(f"Gagal terhubung ke Gemini API: {last_exception}")
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
