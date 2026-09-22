@@ -8,12 +8,12 @@ from google import genai
 from google.genai import types
 
 # ==========================================
-# CONSTANTS & CONFIGURATION (KEMBALIKAN KE 3.6)
+# CONSTANTS & CONFIGURATION (MODEL RESMI & STABIL)
 # ==========================================
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "gemini-2.5-flash"
 FALLBACK_MODELS = [
-    "gemini-3.5-flash",
-    "gemini-3.7-flash"
+    "gemini-2.0-flash",
+    "gemini-1.5-flash"
 ]
 APP_VERSION = "14.2 — Comedic Parkour & Maximum Viral Hook Engine"
 
@@ -232,7 +232,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
     ]
 
     config_kwargs = {
-        "temperature": 0.3,
+        "temperature": 0.35,
         "safety_settings": safety_settings
     }
     if json_mode:
@@ -254,9 +254,10 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
                     return text
             except Exception as exc:
                 last_exception = exc
-                time.sleep(1.0)
+                time.sleep(2.0)  # Delay backoff untuk mencegah rate limit 429 & overload 503
 
     raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
+
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
@@ -302,10 +303,11 @@ def scene_count() -> int:
     return val
 
 def get_client():
-    key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
+    # MEMPERBAIKI DUKUNGAN ST.SECRETS
+    key = (os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "") or st.session_state.get("api_key", "")).strip()
     key = key.strip("`\"' ")
     if not key:
-        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
+        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar atau pasang GEMINI_API_KEY di Streamlit Secrets.")
         return None
     try:
         return genai.Client(api_key=key)
@@ -369,7 +371,6 @@ def reference_parts(client, file_uploader_obj):
     if st.session_state.reference_text.strip():
         return [types.Part.from_text(text=st.session_state.reference_text)]
     return []
-
 # ==========================================
 # ENGINE LOGIC
 # ==========================================
@@ -434,7 +435,7 @@ HASILKAN JSON SANGAT RINGKAS:
             st.session_state.analysis = data
             st.session_state.storyboard = data.get("storyboard_plan", [])
             
-            # --- PEMBULATAN MATEMATIKA PASTI 8 DETIK (CEILING FUNCTION) ---
+            # Pembulatan matematika fungsi ceil (8 detik per scene)
             raw_seconds = data.get("video_duration_seconds", 16)
             if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
                 calculated_scenes = math.ceil(raw_seconds / 8)
@@ -459,7 +460,6 @@ def generate_scene_prompt(scene_number: int) -> bool:
     total_scenes = scene_count()
     is_final_scene = (scene_number == total_scenes)
 
-    # --- SINKRONISASI MULTIMODAL LAST FRAME BRIDGE ---
     prompt_parts = []
     prev_scene = scene_number - 1
     if prev_scene in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene]:
@@ -474,7 +474,6 @@ def generate_scene_prompt(scene_number: int) -> bool:
     else:
         frame_context = "No previous frame image attached."
 
-    # Fallback Penentuan Fokus Aksi
     custom_obstacle = st.session_state.user_scene_obstacles.get(scene_number, "")
     custom_maneuver = st.session_state.user_scene_maneuvers.get(scene_number, "")
     
@@ -543,6 +542,7 @@ Provide ONLY the final direct prompt text in clear English. Do not write markdow
     except Exception as exc:
         st.error(f"⚠️ Gagal menyusun Prompt Scene {scene_number}: {exc}")
         return False
+
 # ==========================================
 # RENDER VIEWS
 # ==========================================
@@ -691,9 +691,15 @@ def render_scenes():
             st.subheader("🎯 Finalisasi & SEO Generator (Otomatis + Hashtag Relevan)")
 
             if st.button("🚀 Generate Judul, Deskripsi CTA, Hashtag & 18 Tags Unik", type="primary", use_container_width=True):
-                client = get_client()
-                if client:
-                    prompt = f"""
+                run_seo_generator()
+
+            render_seo_content()
+
+def run_seo_generator():
+    client = get_client()
+    if not client:
+        return
+    prompt = f"""
 Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
 Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
 
@@ -703,48 +709,54 @@ Buatkan format SEO lengkap dalam bentuk JSON terstruktur dengan ketentuan:
 3. "hashtags": [8 Hashtag viral & relevan dipisah spasi, contoh: #UGC #3DParkour #FYP],
 4. "tags": [Tepat 18 Tags SEO unik berbahasa Inggris tanpa duplikat]
 """
-                    with st.spinner("Meracik Judul, CTA, Hashtag Viral, dan 18 Tags SEO Unik via Gemini AI..."):
-                        try:
-                            raw_seo = ask(client, prompt, json_mode=True)
-                            st.session_state.seo = extract_json(raw_seo)
-                            st.success("✨ Metadata & SEO Berhasil Digenerate!")
-                        except Exception as exc:
-                            st.error(f"Gagal generate SEO: {exc}")
+    with st.spinner("Meracik Judul, CTA, Hashtag Viral, dan 18 Tags SEO Unik via Gemini AI..."):
+        try:
+            raw_seo = ask(client, prompt, json_mode=True)
+            st.session_state.seo = extract_json(raw_seo)
+            st.success("✨ Metadata & SEO Berhasil Digenerate!")
+        except Exception as exc:
+            st.error(f"Gagal generate SEO: {exc}")
 
-            seo_data = st.session_state.get("seo", {})
-            if seo_data:
-                st.markdown("#### 📝 Pilihan Judul Viral (CTR Tinggi):")
-                titles = seo_data.get("judul", [])
-                if isinstance(titles, list):
-                    for idx, t in enumerate(titles, 1):
-                        st.code(f"{idx}. {t}")
-                else:
-                    st.code(str(titles))
-
-                st.markdown("#### 📄 Deskripsi & CTA:")
-                st.text(seo_data.get("deskripsi", ""))
-
-                st.markdown("#### 0️⃣ Hashtag Relevan:")
-                hashtags = seo_data.get("hashtags", [])
-                if isinstance(hashtags, list):
-                    st.code(" ".join(hashtags))
-                else:
-                    st.code(str(hashtags))
-
-                st.markdown("#### 🏷️ 18 Tags Global Unik:")
-                tags_list = seo_data.get("tags", [])
-                if isinstance(tags_list, list):
-                    st.code(", ".join(tags_list))
-                else:
-                    st.code(str(tags_list))
-
-def render_seo():
-    st.title("🚀 SEO & Metadata Engine")
+def render_seo_content():
     seo_data = st.session_state.get("seo", {})
     if seo_data:
-        st.json(seo_data)
+        st.markdown("#### 📝 Pilihan Judul Viral (CTR Tinggi):")
+        titles = seo_data.get("judul", [])
+        if isinstance(titles, list):
+            for idx, t in enumerate(titles, 1):
+                st.code(f"{idx}. {t}")
+        else:
+            st.code(str(titles))
+
+        st.markdown("#### 📄 Deskripsi & CTA:")
+        st.text(seo_data.get("deskripsi", ""))
+
+        st.markdown("#### 0️⃣ Hashtag Relevan:")
+        hashtags = seo_data.get("hashtags", [])
+        if isinstance(hashtags, list):
+            st.code(" ".join(hashtags))
+        else:
+            st.code(str(hashtags))
+
+        st.markdown("#### 🏷️ 18 Tags Global Unik:")
+        tags_list = seo_data.get("tags", [])
+        if isinstance(tags_list, list):
+            st.code(", ".join(tags_list))
+        else:
+            st.code(str(tags_list))
+
+def render_seo():
+    st.title("🚀 SEO & Metadata Engine Center")
+    
+    if st.button("🔥 GENERATE SEO KONTEN SEKARANG", type="primary", use_container_width=True):
+        run_seo_generator()
+        st.rerun()
+
+    seo_data = st.session_state.get("seo", {})
+    if seo_data:
+        render_seo_content()
     else:
-        st.info("Selesaikan prompt scene terlebih dahulu untuk menggenerate SEO.")
+        st.info("Klik tombol di atas untuk menggenerate Judul, Deskripsi CTA, Hashtags, dan 18 Tags Unik.")
 
 # ==========================================
 # SIDEBAR & ROUTER EXECUTION
