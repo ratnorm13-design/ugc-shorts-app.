@@ -12,7 +12,8 @@ from google.genai import types
 # ==========================================
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
-MODEL_NAME = "gemini-3.6-flash"
+# NAMA MODEL RESMI GEMINI SAAT INI
+MODEL_NAME = "gemini-2.5-flash"
 FALLBACK_MODELS = [
     "gemini-2.0-flash",
     "gemini-1.5-flash"
@@ -253,16 +254,8 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
     content_parts = media_parts + [types.Part.from_text(text=prompt)]
     contents = [types.Content(role="user", parts=content_parts)]
 
-    safety_settings = [
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-        types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-    ]
-
     config_kwargs = {
         "temperature": 0.3,
-        "safety_settings": safety_settings
     }
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
