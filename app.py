@@ -7,19 +7,9 @@ import streamlit as st
 import google.generativeai as genai
 
 # ==========================================
-# CONSTANTS & CONFIGURATION (FLEXIBLE MODEL)
+# CONSTANTS & CONFIGURATION
 # ==========================================
-# Masukkan nama model utama lu di sini (bisa gemini-3.6-flash jika pakai proxy/endpoint khusus)
-DEFAULT_MODEL = "gemini-1.5-flash"
-
-FALLBACK_MODELS = [
-    "gemini-1.5-flash-latest",
-    "gemini-2.0-flash",
-    "gemini-1.5-pro",
-    "gemini-3.6-flash"  # Model kustom versi lu
-]
 APP_VERSION = "14.2 — Comedic Parkour & Maximum Viral Hook Engine"
-
 MAX_FILE_SIZE_MB = 15
 
 DURATION_SCENES = {
@@ -200,78 +190,14 @@ OBSTACLE_OPTIONS = {
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
 
 # ==========================================
-# HELPER FUNCTIONS & STATE INIT
+# INITIALIZE STREAMLIT SESSION STATE
 # ==========================================
-def extract_json(text: str):
-    text = (text or "").strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
-    text = re.sub(r"\s*```$", "", text)
-    try:
-        return json.loads(text)
-    except Exception:
-        pass
-
-    starts = [p for p in (text.find("{"), text.find("[")) if p >= 0]
-    if not starts:
-        raise ValueError("Respons AI tidak berisi JSON yang valid.")
-    start = min(starts)
-    for end in range(len(text), start, -1):
-        try:
-            return json.loads(text[start:end].strip())
-        except Exception:
-            continue
-    raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
-
-def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
-    # 1. Ambil API Key dari Secrets, Environment, atau Sidebar Input
-    key = (
-        st.session_state.get("api_key", "") 
-        or os.getenv("GEMINI_API_KEY") 
-        or st.secrets.get("GEMINI_API_KEY", "")
-    ).strip().strip("`\"' ")
-
-    if not key:
-        raise ValueError("🔑 API Key belum diisi! Masukkan Gemini API Key Anda di Sidebar atau Streamlit Secrets.")
-
-    # 2. Konfigurasi SDK resmi
-    genai.configure(api_key=key)
-
-    # 3. Urutan model yang dicoba
-    custom_model = st.session_state.get("custom_model_input", "gemini-1.5-flash").strip()
-    models_to_try = [custom_model, "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
-    
-    # Filter duplikat nama model
-    seen = set()
-    models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
-
-    # 4. Format isi pesan & konfigurasi
-    contents = list(parts or []) + [prompt]
-    gen_config = {
-        "temperature": 0.35,
-    }
-    if json_mode:
-        gen_config["response_mime_type"] = "application/json"
-
-    last_exception = None
-
-    # 5. Eksekusi pemanggilan
-    for model_name in models_to_try:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(contents, generation_config=gen_config)
-            
-            if response and response.text and response.text.strip():
-                return response.text
-        except Exception as exc:
-            last_exception = exc
-            time.sleep(1.0)
-
-    raise RuntimeError(f"Gagal terhubung ke Gemini API: {last_exception}")
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
     "page": "home",
     "api_key": "",
+    "custom_model_input": "gemini-1.5-flash",
     "reference_file": None,
     "reference_text": "",
     "visual_style": STYLE_OPTIONS[0],
@@ -311,21 +237,88 @@ def scene_count() -> int:
         return st.session_state.detected_scenes
     return val
 
-def get_client():
-    # MEMPERBAIKI DUKUNGAN ST.SECRETS
-    key = (os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "") or st.session_state.get("api_key", "")).strip()
-    key = key.strip("`\"' ")
-    if not key:
-        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar atau pasang GEMINI_API_KEY di Streamlit Secrets.")
-        return None
+def extract_json(text: str):
+    text = (text or "").strip()
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
+    text = re.sub(r"\s*```$", "", text)
     try:
-        return genai.Client(api_key=key)
-    except Exception as exc:
-        st.error(f"Gagal membuat koneksi Gemini API: {exc}")
-        return None
+        return json.loads(text)
+    except Exception:
+        pass
+
+    starts = [p for p in (text.find("{"), text.find("[")) if p >= 0]
+    if not starts:
+        raise ValueError("Respons AI tidak berisi JSON yang valid.")
+    start = min(starts)
+    for end in range(len(text), start, -1):
+        try:
+            return json.loads(text[start:end].strip())
+        except Exception:
+            continue
+    raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
+
+def get_api_key() -> str:
+    key = (
+        st.session_state.get("api_key", "")
+        or os.getenv("GEMINI_API_KEY", "")
+        or st.secrets.get("GEMINI_API_KEY", "")
+    )
+    return str(key).strip().strip("`\"' ")
+
+def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
+    key = get_api_key()
+    if not key:
+        st.error("🔑 API Key belum diisi! Masukkan Gemini API Key di Sidebar atau Streamlit Secrets.")
+        return ""
+
+    genai.configure(api_key=key)
+
+    custom_model = st.session_state.get("custom_model_input", "gemini-1.5-flash").strip()
+    models_to_try = [
+        custom_model,
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash-latest"
+    ]
+    
+    seen = set()
+    models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+    contents = list(parts or []) + [prompt]
+    
+    generation_config = {
+        "temperature": 0.35,
+    }
+    if json_mode:
+        generation_config["response_mime_type"] = "application/json"
+
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+
+    last_exception = None
+
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                generation_config=generation_config,
+                safety_settings=safety_settings
+            )
+            response = model.generate_content(contents)
+            if response and response.text and response.text.strip():
+                return response.text
+        except Exception as exc:
+            last_exception = exc
+            time.sleep(1.5)
+
+    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
 
 def get_active_config():
-    """Fungsi Penyelaras State (Mencegah Inkonsistensi UI vs Memory Analysis)"""
     analysis = st.session_state.get("analysis", {})
     mutation = analysis.get("remixed_mutation", {})
 
@@ -362,7 +355,7 @@ def get_active_config():
         "visual_token": mutation.get("visual_anchor_token", runner)
     }
 
-def reference_parts(client, file_uploader_obj):
+def reference_parts(file_uploader_obj):
     if file_uploader_obj is not None:
         try:
             data = file_uploader_obj.getvalue()
@@ -370,26 +363,27 @@ def reference_parts(client, file_uploader_obj):
             if size_mb > MAX_FILE_SIZE_MB:
                 st.warning(f"⚠️ Ukuran file video ({size_mb:.1f} MB) melebihi batas {MAX_FILE_SIZE_MB} MB. Sistem otomatis mengalihkan ke mode analisis teks jika ada.")
                 if st.session_state.reference_text.strip():
-                    return [types.Part.from_text(text=st.session_state.reference_text)]
+                    return [st.session_state.reference_text]
                 return []
             mime = getattr(file_uploader_obj, "type", None) or "video/mp4"
-            return [types.Part.from_bytes(data=data, mime_type=mime)]
+            return [{"mime_type": mime, "data": data}]
         except Exception as exc:
             st.warning(f"Gagal membaca file video: {exc}")
             return []
     if st.session_state.reference_text.strip():
-        return [types.Part.from_text(text=st.session_state.reference_text)]
+        return [st.session_state.reference_text]
     return []
+
 # ==========================================
 # ENGINE LOGIC
 # ==========================================
 def run_analysis():
-    client = get_client()
-    if not client:
+    if not get_api_key():
+        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar atau Streamlit Secrets.")
         return
 
     ref_file = st.session_state.get("ref_file_input")
-    parts = reference_parts(client, ref_file)
+    parts = reference_parts(ref_file)
     if not parts and not st.session_state.reference_text.strip():
         st.warning("Masukkan atau upload video/skenario referensi terlebih dahulu.")
         return
@@ -439,12 +433,11 @@ HASILKAN JSON SANGAT RINGKAS:
 """
     with st.spinner("Membedah roadmap 1:1 & meracik Flow AI No-Edit Prompt..."):
         try:
-            raw = ask(client, prompt, parts, json_mode=True)
+            raw = ask(prompt, parts, json_mode=True)
             data = extract_json(raw)
             st.session_state.analysis = data
             st.session_state.storyboard = data.get("storyboard_plan", [])
             
-            # Pembulatan matematika fungsi ceil (8 detik per scene)
             raw_seconds = data.get("video_duration_seconds", 16)
             if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
                 calculated_scenes = math.ceil(raw_seconds / 8)
@@ -460,8 +453,8 @@ HASILKAN JSON SANGAT RINGKAS:
             st.error(f"Analisis gagal: {exc}")
 
 def generate_scene_prompt(scene_number: int) -> bool:
-    client = get_client()
-    if not client:
+    if not get_api_key():
+        st.error("Masukkan Gemini API Key terlebih dahulu.")
         return False
 
     cfg = get_active_config()
@@ -476,7 +469,7 @@ def generate_scene_prompt(scene_number: int) -> bool:
             frame_file = st.session_state.scene_frames[prev_scene]
             frame_bytes = frame_file.getvalue()
             mime = getattr(frame_file, "type", "image/png")
-            prompt_parts.append(types.Part.from_bytes(data=frame_bytes, mime_type=mime))
+            prompt_parts.append({"mime_type": mime, "data": frame_bytes})
             frame_context = f"REAL-TIME VISUAL CONTINUITY: Analyze the attached image from Scene {prev_scene}'s last frame. Scene {scene_number} MUST start precisely from this exact character positioning, camera perspective, and platform alignment."
         except Exception:
             frame_context = "No image attachment parsed."
@@ -545,16 +538,35 @@ OUTPUT FORMAT:
 Provide ONLY the final direct prompt text in clear English. Do not write markdown tags, extra commentary, or section labels.
 """
     try:
-        res_prompt = ask(client, prompt, parts=prompt_parts, json_mode=False)
+        res_prompt = ask(prompt, parts=prompt_parts, json_mode=False)
         st.session_state.scene_prompts[scene_number] = res_prompt.strip()
         return True
     except Exception as exc:
         st.error(f"⚠️ Gagal menyusun Prompt Scene {scene_number}: {exc}")
         return False
 
-# ==========================================
-# RENDER VIEWS
-# ==========================================
+def run_seo_generator():
+    if not get_api_key():
+        st.error("Masukkan Gemini API Key terlebih dahulu.")
+        return
+    prompt = f"""
+Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
+Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
+
+Buatkan format SEO lengkap dalam bentuk JSON terstruktur dengan ketentuan:
+1. "judul": [3 Pilihan Judul singkat, memancing curiosity gap, & CTR tinggi],
+2. "deskripsi": "Deskripsi cerita singkat mengandung kata kunci natural + WAJIB ADA CALL TO ACTION (CTA) ajakan untuk Komen, Like, Subscribe, dan Nyalakan Lonceng",
+3. "hashtags": [8 Hashtag viral & relevan dipisah spasi, contoh: #UGC #3DParkour #FYP],
+4. "tags": [Tepat 18 Tags SEO unik berbahasa Inggris tanpa duplikat]
+"""
+    with st.spinner("Meracik Judul, CTA, Hashtag Viral, dan 18 Tags SEO Unik via Gemini AI..."):
+        try:
+            raw_seo = ask(prompt, json_mode=True)
+            st.session_state.seo = extract_json(raw_seo)
+            st.success("✨ Metadata & SEO Berhasil Digenerate!")
+        except Exception as exc:
+            st.error(f"Gagal generate SEO: {exc}")
+
 def render_home():
     st.title("🎬 UGC Remix Studio v14.2")
     st.caption("Engine Otomasi Konten 3D Game Challenge dengan Comedic Parkour Maneuvers, Multimodal Continuity Bridge, & Flow AI No-Edit Engine.")
@@ -611,7 +623,6 @@ def render_home():
     st.markdown("---")
     if st.button("PROSES & REMIX REFERENSI", type="primary", use_container_width=True):
         run_analysis()
-
 def render_analysis():
     st.title("🔍 Hasil Roadmap De-duplication & Storyboard Mapping")
     analysis = st.session_state.get("analysis", {})
@@ -704,28 +715,6 @@ def render_scenes():
 
             render_seo_content()
 
-def run_seo_generator():
-    client = get_client()
-    if not client:
-        return
-    prompt = f"""
-Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
-Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
-
-Buatkan format SEO lengkap dalam bentuk JSON terstruktur dengan ketentuan:
-1. "judul": [3 Pilihan Judul singkat, memancing curiosity gap, & CTR tinggi],
-2. "deskripsi": "Deskripsi cerita singkat mengandung kata kunci natural + WAJIB ADA CALL TO ACTION (CTA) ajakan untuk Komen, Like, Subscribe, dan Nyalakan Lonceng",
-3. "hashtags": [8 Hashtag viral & relevan dipisah spasi, contoh: #UGC #3DParkour #FYP],
-4. "tags": [Tepat 18 Tags SEO unik berbahasa Inggris tanpa duplikat]
-"""
-    with st.spinner("Meracik Judul, CTA, Hashtag Viral, dan 18 Tags SEO Unik via Gemini AI..."):
-        try:
-            raw_seo = ask(client, prompt, json_mode=True)
-            st.session_state.seo = extract_json(raw_seo)
-            st.success("✨ Metadata & SEO Berhasil Digenerate!")
-        except Exception as exc:
-            st.error(f"Gagal generate SEO: {exc}")
-
 def render_seo_content():
     seo_data = st.session_state.get("seo", {})
     if seo_data:
@@ -773,9 +762,7 @@ def render_seo():
 with st.sidebar:
     st.title("🧭 Navigasi Studio")
     st.text_input("Gemini API Key", key="api_key", type="password", help="Masukkan API Key Google Gemini Anda di sini.")
-    
-    # 📍 TEMPATKAN BARIS TERSEBUT DI SINI (Baris ~467):
-    st.text_input("Model Name (Opsional)", value="gemini-1.5-flash", key="custom_model_input", help="Contoh: gemini-1.5-flash, gemini-3.6-flash, dll.")
+    st.text_input("Model Name (Opsional)", value="gemini-1.5-flash", key="custom_model_input", help="Contoh: gemini-1.5-flash, gemini-1.5-pro, dll.")
     
     st.markdown("---")
     if st.button("🏠 Beranda / Input Referensi", use_container_width=True):
