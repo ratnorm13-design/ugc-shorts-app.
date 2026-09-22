@@ -4,15 +4,13 @@ import os
 import re
 import time
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # ==========================================
 # 1. PAGE CONFIG & CONSTANTS
 # ==========================================
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
-# NAMA MODEL RESMI GEMINI SAAT INI
 MODEL_NAME = "gemini-2.5-flash"
 FALLBACK_MODELS = [
     "gemini-2.0-flash",
@@ -249,34 +247,46 @@ def extract_json(text: str):
             continue
     raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
 
-def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
-    media_parts = list(parts or [])
-    content_parts = media_parts + [types.Part.from_text(text=prompt)]
-    contents = [types.Content(role="user", parts=content_parts)]
+def configure_api():
+    key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
+    key = key.strip("`\"' ")
+    if not key:
+        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
+        return False
+    
+    # Konfigurasi resmi library google-generativeai
+    genai.configure(api_key=key)
+    return True
 
-    config_kwargs = {
+def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
+    if not configure_api():
+        raise RuntimeError("API Key belum terkonfigurasi.")
+
+    media_parts = list(parts or [])
+    contents = media_parts + [prompt]
+
+    gen_config = {
         "temperature": 0.3,
     }
     if json_mode:
-        config_kwargs["response_mime_type"] = "application/json"
+        gen_config["response_mime_type"] = "application/json"
 
     models_to_try = [MODEL_NAME] + FALLBACK_MODELS
     last_exception = None
 
     for model_candidate in models_to_try:
-        for _ in range(2):
-            try:
-                response = client.models.generate_content(
-                    model=model_candidate,
-                    contents=contents,
-                    config=types.GenerateContentConfig(**config_kwargs),
-                )
-                text = getattr(response, "text", None)
-                if text and text.strip():
-                    return text
-            except Exception as exc:
-                last_exception = exc
-                time.sleep(1.0)
+        try:
+            model = genai.GenerativeModel(
+                model_name=model_candidate,
+                generation_config=gen_config
+            )
+            response = model.generate_content(contents)
+            text = getattr(response, "text", None)
+            if text and text.strip():
+                return text
+        except Exception as exc:
+            last_exception = exc
+            time.sleep(1.0)
 
     raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
 
@@ -285,22 +295,6 @@ def scene_count() -> int:
     if val == 0:
         return st.session_state.detected_scenes
     return val
-
-def get_client():
-    key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
-    key = key.strip("`\"' ")
-    if not key:
-        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
-        return None
-    try:
-        # Memaksa SDK mengirimkan kunci sebagai API Key (Header x-goog-api-key)
-        return genai.Client(
-            api_key=key,
-            http_options={'api_version': 'v1beta', 'headers': {'x-goog-api-key': key}}
-        )
-    except Exception as exc:
-        st.error(f"Gagal membuat koneksi Gemini API: {exc}")
-        return None
 
 def get_active_config():
     analysis = st.session_state.get("analysis", {})
@@ -339,7 +333,7 @@ def get_active_config():
         "visual_token": mutation.get("visual_anchor_token", runner)
     }
 
-def reference_parts(client, file_uploader_obj):
+def reference_parts(file_uploader_obj):
     if file_uploader_obj is not None:
         try:
             data = file_uploader_obj.getvalue()
@@ -347,24 +341,20 @@ def reference_parts(client, file_uploader_obj):
             if size_mb > MAX_FILE_SIZE_MB:
                 st.warning(f"⚠️ Ukuran file video ({size_mb:.1f} MB) melebihi batas {MAX_FILE_SIZE_MB} MB. Switch ke deskripsi teks.")
                 if st.session_state.reference_text.strip():
-                    return [types.Part.from_text(text=st.session_state.reference_text)]
+                    return [{"mime_type": "text/plain", "data": st.session_state.reference_text}]
                 return []
             mime = getattr(file_uploader_obj, "type", None) or "video/mp4"
-            return [types.Part.from_bytes(data=data, mime_type=mime)]
+            return [{"mime_type": mime, "data": data}]
         except Exception as exc:
             st.warning(f"Gagal membaca file video: {exc}")
             return []
     if st.session_state.reference_text.strip():
-        return [types.Part.from_text(text=st.session_state.reference_text)]
+        return [st.session_state.reference_text]
     return []
 
 def run_analysis():
-    client = get_client()
-    if not client:
-        return
-
     ref_file = st.session_state.get("ref_file_input")
-    parts = reference_parts(client, ref_file)
+    parts = reference_parts(ref_file)
     if not parts and not st.session_state.reference_text.strip():
         st.warning("Masukkan atau upload video/skenario referensi terlebih dahulu.")
         return
@@ -414,7 +404,7 @@ HASILKAN JSON SANGAT RINGKAS:
 """
     with st.spinner("Membedah roadmap 1:1 & meracik Flow AI No-Edit Prompt..."):
         try:
-            raw = ask(client, prompt, parts, json_mode=True)
+            raw = ask(prompt, parts=parts, json_mode=True)
             data = extract_json(raw)
             st.session_state.analysis = data
             st.session_state.storyboard = data.get("storyboard_plan", [])
@@ -435,10 +425,6 @@ HASILKAN JSON SANGAT RINGKAS:
             st.error(f"Analisis gagal: {exc}")
 
 def generate_scene_prompt(scene_number: int) -> bool:
-    client = get_client()
-    if not client:
-        return False
-
     cfg = get_active_config()
     storyboard = st.session_state.analysis.get("storyboard_plan", [])
     total_scenes = scene_count()
@@ -451,7 +437,7 @@ def generate_scene_prompt(scene_number: int) -> bool:
             frame_file = st.session_state.scene_frames[prev_scene]
             frame_bytes = frame_file.getvalue()
             mime = getattr(frame_file, "type", "image/png")
-            prompt_parts.append(types.Part.from_bytes(data=frame_bytes, mime_type=mime))
+            prompt_parts.append({"mime_type": mime, "data": frame_bytes})
             frame_context = f"REAL-TIME VISUAL CONTINUITY: Analyze the attached image from Scene {prev_scene}'s last frame."
         except Exception:
             frame_context = "No image attachment parsed."
@@ -516,12 +502,13 @@ ACTION SEQUENCE:
 OUTPUT FORMAT: Provide ONLY the final prompt text in English.
 """
     try:
-        res_prompt = ask(client, prompt, parts=prompt_parts, json_mode=False)
+        res_prompt = ask(prompt, parts=prompt_parts, json_mode=False)
         st.session_state.scene_prompts[scene_number] = res_prompt.strip()
         return True
     except Exception as exc:
         st.error(f"⚠️ Gagal menyusun Prompt Scene {scene_number}: {exc}")
         return False
+
 # ==========================================
 # 4. RENDER UI VIEWS
 # ==========================================
@@ -667,9 +654,7 @@ def render_scenes():
             st.subheader("🎯 Finalisasi SEO Generator")
 
             if st.button("🚀 Generate SEO & Hashtags", type="primary", use_container_width=True):
-                client = get_client()
-                if client:
-                    prompt = f"""
+                prompt = f"""
 Buatkan format SEO lengkap dalam JSON terstruktur:
 1. "judul": [3 Pilihan Judul viral],
 2. "deskripsi": "Deskripsi cerita singkat + Call to Action",
@@ -677,13 +662,13 @@ Buatkan format SEO lengkap dalam JSON terstruktur:
 4. "tags": [18 Tags SEO unik tanpa duplikat]
 Data: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
 """
-                    with st.spinner("Generating SEO via Gemini..."):
-                        try:
-                            raw_seo = ask(client, prompt, json_mode=True)
-                            st.session_state.seo = extract_json(raw_seo)
-                            st.success("✨ Metadata SEO Berhasil Digenerate!")
-                        except Exception as exc:
-                            st.error(f"Gagal generate SEO: {exc}")
+                with st.spinner("Generating SEO via Gemini..."):
+                    try:
+                        raw_seo = ask(prompt, json_mode=True)
+                        st.session_state.seo = extract_json(raw_seo)
+                        st.success("✨ Metadata SEO Berhasil Digenerate!")
+                    except Exception as exc:
+                        st.error(f"Gagal generate SEO: {exc}")
 
             seo_data = st.session_state.get("seo", {})
             if seo_data:
