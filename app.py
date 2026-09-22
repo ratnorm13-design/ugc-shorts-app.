@@ -8,12 +8,16 @@ from google import genai
 from google.genai import types
 
 # ==========================================
-# CONSTANTS & CONFIGURATION (MODEL RESMI & STABIL)
+# CONSTANTS & CONFIGURATION (FLEXIBLE MODEL)
 # ==========================================
-MODEL_NAME = "gemini-2.5-flash"
+# Masukkan nama model utama lu di sini (bisa gemini-3.6-flash jika pakai proxy/endpoint khusus)
+DEFAULT_MODEL = "gemini-1.5-flash"
+
 FALLBACK_MODELS = [
+    "gemini-1.5-flash-latest",
     "gemini-2.0-flash",
-    "gemini-1.5-flash"
+    "gemini-1.5-pro",
+    "gemini-3.6-flash"  # Model kustom versi lu
 ]
 APP_VERSION = "14.2 — Comedic Parkour & Maximum Viral Hook Engine"
 
@@ -238,7 +242,10 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
 
-    models_to_try = [MODEL_NAME] + FALLBACK_MODELS
+    # Ambil model dari sidebar jika diisi user, atau gunakan daftar model
+    selected_model = st.session_state.get("custom_model_input", DEFAULT_MODEL)
+    models_to_try = [selected_model] + [m for m in FALLBACK_MODELS if m != selected_model]
+    
     last_exception = None
 
     for model_candidate in models_to_try:
@@ -254,10 +261,9 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
                     return text
             except Exception as exc:
                 last_exception = exc
-                time.sleep(2.0)  # Delay backoff untuk mencegah rate limit 429 & overload 503
+                time.sleep(1.5)
 
-    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
-
+    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}"
 st.set_page_config(page_title="UGC Remix Studio v14.2", page_icon="🎬", layout="wide")
 
 DEFAULTS = {
@@ -764,6 +770,10 @@ def render_seo():
 with st.sidebar:
     st.title("🧭 Navigasi Studio")
     st.text_input("Gemini API Key", key="api_key", type="password", help="Masukkan API Key Google Gemini Anda di sini.")
+    
+    # 📍 TEMPATKAN BARIS TERSEBUT DI SINI (Baris ~467):
+    st.text_input("Model Name (Opsional)", value="gemini-1.5-flash", key="custom_model_input", help="Contoh: gemini-1.5-flash, gemini-3.6-flash, dll.")
+    
     st.markdown("---")
     if st.button("🏠 Beranda / Input Referensi", use_container_width=True):
         go("home")
