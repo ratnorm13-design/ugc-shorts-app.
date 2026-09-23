@@ -24,7 +24,7 @@ FALLBACK_MODELS = [
     "gemini-3.6-flash",
     "gemini-2.5-flash"
 ]
-APP_VERSION = "14.2 — Fully Integrated Engine"
+APP_VERSION = "14.2 — Fully Integrated Engine (Patched)"
 MAX_FILE_SIZE_MB = 15
 
 DURATION_SCENES = {
@@ -444,8 +444,14 @@ def generate_scene_prompt(scene_number: int) -> bool:
     
     if prev_scene in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene]:
         try:
-            frame_file = st.session_state.scene_frames[prev_scene]
-            img = Image.open(frame_file)
+            frame_data = st.session_state.scene_frames[prev_scene]
+            # Mencegah error TypeError stream pointer, pastikan obj yang dikirim adalah PIL Image murni
+            if isinstance(frame_data, Image.Image):
+                img = frame_data
+            else:
+                frame_data.seek(0)
+                img = Image.open(frame_data)
+                
             prompt_parts.append(img)
             frame_context = f"REAL-TIME VISUAL CONTINUITY: Maintain identical aesthetic, color palette, and character design as shown in Scene {prev_scene}'s frame."
         except Exception as e:
@@ -819,9 +825,15 @@ def render_scenes():
                 type=["jpg", "jpeg", "png", "webp"],
                 key=f"frame_uploader_{current_sc - 1}"
             )
+            # LOGIC FIX: Penanganan Stream Pointer Streamlit -> Konversi ke PIL Image
             if uploaded_frame:
-                st.session_state.scene_frames[current_sc - 1] = uploaded_frame
-                st.image(uploaded_frame, caption=f"Frame Acuan Continuity Scene {current_sc - 1}", use_column_width=True)
+                try:
+                    uploaded_frame.seek(0)
+                    img_preview = Image.open(uploaded_frame)
+                    st.session_state.scene_frames[current_sc - 1] = img_preview
+                    st.image(img_preview, caption=f"Frame Acuan Continuity Scene {current_sc - 1}", use_container_width=True)
+                except Exception as e:
+                    st.error(f"Gagal memuat gambar: {e}")
 
         st.markdown("---")
         if st.button(f"✨ Generate Prompt Scene {current_sc}", type="primary", use_container_width=True):
