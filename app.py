@@ -280,7 +280,6 @@ def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
 
     error_logs = []
 
-    # Coba satu per satu model sampai berhasil
     for model_candidate in PRIMARY_MODELS:
         try:
             model = genai.GenerativeModel(
@@ -292,13 +291,18 @@ def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
             if text and text.strip():
                 return text
         except Exception as exc:
+            err_str = str(exc)
+            # Jika terkena Rate Limit 429, stop loop dan minta user beri jeda
+            if "429" in err_str or "quota" in err_str.lower():
+                raise RuntimeError(
+                    f"⚠️ Kuota API per menit habis (429 Rate Limit). "
+                    f"Tunggu sekitar 30-60 detik sebelum menekan tombol lagi."
+                )
             error_logs.append(f"[{model_candidate}]: {exc}")
-            time.sleep(0.3)
+            time.sleep(1)
 
-    # Tampilkan diagnosa detail jika semua model gagal
     joined_errors = " | ".join(error_logs)
-    raise RuntimeError(f"Gagal terhubung ke Gemini API. Detail error per model: {joined_errors}")
-
+    raise RuntimeError(f"Gagal terhubung ke Gemini API. Detail error: {joined_errors}")
 def scene_count() -> int:
     val = DURATION_SCENES.get(st.session_state.duration, 0)
     if val == 0:
