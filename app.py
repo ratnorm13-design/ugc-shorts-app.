@@ -19,12 +19,15 @@ st.set_page_config(
     layout="wide"
 )
 
-MODEL_NAME = "gemini-3.7-flash"
-FALLBACK_MODELS = [
-    "gemini-3.6-flash",
-    "gemini-2.5-flash"
+# Daftar model resmi Google Gemini (Urutan dari yang paling stabil & responsif)
+PRIMARY_MODELS = [
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro",
+    "gemini-1.0-pro"
 ]
-APP_VERSION = "14.2 — Fully Integrated Engine (Patched)"
+
+APP_VERSION = "14.2 — Production Stable Engine"
 MAX_FILE_SIZE_MB = 15
 
 DURATION_SCENES = {
@@ -220,7 +223,7 @@ DEFAULTS = {
     "scene_prompts": {},
     "scene_frames": {},
     "current_scene": 1,
-    "detected_scenes": 4,
+    "detected_scenes": 3,
     "seo": {},
 }
 
@@ -246,20 +249,21 @@ def extract_json(text: str):
 
     starts = [p for p in (text.find("{"), text.find("[")) if p >= 0]
     if not starts:
-        raise ValueError("Respons AI tidak berisi JSON yang valid.")
+        raise ValueError("Respons AI tidak berisi format JSON yang valid.")
     start = min(starts)
     for end in range(len(text), start, -1):
         try:
             return json.loads(text[start:end].strip())
         except Exception:
             continue
-    raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
+    raise ValueError("Gagal memproses struktur JSON dari AI.")
 
 def configure_api():
-    key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
+    # Mengutamakan Input Manual dari UI jika ada, baru fallback ke Environment Variable
+    key = st.session_state.get("api_key", "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
     key = key.strip("`\"' ")
     if not key:
-        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
+        st.error("Masukkan Gemini API Key terlebih dahulu pada Control Panel di Sidebar.")
         return False
     
     genai.configure(api_key=key)
@@ -272,16 +276,14 @@ def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
     media_parts = list(parts or [])
     contents = media_parts + [prompt]
 
-    gen_config = {
-        "temperature": 0.3,
-    }
+    gen_config = {"temperature": 0.3}
     if json_mode:
         gen_config["response_mime_type"] = "application/json"
 
-    models_to_try = [MODEL_NAME] + FALLBACK_MODELS
-    last_exception = None
+    error_logs = []
 
-    for model_candidate in models_to_try:
+    # Coba satu per satu model sampai berhasil
+    for model_candidate in PRIMARY_MODELS:
         try:
             model = genai.GenerativeModel(
                 model_name=model_candidate,
@@ -292,10 +294,12 @@ def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
             if text and text.strip():
                 return text
         except Exception as exc:
-            last_exception = exc
-            time.sleep(1.0)
+            error_logs.append(f"[{model_candidate}]: {exc}")
+            time.sleep(0.3)
 
-    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
+    # Tampilkan diagnosa detail jika semua model gagal
+    joined_errors = " | ".join(error_logs)
+    raise RuntimeError(f"Gagal terhubung ke Gemini API. Detail error per model: {joined_errors}")
 
 def scene_count() -> int:
     val = DURATION_SCENES.get(st.session_state.duration, 0)
@@ -346,14 +350,14 @@ def reference_parts(file_uploader_obj):
             data = file_uploader_obj.getvalue()
             size_mb = len(data) / (1024 * 1024)
             if size_mb > MAX_FILE_SIZE_MB:
-                st.warning(f"⚠️ Ukuran file video ({size_mb:.1f} MB) melebihi batas {MAX_FILE_SIZE_MB} MB. Switch ke deskripsi teks.")
+                st.warning(f"⚠️ Ukuran file ({size_mb:.1f} MB) melebihi batas {MAX_FILE_SIZE_MB} MB. Beralih ke skenario teks.")
                 if st.session_state.reference_text.strip():
                     return [st.session_state.reference_text]
                 return []
             mime = getattr(file_uploader_obj, "type", None) or "video/mp4"
             return [{"mime_type": mime, "data": data}]
         except Exception as exc:
-            st.warning(f"Gagal membaca file video: {exc}")
+            st.warning(f"Gagal membaca file referensi: {exc}")
             return []
     if st.session_state.reference_text.strip():
         return [st.session_state.reference_text]
@@ -369,21 +373,15 @@ def run_analysis():
     cfg = get_active_config()
     target_scenes = scene_count()
     if target_scenes == 0:
-        target_scenes = 4
+        target_scenes = 3
 
     prompt = f"""
 Anda adalah AI Master Creative Director khusus konten viral 3D Game / Parkour / Obstacle Challenge.
 
 HIRARKI ATURAN UTAMA:
 1. UTAMA: Gunakan Pilihan Manual UI User ({cfg['runner']}, {cfg['target_doll']}, {cfg['map_env']}, {cfg['prop_stand']}, {cfg['climax_act']}) sebagai fondasi utama adegan.
-2. SEKUNDER: Gunakan Video Referensi HANYA untuk mengambil inspirasi gaya kamera, pencahayaan, dan tempo gerakan.
+2. SEKUNDER: Gunakan Referensi Teks/Video HANYA untuk mengambil inspirasi tempo gerakan.
 3. STORYBOARD LENGTH LOCK: Hasilkan skenario runtut tepat sebanyak {target_scenes} adegan/scene.
-
-PENGATURAN SCENE DARI USER:
-- Style Visual: {cfg['style']}
-- Map Background: {cfg['map_env']}
-- Target Stand: {cfg['prop_stand']}
-- Action Climax Scene Akhir: {cfg['climax_act']}
 
 HASILKAN JSON LENGKAP:
 {{
@@ -411,7 +409,7 @@ HASILKAN JSON LENGKAP:
   "spatial_layout": "Third-person tracking shot"
 }}
 """
-    with st.spinner("Membedah roadmap 1:1 & meracik Flow AI No-Edit Prompt..."):
+    with st.spinner("Membedah roadmap & meracik Flow AI Prompt..."):
         try:
             raw = ask(prompt, parts=parts, json_mode=True)
             data = extract_json(raw)
@@ -442,15 +440,15 @@ def generate_scene_prompt(scene_number: int) -> bool:
     prompt_parts = []
     prev_scene = scene_number - 1
     
+    # Penanganan gambar frame continuity yang aman
     if prev_scene in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene]:
         try:
             frame_data = st.session_state.scene_frames[prev_scene]
-            # Mencegah error TypeError stream pointer, pastikan obj yang dikirim adalah PIL Image murni
             if isinstance(frame_data, Image.Image):
                 img = frame_data
             else:
                 frame_data.seek(0)
-                img = Image.open(frame_data)
+                img = Image.open(frame_data).convert("RGB")
                 
             prompt_parts.append(img)
             frame_context = f"REAL-TIME VISUAL CONTINUITY: Maintain identical aesthetic, color palette, and character design as shown in Scene {prev_scene}'s frame."
@@ -479,10 +477,9 @@ def generate_scene_prompt(scene_number: int) -> bool:
 
     if scene_number == 1 and not is_final_scene:
         action_instructions = f"""
-- PHASE 1 (0-2s) HOOK: High-contrast comedic opening. Target entities ({cfg['target_desc']}) perform idle antics on {cfg['prop_stand']}. Runner ({cfg['runner']}) executes funny acceleration start.
-- PHASE 2 (2-4s) IMPACT: Runner delivers heavy kick into Target Entity A.
-- PHASE 3 (4-8s) AFTERMATH: Target A catapulted off into void.
-- FOOTING LOCK: Runner lands safely on track and continues forward.
+- PHASE 1 HOOK: High-contrast comedic opening. Target entities ({cfg['target_desc']}) perform idle taunt antics on {cfg['prop_stand']}. Runner ({cfg['runner']}) executes fast acceleration run on {cfg['map_env']}.
+- PHASE 2 IMPACT: Runner delivers a heavy kick into Target Entity.
+- PHASE 3 AFTERMATH: Target catapulted off into void with loose ragdoll physics.
 """
     elif is_final_scene:
         action_instructions = f"""
@@ -499,7 +496,7 @@ def generate_scene_prompt(scene_number: int) -> bool:
 """
 
     prompt = f"""
-System Directive: Convert sequence into ONE compact English prompt (<110 words) for Flow AI.
+System Directive: Convert sequence into ONE compact English prompt (<100 words) for Flow AI / UGC video generator.
 
 {frame_context}
 
@@ -574,17 +571,16 @@ def render_sidebar():
         st.markdown("---")
 
         # API Key Input
-        env_key = os.getenv("GEMINI_API_KEY", "")
-        if env_key:
-            st.success("🔑 API Key terdeteksi dari Environment System.")
-        else:
-            api_key_input = st.text_input(
-                "Gemini API Key",
-                value=st.session_state.api_key,
-                type="password",
-                help="Masukkan API Key Google Gemini Anda di sini."
-            )
-            st.session_state.api_key = api_key_input
+        api_key_input = st.text_input(
+            "Gemini API Key",
+            value=st.session_state.api_key,
+            type="password",
+            help="Masukkan API Key Google Gemini Anda di sini."
+        )
+        st.session_state.api_key = api_key_input
+
+        if not st.session_state.api_key and os.getenv("GEMINI_API_KEY"):
+            st.info("💡 Menggunakan API Key dari System Env.")
 
         st.markdown("---")
 
@@ -629,7 +625,7 @@ def render_home():
         ref_text = st.text_area(
             "Atau Tuliskan Deskripsi Skenario Referensi Teks",
             value=st.session_state.reference_text,
-            placeholder="Contoh: Pocong melompat cepat di atas lintasan peti kemas rooftop, menendang kapsul kuning hingga jatuh...",
+            placeholder="Contoh: Pocong melompat cepat di atas lintasan peti kemas rooftop...",
             height=120
         )
         st.session_state.reference_text = ref_text
@@ -817,7 +813,7 @@ def render_scenes():
         )
         st.session_state.user_scene_maneuvers[current_sc] = sel_man_key
 
-        # Image frame continuity uploader for previous scene
+        # Image frame continuity uploader dengan conversion aman
         if current_sc > 1:
             st.markdown(f"#### 🖼️ Frame Continuity (Reference Scene {current_sc - 1})")
             uploaded_frame = st.file_uploader(
@@ -825,13 +821,14 @@ def render_scenes():
                 type=["jpg", "jpeg", "png", "webp"],
                 key=f"frame_uploader_{current_sc - 1}"
             )
-            # LOGIC FIX: Penanganan Stream Pointer Streamlit -> Konversi ke PIL Image
             if uploaded_frame:
                 try:
                     uploaded_frame.seek(0)
-                    img_preview = Image.open(uploaded_frame)
-                    st.session_state.scene_frames[current_sc - 1] = img_preview
-                    st.image(img_preview, caption=f"Frame Acuan Continuity Scene {current_sc - 1}", use_container_width=True)
+                    img = Image.open(uploaded_frame)
+                    # Deep copy agar image pointer tetap tersimpan aman di session state
+                    img_copy = img.copy().convert("RGB")
+                    st.session_state.scene_frames[current_sc - 1] = img_copy
+                    st.image(img_copy, caption=f"Frame Acuan Continuity Scene {current_sc - 1}", use_container_width=True)
                 except Exception as e:
                     st.error(f"Gagal memuat gambar: {e}")
 
