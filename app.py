@@ -1,289 +1,241 @@
+# ==========================================
+# BAGIAN 1 dari 2: CONFIG, CONSTANTS, & CORE LOGIC
+# ==========================================
 import json
+import math
+import os
 import re
 import time
-import cv2
-import hashlib
-import os
-import tempfile
-from copy import deepcopy
-from typing import Any
-
 import streamlit as st
-from google import genai
-from google.genai import types
+from PIL import Image
+import google.generativeai as genai
 
-st.set_page_config(page_title="GTA V Parkour Remix Studio", page_icon="🎮", layout="wide")
-
-MODEL_NAME = "gemini-3.6-flash"
-APP_VERSION = "14.1 — GTA V Parkour Reference + Hard Continuity"
-
-DURATION_SCENES = {
-    "8 detik": 1,
-    "16 detik": 2,
-    "24 detik": 3,
-    "32 detik": 4,
-    "40 detik": 5,
-    "48 detik": 6,
-    "56 detik": 7,
-    "1 menit": 8,
-    "1,5 menit": 12,
-    "2 menit": 15,
-    "2,5 menit": 19,
-    "3 menit": 23,
-    "3,5 menit": 27,
-    "4 menit": 30,
-    "4,5 menit": 34,
-    "5 menit": 38,
-}
-MAX_SUPPORTED_SECONDS = DURATION_SCENES["5 menit"] * 8
-
-STYLE_OPTIONS = [
-    "Sinematik realistis",
-    "Animasi 3D",
-    "Animasi 2D",
-    "Komedi bergaya",
-    "Lucu dan ramah keluarga",
-    "Dokumenter realistis",
-    "Aksi sinematik",
-    "Kustom",
-]
-ASPECT_OPTIONS = ["9:16 — Shorts", "16:9 — YouTube", "1:1 — Kotak"]
-REFERENCE_OPTIONS = ["Video", "Screenshot", "Teks / ide"]
-
-# ============================================================
-# REFERENCE-DERIVED SUBJECT LOCK — NO HARDCODED CHARACTER
-# ============================================================
-# V14.1 is dedicated to GTA V parkour content, but actual subjects are
-# ALWAYS derived from the uploaded reference. No default character is injected.
-CHARACTER_LOCK = {
-    "mode": "reference-derived",
-    "project": "GTA V parkour",
-    "source_of_truth": "current reference analysis -> subject_roster + character_lock",
-    "rule": (
-        "Subject identity, appearance, role, clothing, position, and continuity "
-        "must be derived from the current reference. Never substitute a default character. "
-        "Preserve the detected runner and all action-relevant supporting subjects."
-    ),
-}
-
-CHARACTER_LOCK_EN = (
-    "REFERENCE-DERIVED SUBJECT LOCK. The current reference is the sole source of truth for "
-    "the runner and all supporting subjects. Preserve each detected subject's identity, "
-    "appearance, clothing, role, position, orientation, and continuity. Never substitute a "
-    "default character or invent a new protagonist. For this GTA V parkour project, preserve "
-    "the reference's game-world route, obstacles, camera geography, movement logic, and "
-    "cause-and-effect while keeping the action inside the game-world context."
+# ==========================================
+# 1. PAGE CONFIG & CONSTANTS
+# ==========================================
+st.set_page_config(
+    page_title="UGC Remix Studio v14.2",
+    page_icon="🎬",
+    layout="wide"
 )
 
-PROJECT_PROFILE = {
-    "name": "GTA V Parkour",
-    "visual_identity": (
-        "cinematic game footage consistent with the supplied reference, realistic game-engine "
-        "lighting, urban game-world environments, readable traversal movement, and continuous geography"
-    ),
-    "scope": "game-world traversal/parkour content based on the supplied reference",
+MODEL_NAME = "gemini-3.7-flash"
+FALLBACK_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-2.5-flash"
+]
+APP_VERSION = "14.2 — Fully Integrated Engine"
+MAX_FILE_SIZE_MB = 15
+
+DURATION_SCENES = {
+    "Auto (Sesuai Durasi & Video Referensi)": 0,
+    "8 detik (1 Scene - Shorts Kilat)": 1,
+    "16 detik (2 Scene - Shorts Standar)": 2,
+    "24 detik (3 Scene)": 3,
+    "32 detik (4 Scene)": 4,
+    "40 detik (5 Scene)": 5,
+    "60 detik (8 Scene - 1 Menit Long)": 8,
+    "120 detik (15 Scene - 2 Menit Long)": 15,
+    "180 detik (22 Scene - 3 Menit Long Full Challenge)": 22,
 }
 
+STYLE_OPTIONS = [
+    "GTA V Modded Gameplay Style",
+    "3D Animated Game Graphics",
+    "Unreal Engine 5 Parkour Render",
+    "Sinematik Realistis 3D",
+]
+
+CAMERA_OPTIONS = [
+    "Auto / Dynamic Tracking (Ikuti Runner dari Belakang)",
+    "Slow Cinematic Zoom-In (Zoom Perlahan Fokus ke Target)",
+    "Smooth Side Panning Shot (Kamera Bergerak dari Samping)",
+    "Low-Angle Action Chase (Sudut Rendah Dramatis / Dari Bawah)"
+]
+
+RUNNER_PRESETS = [
+    "Custom / Ketik Sendiri",
+    "Pocong Gesit (Hantu lokal berbalut kain kafan putih melompat absurd & kencang)",
+    "Bebek Karet Raksasa (Mainan bebek mandi kuning licin membal dengan kaki robotik)",
+    "Karakter Roblox / Blocky Noob (Karakter balok ikonik gaya voxel yang pecah pas kena pukul)",
+    "Sktetelons / Tengkorak Gila (Karakter kerangka tulang hidup dengan ragdoll physics mantap)",
+    "Fat Orange Cat (Kucing oranye gemuk berjaket hoodie)",
+    "Funny Green Frog (Katak hijau nyeleneh berkacamata hitam)",
+    "Blocky Voxel Man (Karakter balok gaya retro game independen)",
+    "Inflatable Dinosaur (Kostum dinosaurus tiup warna hijau)",
+    "Minecraft Creeper Style (Karakter makhluk hijau kotak khas Minecraft)",
+    "Gingerbread Cookie (Manusia kue jahe hidup)",
+    "Minecraft Blocky Zombie (Karakter mayat hidup kotak-kotak ala Minecraft)",
+    "Tung Tung Sahur (Karakter anomali ikonik meme sahur yang absurd)",
+    "Tralalero Tralala (Karakter absurd ala hiu bermata lebar berkaki sneakers)",
+    "Udindindun (Karakter khas Italian brainrot yang konyol dan nyeleneh)"
+]
+
+TARGET_IDLE_PRESETS = [
+    "Auto / Random Mix (Otomatis Bervariasi per Target)",
+    "🕺 Joget & Konyol (TikTok Idle Dance, Goyang Pinggul, Body Sway)",
+    "😱 Panik & Ketakutan (Trembling In-Place, Frantic Hand Waving)",
+    "😎 Sombong & Ngeledek (Chest Slap, Taunting Gesture, Pointing)",
+    "🗿 Mode Diam / Patung (Classic Static Stance)"
+]
+
+TARGET_DOLL_PRESETS = [
+    "Auto / Random Mix (Otomatis Campur 10 Karakter Unik)",
+    "1. Kapsul Kuning Mata Goggle (Parodi Minion)",
+    "2. Astronaut Kapsul Tanpa Tangan (Parodi Among Us)",
+    "3. Jelly Bean Kapsul Imut (Parodi Fall Guys)",
+    "4. Alien Berantena Warna-Warni (Parodi Teletubbies)",
+    "5. Kepala Konyol Toilet Putih (Parodi Skibidi)",
+    "6. Monster Bulu Biru Senyum Lebar (Parodi Huggy Wuggy)",
+    "7. Mini-Figure Balok Plastik (Parodi Lego)",
+    "8. Ogre Hijau Gemuk Baju Cokelat (Parodi Shrek)",
+    "9. Bebek Karet Kuning Raksasa (Rubber Duck)",
+    "10. Tengkorak Kerangka Gila (Ragdoll Skeleton)",
+]
+
+TARGET_DOLL_PROMPT_MAP = {
+    "Auto / Random Mix (Otomatis Campur 10 Karakter Unik)": "a lineup of unique non-humanoid comedic ragdoll entities including yellow capsule beans, porcelain toilet heads, fuzzy blue monsters, and armless space beans",
+    "1. Kapsul Kuning Mata Goggle (Parodi Minion)": "a row of funny yellow capsule-shaped bean creatures wearing round metallic goggles and blue dungarees",
+    "2. Astronaut Kapsul Tanpa Tangan (Parodi Among Us)": "a row of vibrant armless astronaut space bean dolls wearing glassy visor helmets",
+    "3. Jelly Bean Kapsul Imut (Parodi Fall Guys)": "a row of cute chubby jelly bean character dolls in bright neon pastel colors",
+    "4. Alien Berantena Warna-Warni (Parodi Teletubbies)": "a row of colorful plush alien bean dolls with uniquely shaped head antennas in red, yellow, green, and purple",
+    "5. Kepala Konyol Toilet Putih (Parodi Skibidi)": "a row of funny cartoon head entities sticking out from shiny white porcelain toilet bowls",
+    "6. Monster Bulu Biru Senyum Lebar (Parodi Huggy Wuggy)": "a row of tall fuzzy blue monster plush dolls with long lanky arms and wide toothy grins",
+    "7. Mini-Figure Balok Plastik (Parodi Lego)": "a row of yellow plastic block mini-figures with rigid snap-on limbs and square torsos",
+    "8. Ogre Hijau Gemuk Baju Cokelat (Parodi Shrek)": "a row of chubby green ogre-like creature dolls wearing rustic brown burlap vests",
+    "9. Bebek Karet Kuning Raksasa (Rubber Duck)": "a row of oversized squeaky yellow rubber duckies with round glossy eyes",
+    "10. Tengkorak Kerangka Gila (Ragdoll Skeleton)": "a row of funny goofy 3D skeleton bone ragdolls with loose floppy physics",
+}
+
+MAP_OPTIONS = [
+    "Auto (Ikuti Remix UGC)",
+    "1. Maze Bank Tower Rooftop (Downtown Los Santos Skyscraper)",
+    "2. Mount Chiliad Mega Ramp & Ridge (High Mountain Canyon)",
+    "3. Pacific Ocean Docks & Shipping Containers (Sea Port)",
+    "4. Sky-High Cloud Ramp (Floating Infinite Cloud Void)",
+    "5. Alamo Sea Desert Airfield Ramp (Sandy Shores Valley)",
+    "6. Del Perro Pier Coastal Boardwalk (Beach Ferris Wheel View)",
+    "7. Fort Zancudo Military Airbase Overhead (Jet Base View)",
+    "8. Zancudo River Canyon Bridge (Red Rock River)",
+    "9. Neon City Cyberpunk Night (Glow Los Santos Nightlife)",
+    "10. Lava Volcano Caldera Arena (Active Volcano Lava Pit)"
+]
+
+PROP_STAND_OPTIONS = [
+    "Auto (Ikuti Remix UGC)",
+    "1. Direct Concrete Rooftop / Flat Container Surface",
+    "2. Giant Yoga / Exercise Fitness Balls (Colored Balls)",
+    "3. Wooden Cargo Barrels & Metal Oil Drums",
+    "4. Stacked Rubber Tires & Wheels",
+    "5. Vertical Trampoline Impulse Pads",
+    "6. Glass Ice Cubes & Translucent Pillars",
+    "7. Rotating Wooden Cylinder Log Rollers",
+    "8. High Concrete Construction Blocks",
+    "9. Floating Pool Inflatable Donuts",
+    "10. Steel Spring Coil Platforms"
+]
+
+CLIMAX_ACTION_OPTIONS = [
+    "Auto (Ikuti Remix UGC)",
+    "1. Double Hit Combo + Sacrifice Fall (Runner hits 2 targets & falls off edge together)",
+    "2. Flying Knee Jump Kick + Domino Ragdoll Collapse",
+    "3. 360 Spinning Backfist + Abyss Drag Drop",
+    "4. Double Dropkick + Explosion Bounce Sacrifice Fall",
+    "5. Superman Punch & Barrel Destruction + Full Ragdoll Fall",
+    "6. Tackle & Hug Fall (Kamikaze Drag off the cliff)",
+    "7. High-Velocity Running Sweep Kick + Terpelanting Off-Limit",
+    "8. Consecutive Punch-Kick Combo (3 Hits) + Edge Slurry Fall",
+    "9. Trampoline Launch Overhead Smash + Surface Collapse Fall",
+    "10. Sliding Tackle Multi-Target Clear + Edge Overshoot Fall"
+]
+
+MANEUVER_OPTIONS = [
+    "Auto / Lari Standar (Otomatis Penyesuaian AI)",
+    "1. ⚠️ Terpeleset Hampir Jatuh (Near-Miss Clutch & Recovery)",
+    "2. 🧗 Lari Miring di Dinding (Wall Run & Bounce)",
+    "3. 🛹 Meluncur Rendah di Floor (Sliding Tackle & Slide)",
+    "4. 🚀 Melambung Trampolin & Injak dari Udara (Trampoline Vault & Smash)",
+    "5. 🛹 Grind di Pipa / Pagar (Rail Balance Grinding)",
+    "6. 🕺 Joget & Ejekan Sambil Lari (Mid-Run Emote & Taunt)",
+    "7. 🪂 Meluncur Tali Zipline (Zipline Speed Drop)",
+    "8. 🥊 Menunduk & Dodge Serangan Target (Target Counter & Dodge)",
+    "9. ⚡ Injak Karpet Speed Boost (Nitro Dash Acceleration)",
+    "10. 🧱 Melompat Presisi Antar Pilar (Precision Pillar Vaulting)"
+]
+
+MANEUVER_PROMPT_MAP = {
+    "Auto / Lari Standar (Otomatis Penyesuaian AI)": "",
+    "1. ⚠️ Terpeleset Hampir Jatuh (Near-Miss Clutch & Recovery)": "MANEUVER ACTION: Runner stumbles clumsily near the edge, almost falling into the void in panic, but dramatically catches the ledge with one hand and pulls up back onto the track.",
+    "2. 🧗 Lari Miring di Dinding (Wall Run & Bounce)": "MANEUVER ACTION: Runner wall-runs vertically along the adjacent container side wall before leaping diagonally back onto the platform.",
+    "3. 🛹 Meluncur Rendah di Floor (Sliding Tackle & Slide)": "MANEUVER ACTION: Runner performs a fast low-angle baseball slide underneath high obstacles while sweeping forward.",
+    "4. 🚀 Melambung Trampolin & Injak dari Udara (Trampoline Vault & Smash)": "MANEUVER ACTION: Runner hits a glowing launch pad, soaring high into the air with a comedic acrobatic flip before landing on the path.",
+    "5. 🛹 Grind di Pipa / Pagar (Rail Balance Grinding)": "MANEUVER ACTION: Runner leaps onto a narrow side railing, balancing on one foot while grinding forward at high speed.",
+    "6. 🕺 Joget & Ejekan Sambil Lari (Mid-Run Emote & Taunt)": "MANEUVER ACTION: Runner executes a hilarious 1-second taunt emote (pointing, hip sway, finger snap) mid-sprint without slowing down.",
+    "7. 🪂 Meluncur Tali Zipline (Zipline Speed Drop)": "MANEUVER ACTION: Runner grabs an overhead zipline handle, zipping rapidly over a gap before dropping precisely onto the track.",
+    "8. 🥊 Menunduk & Dodge Serangan Target (Target Counter & Dodge)": "MANEUVER ACTION: Target entity tosses a comedic object; runner duck-slides under it and instantly counters with a heavy kick.",
+    "9. ⚡ Injak Karpet Speed Boost (Nitro Dash Acceleration)": "MANEUVER ACTION: Runner steps on a glowing neon speed pad, gaining instant nitro boost speed with motion blur effect.",
+    "10. 🧱 Melompat Presisi Antar Pilar (Precision Pillar Vaulting)": "MANEUVER ACTION: Runner rapidly vaults across a series of narrow, disconnected concrete pillars over open air."
+}
+
+OBSTACLE_OPTIONS = {
+    "None / Lari Datar": "",
+    "1. ⛓️ Swinging Giant Pendulums & Hammers": "ENVIRONMENT MECHANIC: Giant swinging pendulums and massive hammers obstruct the path; runner must weave and dodge around them skillfully.",
+    "2. 🔥 Flamethrower & Fire Jet Gates": "ENVIRONMENT MECHANIC: Periodic intense fire jets shoot up from the platform surface; runner timing must be precise.",
+    "3. 🌀 Rotating Spike Rollers": "ENVIRONMENT MECHANIC: Fast-spinning spiked cylinders block the middle path; runner must leap over them cleanly.",
+    "4. 💣 Explosive Red Barrels": "ENVIRONMENT MECHANIC: Highly unstable red explosive barrels line the edges; accidental contact triggers physics blast.",
+    "5. 🪓 Oscillating Guillotine Blades": "ENVIRONMENT MECHANIC: Massive razor-sharp guillotine blades drop up and down rapidly across the lane.",
+    "6. 🧱 Crushing Hydraulic Pistons": "ENVIRONMENT MECHANIC: Heavy concrete hydraulic blocks punch horizontally across the runner's path.",
+    "7. 🌉 Narrow Crumbling Bridge / Glass Tiles": "ENVIRONMENT MECHANIC: Fragile glass tiles and crumbling concrete blocks shatter 1 second after being stepped on.",
+    "8. ⚡ Electrified Fence & Laser Barriers": "ENVIRONMENT MECHANIC: High-voltage flickering electric laser barriers force the runner to slide or jump high.",
+    "9. 🌀 High-Speed Wind Turbine Fans": "ENVIRONMENT MECHANIC: Industrial wind turbine fans blow strong lateral gusts threatening to push runner off the edge.",
+    "10. 🪜 Sky-High Spiral Metal Ladder": "MANDATORY NAVIGATIONAL ACTION: Runner rapidly climbs a steep spiral metal ladder hovering high over open air."
+}
+
+ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
+
+# ==========================================
+# 2. STATE INITIALIZATION
+# ==========================================
 DEFAULTS = {
     "page": "home",
     "api_key": "",
-    "reference_type": "Video",
     "reference_file": None,
-    "reference_files": [],
     "reference_text": "",
     "visual_style": STYLE_OPTIONS[0],
+    "selected_camera": CAMERA_OPTIONS[0],
+    "runner_choice": RUNNER_PRESETS[1],
+    "target_idle_choice": TARGET_IDLE_PRESETS[0],
+    "target_doll_choice": TARGET_DOLL_PRESETS[0],
+    "custom_runner": "",
+    "selected_map": MAP_OPTIONS[0],
+    "selected_prop_stand": PROP_STAND_OPTIONS[0],
+    "selected_climax_action": CLIMAX_ACTION_OPTIONS[0],
     "aspect_ratio": ASPECT_OPTIONS[0],
-    "duration": "8 detik",
-    "duration_selector": "8 detik",
-    "reference_signature": None,
-    "reference_content_signature": None,
-    "gemini_reference_cache": {},
-    "reference_type_last": "Video",
-    "_reset_requested": False,
-    "project_nonce": 0,
-    "detected_reference_duration": None,
-    "duration_extension": None,
-    "target_scene_count": None,
-    "target_duration_label": None,
+    "duration": "Auto (Sesuai Durasi & Video Referensi)",
     "custom_instruction": "",
-    "scene_custom_instructions": {},
-    "scene_prompt_input_signatures": {},
+    "user_scene_obstacles": {},
+    "user_scene_maneuvers": {},
     "analysis": {},
-    "emotion_performance": {},
-    "reference_fidelity": {},
-    "remix_strategy": {},
-    "reference_ground_truth": {},
-    "character": {},
     "storyboard": [],
     "scene_prompts": {},
-    "scene_prompt_notes": {},
     "scene_frames": {},
-    "continuity_bridges": {},
     "current_scene": 1,
-    "storyboard_duration": None,
+    "detected_scenes": 4,
     "seo": {},
-    "analysis_project_signature": None,
-    "analysis_valid": False,
-    "analysis_stale_reason": "",
 }
 
-for key, value in DEFAULTS.items():
-    if key not in st.session_state:
-        st.session_state[key] = deepcopy(value)
+for k, v in DEFAULTS.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-def reset_project_callback():
-    """Start a fresh project without mutating active widget keys.
-
-    Streamlit widgets are stateful and some widget values cannot safely be
-    assigned through Session State. The reset therefore changes a project
-    nonce, clears only application data, and lets the new widget keys create
-    a clean UI on the next rerun.
-    """
-    preserved_api_key = st.session_state.get("api_key", "")
-    old_nonce = int(st.session_state.get("project_nonce", 0) or 0)
-
-    # Clear application-owned state only. Do not delete/set file_uploader or
-    # button keys; changing project_nonce gives those widgets fresh identities.
-    widget_keys = {"api_key", "duration_selector", "reference_type", "visual_style", "aspect_ratio", "custom_instruction"}
-    for key in list(DEFAULTS):
-        if key not in widget_keys:
-            st.session_state.pop(key, None)
-
-    for key in list(st.session_state.keys()):
-        if key.startswith((
-            "title_", "gate_frame_", "advance_frame_", "ref_upload_",
-            "frame_saved_", "validate_frame_", "open_next_", "screenshot_ref_"
-        )):
-            # These are old project-specific widget identities. Removing them
-            # in the callback is safe because the new widgets use a new nonce.
-            st.session_state.pop(key, None)
-
-    st.session_state["api_key"] = preserved_api_key
-    st.session_state["reference_type"] = "Video"
-    st.session_state["reference_type_last"] = "Video"
-    st.session_state["visual_style"] = STYLE_OPTIONS[0]
-    st.session_state["aspect_ratio"] = ASPECT_OPTIONS[0]
-    st.session_state["duration_selector"] = "8 detik"
-    st.session_state["custom_instruction"] = ""
-    st.session_state["scene_custom_instructions"] = {}
-    st.session_state["scene_prompt_input_signatures"] = {}
-    st.session_state["project_nonce"] = old_nonce + 1
-    st.session_state["page"] = "home"
-
-
-def go(page):
-    st.session_state.page = page
+def go(page_name: str):
+    st.session_state.page = page_name
     st.rerun()
 
-
-def scene_count():
-    """Return the locked scene count for the analyzed project.
-
-    Once analysis starts, the scene count must NOT change just because the
-    Home duration widget reruns or the user navigates between pages.
-    """
-    locked = st.session_state.get("target_scene_count")
-    if locked:
-        return int(locked)
-    return DURATION_SCENES[st.session_state.duration]
-
-
-def detect_video_duration(uploaded_file):
-    """Return reference video duration in seconds, or None if it cannot be read."""
-    if uploaded_file is None:
-        return None
-    temp_path = None
-    try:
-        suffix = ".mp4"
-        name = getattr(uploaded_file, "name", "")
-        if "." in name:
-            suffix = "." + name.rsplit(".", 1)[1].lower()
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(uploaded_file.getvalue())
-            temp_path = tmp.name
-        cap = cv2.VideoCapture(temp_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        cap.release()
-        if fps and fps > 0 and frames and frames > 0:
-            return float(frames / fps)
-    except Exception:
-        return None
-    finally:
-        if temp_path:
-            try:
-                import os
-                os.remove(temp_path)
-            except Exception:
-                pass
-    return None
-
-
-def choose_target_duration(seconds):
-    """Choose the smallest supported duration that is not shorter than the reference."""
-    if seconds is None:
-        return None, None
-    if seconds > MAX_SUPPORTED_SECONDS + 0.25:
-        return None, None
-    supported = [(scenes * 8, label) for label, scenes in DURATION_SCENES.items()]
-    supported.sort()
-    for total, label in supported:
-        if seconds <= total + 0.25:
-            return label, total
-    return None, None
-
-
-def apply_reference_duration(uploaded_file):
-    """Detect video duration and automatically move the target up when needed."""
-    seconds = detect_video_duration(uploaded_file)
-    if seconds is None:
-        return
-    target_label, target_seconds = choose_target_duration(seconds)
-    st.session_state.detected_reference_duration = seconds
-    if target_label and target_label != st.session_state.duration:
-        current_seconds = DURATION_SCENES[st.session_state.duration] * 8
-        if target_seconds > current_seconds:
-            st.session_state.duration = target_label
-            st.session_state.duration_extension = {
-                "reference_seconds": round(seconds, 2),
-                "target_seconds": target_seconds,
-                "target_duration": target_label,
-                "added_seconds": round(target_seconds - seconds, 2),
-            }
-    elif target_label:
-        st.session_state.duration_extension = None
-
-
-def safe_text(value):
-    if value is None:
-        return ""
-    if isinstance(value, list):
-        return ", ".join(str(x) for x in value)
-    if isinstance(value, dict):
-        return json.dumps(value, ensure_ascii=False)
-    return str(value)
-
-
-def get_client():
-    # Prefer a server-side secret when deployed; fall back to the sidebar key.
-    key = (os.getenv("GEMINI_API_KEY") or st.session_state.api_key or "").strip()
-    key = key.strip("`\"' ")
-    if not key:
-        st.error("Masukkan Gemini API Key terlebih dahulu.")
-        return None
-    try:
-        return genai.Client(api_key=key)
-    except Exception as exc:
-        message = str(exc)
-        if "API_KEY_INVALID" in message or "invalid api key" in message.lower():
-            st.error("Gemini API Key tidak valid. Buat/gunakan Auth key yang aktif di Google AI Studio.")
-        else:
-            st.error(f"Gagal membuat koneksi Gemini: {message}")
-        return None
-
-
-def extract_json(text: str) -> Any:
+# ==========================================
+# 3. HELPER FUNCTIONS & CORE LOGIC
+# ==========================================
+def extract_json(text: str):
     text = (text or "").strip()
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
     text = re.sub(r"\s*```$", "", text)
@@ -301,2469 +253,674 @@ def extract_json(text: str) -> Any:
             return json.loads(text[start:end].strip())
         except Exception:
             continue
-    raise ValueError("Respons AI tidak bisa dibaca sebagai JSON.")
-
-
-# ============================================================
-# GEMINI STRUCTURED OUTPUT SCHEMAS
-# ============================================================
-FLEX_STRING_ARRAY = {"type": "array", "items": {"type": "string"}}
-FLEX_OBJECT_ARRAY = {"type": "array", "items": {"type": "object"}}
-
-REFERENCE_ANALYSIS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "ringkasan": {"type": "string"}, "niche": {"type": "string"},
-        "hook": {"type": "string"}, "sebab_akibat": {"type": "string"},
-        "tujuan_emosi": {"type": "string"}, "pacing_logic": {"type": "string"},
-        "payoff": {"type": "string"}, "duration_extension_plan": {"type": "string"},
-        "world_lock": {"type": "object"}, "camera_lock": {"type": "object"},
-        "subject_roster": FLEX_OBJECT_ARRAY, "seat_map": FLEX_OBJECT_ARRAY,
-        "object_inventory": FLEX_OBJECT_ARRAY, "spatial_layout": {"type": "object"},
-        "character_lock": {"type": "object"}, "prop_locks": FLEX_OBJECT_ARRAY,
-        "temporal_breakdown": FLEX_OBJECT_ARRAY, "urutan_kejadian": FLEX_STRING_ARRAY,
-        "reference_ground_truth": {"type": "object"},
-        "emotion_performance_analysis": {"type": "object"},
-        "reference_fidelity": {"type": "object"},
-        "remix_strategy": {"type": "object"}, "detail_produksi": {"type": "object"},
-        "scene_coverage_map": FLEX_OBJECT_ARRAY,
-    },
-    "required": [
-        "ringkasan", "hook", "subject_roster", "object_inventory",
-        "spatial_layout", "temporal_breakdown", "reference_ground_truth",
-        "emotion_performance_analysis", "reference_fidelity", "remix_strategy",
-        "scene_coverage_map"
-    ],
-}
-
-SCENE_CONTRACT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "nomor": {"type": "integer"}, "waktu": {"type": "string"},
-        "tujuan": {"type": "string"}, "source_time_window": {"type": "string"},
-        "source_beats": FLEX_STRING_ARRAY, "continuity_bridge": {"type": "object"},
-        "start_state": {"type": "object"}, "cause": {"type": "string"},
-        "aksi": {"type": "string"}, "fidelity_audit": {"type": "object"},
-        "emotion_performance": {"type": "object"}, "end_state": {"type": "object"},
-        "kontinuitas": {"type": "string"}, "kamera": {"type": "string"},
-        "audio": {"type": "string"}, "transisi": {"type": "string"},
-    },
-    "required": [
-        "source_time_window", "source_beats", "start_state", "cause",
-        "aksi", "fidelity_audit", "emotion_performance", "end_state"
-    ],
-}
-
-SEO_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "english": {"type": "object"},
-        "indonesian": {"type": "object"},
-        "global_tags_15": FLEX_STRING_ARRAY,
-        "seo_strategy": {"type": "object"},
-        "teks_thumbnail": {"type": "string"},
-        "konsep_thumbnail": {"type": "string"},
-        "komentar_tersemat": {"type": "string"},
-        "ajakan": {"type": "string"},
-    },
-    "required": ["english", "indonesian", "global_tags_15", "seo_strategy"],
-}
-
-
-def _response_schema_for(stage):
-    if stage == "analysis":
-        return REFERENCE_ANALYSIS_SCHEMA
-    if stage == "scene_contract":
-        return SCENE_CONTRACT_SCHEMA
-    if stage == "seo":
-        return SEO_SCHEMA
-    return None
-
-
-def ask(client, prompt, parts=None, json_mode=False, google_search=False, schema=None):
-    """Single Gemini request with safe retry behavior.
-
-    Daily free-tier quota errors are never retried because waiting a few seconds
-    cannot restore a per-day quota. JSON-producing stages use structured JSON mode;
-    prose prompt stages keep normal text output.
-    """
-    # Multimodal ordering: media first, instruction text last. This matches
-    # Google's current video-understanding examples and reduces ambiguity.
-    media_parts = list(parts or [])
-    content_parts = media_parts + [types.Part.from_text(text=prompt)]
-    contents = [types.Content(role="user", parts=content_parts)]
-
-    config_kwargs = {}
-    if json_mode:
-        config_kwargs["response_mime_type"] = "application/json"
-        if schema is not None:
-            config_kwargs["response_schema"] = schema
-    if google_search:
-        config_kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
-    last_error = None
-    transient_tokens = ("500", "502", "503", "504", "UNAVAILABLE", "INTERNAL")
-
-    for attempt in range(4):
-        try:
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=contents,
-                config=types.GenerateContentConfig(**config_kwargs),
-            )
-            text = getattr(response, "text", None)
-            if not text:
-                raise RuntimeError("Gemini mengembalikan respons kosong.")
-            return text
-        except Exception as exc:
-            last_error = exc
-            message = str(exc)
-            upper = message.upper()
-
-            # Authentication/quota/request errors should fail immediately.
-            if "API_KEY_INVALID" in upper or "INVALID_API_KEY" in upper:
-                raise RuntimeError("API key Gemini tidak valid. Gunakan Auth key yang aktif.") from exc
-            if "GENERATE_CONTENT_FREE_TIER_REQUESTS" in upper or "GENERATEREQUESTSPERDAYPERPROJECTPERMODEL-FREETIER" in upper:
-                raise RuntimeError("Kuota harian Gemini Free Tier untuk project/model ini sudah habis. Jangan retry otomatis; tunggu reset kuota atau gunakan billing/paid tier.") from exc
-            if "429" in upper and ("QUOTA" in upper or "RESOURCE_EXHAUSTED" in upper):
-                # A generic 429 may be per-minute or per-day. Do one short retry only
-                # when the response does not explicitly identify a daily quota.
-                if "PERDAY" not in upper and "PER_DAY" not in upper:
-                    if attempt < 3:
-                        time.sleep(2 ** attempt)
-                        continue
-                raise RuntimeError(f"Gemini rate/quota limit: {message}") from exc
-
-            if any(token in upper for token in transient_tokens) and attempt < 3:
-                time.sleep(2 ** attempt)
-                continue
-            raise
-
-    raise RuntimeError(f"Gemini gagal setelah retry: {last_error}")
-
-
-def upload_to_gemini(client, uploaded_file):
-    """Upload reference media and wait until Gemini marks it ACTIVE.
-
-    Streamlit UploadedFile is first copied to a temporary real file because the
-    documented Files API examples upload from a filesystem path. Video files also
-    require polling while their media is processed before inference.
-    """
-    if uploaded_file is None:
-        return None
-
-    temp_path = None
-    try:
-        name = getattr(uploaded_file, "name", "reference.bin")
-        suffix = os.path.splitext(name)[1].lower() or ".bin"
-        data = uploaded_file.getvalue()
-        if not data:
-            raise ValueError("File referensi kosong.")
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(data)
-            temp_path = tmp.name
-
-        mime = getattr(uploaded_file, "type", None)
-        config_kwargs = {"display_name": name}
-        if mime:
-            config_kwargs["mime_type"] = mime
-        config = types.UploadFileConfig(**config_kwargs)
-        remote = client.files.upload(file=temp_path, config=config)
-
-        # Video files can remain PROCESSING after upload. Never send a video URI
-        # to generate_content until it is ACTIVE.
-        state = getattr(remote, "state", None)
-        state_name = getattr(state, "name", str(state or ""))
-        deadline = time.time() + 180
-        while state_name != "ACTIVE":
-            if state_name == "FAILED":
-                raise RuntimeError("Gemini gagal memproses file referensi.")
-            if time.time() >= deadline:
-                raise TimeoutError("Gemini terlalu lama memproses video referensi (lebih dari 180 detik).")
-            time.sleep(3)
-            remote = client.files.get(name=remote.name)
-            state = getattr(remote, "state", None)
-            state_name = getattr(state, "name", str(state or ""))
-
-        return remote
-    except Exception as exc:
-        st.error(f"File referensi gagal diproses Gemini: {exc}")
-        return None
-    finally:
-        if temp_path:
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
-
-
-def normalize_frame(uploaded_file):
-    """Copy a screenshot into plain bytes so Streamlit reruns cannot invalidate it."""
-    if uploaded_file is None:
-        return None
-    if isinstance(uploaded_file, dict) and uploaded_file.get("data"):
-        return uploaded_file
-    try:
-        data = uploaded_file.getvalue()
-        if not data:
-            return None
-        return {
-            "data": data,
-            "mime_type": getattr(uploaded_file, "type", None) or "image/jpeg",
-            "name": getattr(uploaded_file, "name", "frame.jpg"),
-        }
-    except Exception:
-        return None
-
-
-def frame_parts(frame):
-    frame = normalize_frame(frame)
-    if not frame:
-        return []
-    mime = frame.get("mime_type") or "image/jpeg"
-    if not mime.startswith("image/"):
-        mime = "image/jpeg"
-    return [types.Part.from_bytes(data=frame["data"], mime_type=mime)]
-
-
-def file_parts(client, uploaded_file):
-    """Convert an uploaded media item into canonical Gemini Parts."""
-    if uploaded_file is None:
-        return []
-    if isinstance(uploaded_file, dict):
-        return frame_parts(uploaded_file)
-
-    mime = getattr(uploaded_file, "type", None) or "application/octet-stream"
-    name = getattr(uploaded_file, "name", "").lower()
-    if mime.startswith("image/") or name.endswith((".png", ".jpg", ".jpeg", ".webp")):
-        return frame_parts(uploaded_file)
-
-    remote = upload_to_gemini(client, uploaded_file)
-    if not remote:
-        return []
-    file_uri = getattr(remote, "uri", None)
-    file_mime = getattr(remote, "mime_type", None) or mime
-    if not file_uri:
-        return []
-
-    # For short video references, sample above the default 1 FPS so fast reactions
-    # are less likely to disappear. The API documents video_metadata on file_data.
-    fps = 2.0
-    duration = st.session_state.get("detected_reference_duration")
-    if duration and duration <= 30:
-        fps = 3.0
-    elif duration and duration > 120:
-        fps = 1.0
-
-    if file_mime.startswith("video/"):
-        return [
-            types.Part(
-                file_data=types.FileData(file_uri=file_uri, mime_type=file_mime),
-                video_metadata=types.VideoMetadata(fps=fps),
-            )
-        ]
-    return [types.Part.from_uri(file_uri=file_uri, mime_type=file_mime)]
-
-
-
-def reference_keyframe_budget(duration_seconds):
-    """Choose an adaptive analysis-frame budget from the actual source duration.
-
-    The original video is always the primary evidence. Keyframes are an audit
-    layer, so the budget scales with source duration rather than assuming a
-    fixed 16-second clip. The practical ceiling keeps a 5-minute reference
-    from exploding the multimodal request while still giving roughly scene-level
-    temporal coverage.
-    """
-    try:
-        duration = max(0.0, float(duration_seconds))
-    except (TypeError, ValueError):
-        duration = 0.0
-    if duration <= 0:
-        return 8
-
-    # Roughly one baseline evidence frame per ~8 seconds, with extra coverage
-    # for transitions/reactions. Keep enough frames for very short clips too.
-    estimated_scenes = max(1, int((duration + 7.999) // 8))
-    budget = int(round(estimated_scenes * 1.5)) + 2
-    return max(6, min(48, budget))
-
-
-def _select_adaptive_timestamps(cap, duration, budget):
-    """Select timeline + motion-peak timestamps, deterministically.
-
-    This is intentionally lightweight OpenCV analysis: it does not try to
-    understand the scene semantically. It only helps ensure that fast motion,
-    abrupt reactions, impacts, prop changes, and transitions are represented
-    alongside the original video.
-    """
-    if duration <= 0 or budget <= 0:
-        return []
-
-    # Baseline timeline: approximately one evidence point per source scene,
-    # plus endpoints. This scales from seconds to the full 5-minute limit.
-    baseline_count = max(3, min(budget, int(round(duration / 8.0)) + 1))
-    baseline = [0.0] if baseline_count == 1 else [
-        duration * i / (baseline_count - 1) for i in range(baseline_count)
-    ]
-
-    # Low-cost motion scan. Sample about every 0.5s, but never more than 180
-    # probes. Motion score is frame-to-frame grayscale difference at low res.
-    probe_count = max(12, min(180, int(round(duration * 2.0)) + 1))
-    probe_times = [0.0] if probe_count == 1 else [
-        duration * i / (probe_count - 1) for i in range(probe_count)
-    ]
-    scored = []
-    previous = None
-    for ts in probe_times:
-        safe_ts = max(0.0, min(float(ts), max(0.0, duration - 0.02)))
-        cap.set(cv2.CAP_PROP_POS_MSEC, safe_ts * 1000.0)
-        ok, frame = cap.read()
-        if not ok or frame is None:
-            continue
-        small = cv2.resize(frame, (96, 54), interpolation=cv2.INTER_AREA)
-        gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-        if previous is None:
-            score = 0.0
-        else:
-            score = float(cv2.absdiff(gray, previous).mean())
-        previous = gray
-        scored.append((score, safe_ts))
-
-    # Prefer local motion peaks over arbitrary global maxima. A peak must be
-    # separated from an already selected timestamp so one chaotic moment does
-    # not consume the whole budget.
-    peak_candidates = []
-    for i, (score, ts) in enumerate(scored):
-        left = scored[i - 1][0] if i > 0 else score
-        right = scored[i + 1][0] if i + 1 < len(scored) else score
-        if score >= left and score >= right:
-            peak_candidates.append((score, ts))
-    peak_candidates.sort(key=lambda x: x[0], reverse=True)
-
-    selected = list(baseline)
-    min_gap = max(0.75, min(4.0, duration / max(4.0, budget / 2.0)))
-    for _, ts in peak_candidates:
-        if len(selected) >= budget:
-            break
-        if all(abs(ts - existing) >= min_gap for existing in selected):
-            selected.append(ts)
-
-    # If motion peaks were insufficient, fill remaining slots uniformly so the
-    # entire source duration remains covered.
-    if len(selected) < budget:
-        fill_count = budget * 2
-        fillers = [duration * i / max(1, fill_count - 1) for i in range(fill_count)]
-        for ts in fillers:
-            if len(selected) >= budget:
-                break
-            if all(abs(ts - existing) >= min_gap for existing in selected):
-                selected.append(ts)
-
-    selected = sorted({round(max(0.0, min(ts, max(0.0, duration - 0.02))), 3) for ts in selected})
-    return selected[:budget]
-
-
-def extract_reference_keyframes(uploaded_file, max_frames=None):
-    """Extract adaptive timestamped keyframes from the original video.
-
-    The source video remains the primary multimodal evidence. The number of
-    stills scales with the actual reference duration and is supplemented by
-    lightweight motion-peak sampling. This works for short clips and long
-    references up to the project's 5-minute ceiling without hardcoding a
-    16-second assumption.
-    """
-    if uploaded_file is None:
-        return []
-    name = getattr(uploaded_file, "name", "reference.mp4")
-    data = uploaded_file.getvalue()
-    if not data:
-        return []
-    suffix = os.path.splitext(name)[1].lower() or ".mp4"
-    temp_path = None
-    cap = None
-    frames = []
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(data)
-            temp_path = tmp.name
-        cap = cv2.VideoCapture(temp_path)
-        if not cap.isOpened():
-            return []
-        fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
-        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-        duration = float(frame_count / fps) if fps > 0 and frame_count > 0 else None
-        if not duration or duration <= 0:
-            duration = st.session_state.get("detected_reference_duration")
-        if not duration or duration <= 0:
-            return []
-
-        budget = int(max_frames) if max_frames else reference_keyframe_budget(duration)
-        budget = max(6, min(48, budget))
-        timestamps = _select_adaptive_timestamps(cap, duration, budget)
-        for ts in timestamps:
-            cap.set(cv2.CAP_PROP_POS_MSEC, ts * 1000.0)
-            ok, frame = cap.read()
-            if not ok or frame is None:
-                continue
-            ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
-            if not ok:
-                continue
-            frames.append({
-                "timestamp": round(ts, 3),
-                "data": encoded.tobytes(),
-                "mime_type": "image/jpeg",
-            })
-        return frames
-    except Exception:
-        return []
-    finally:
-        if cap is not None:
-            try:
-                cap.release()
-            except Exception:
-                pass
-        if temp_path:
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
-
-
-def file_parts_from_remote(file_uri, file_mime):
-    fps = 2.0
-    duration = st.session_state.get("detected_reference_duration")
-    if duration and duration <= 30:
-        fps = 3.0
-    elif duration and duration > 120:
-        fps = 1.0
-    if str(file_mime).startswith("video/"):
-        return [types.Part(
-            file_data=types.FileData(file_uri=file_uri, mime_type=file_mime),
-            video_metadata=types.VideoMetadata(fps=fps),
-        )]
-    return [types.Part.from_uri(file_uri=file_uri, mime_type=file_mime)]
-
-
-def cached_reference_video_part(client, uploaded_file):
-    """Reuse the Gemini File URI for the same reference bytes across reruns."""
-    if uploaded_file is None:
-        return []
-    signature = st.session_state.get("reference_content_signature")
-    if not signature:
-        try:
-            signature = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
-        except Exception:
-            signature = None
-    cache = st.session_state.setdefault("gemini_reference_cache", {})
-    if signature and signature in cache:
-        item = cache[signature]
-        if item.get("uri") and item.get("mime_type"):
-            return file_parts_from_remote(item["uri"], item["mime_type"])
-    remote = upload_to_gemini(client, uploaded_file)
-    if not remote:
-        return []
-    uri = getattr(remote, "uri", None)
-    mime = getattr(remote, "mime_type", None) or getattr(uploaded_file, "type", None) or "video/mp4"
-    if not uri:
-        return []
-    if signature:
-        cache[signature] = {"uri": uri, "mime_type": mime}
-    return file_parts_from_remote(uri, mime)
-
-
-def reference_analysis_parts(client):
-    """Build the reference analysis evidence bundle.
-
-    For video references: Gemini receives the original video PLUS adaptive, timestamped
-    keyframes scaled to the actual source duration. This is intentionally analysis-only;
-    sequential scene generation still uses the last-frame bridge workflow.
-    """
-    if st.session_state.reference_type != "Video" or not st.session_state.reference_file:
-        return reference_parts(client)
-    video_parts = cached_reference_video_part(client, st.session_state.reference_file)
-    if not video_parts:
-        return []
-    keyframes = extract_reference_keyframes(st.session_state.reference_file)
-    parts = list(video_parts)
-    for item in keyframes:
-        ts = item["timestamp"]
-        parts.append(types.Part.from_text(text=(
-            f"REFERENCE KEYFRAME — timestamp {ts:.2f}s. "
-            "This frame is audit evidence from the original video at this exact point. "
-            "Do not treat it as a new reference or separate scene."
-        )))
-        parts.append(types.Part.from_bytes(data=item["data"], mime_type=item["mime_type"]))
-    return parts
-
-
-def reference_parts(client):
-    ref_type = st.session_state.reference_type
-    if ref_type == "Video" and st.session_state.reference_file:
-        return file_parts(client, st.session_state.reference_file)
-    if ref_type == "Screenshot":
-        result = []
-        for uploaded_file in st.session_state.reference_files:
-            result.extend(file_parts(client, uploaded_file))
-        return result
-    if ref_type == "Teks / ide" and st.session_state.reference_text.strip():
-        text = f"REFERENSI TEKS PENGGUNA:\n{st.session_state.reference_text}"
-        return [types.Part.from_text(text=text)]
-    return []
-
-
-def current_project_signature():
-    payload = {
-        "reference_type": st.session_state.get("reference_type"),
-        "reference_content_signature": st.session_state.get("reference_content_signature"),
-        "visual_style": st.session_state.get("visual_style"),
-        "aspect_ratio": st.session_state.get("aspect_ratio"),
-        "duration": st.session_state.get("duration"),
-        "custom_instruction": st.session_state.get("custom_instruction", ""),
-        "project_profile": PROJECT_PROFILE,
-    }
-    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def mark_analysis_stale_if_needed():
-    saved = st.session_state.get("analysis_project_signature")
-    if not saved or not st.session_state.get("analysis_valid"):
+    raise ValueError("Respons AI tidak dapat diparse sebagai JSON.")
+
+def configure_api():
+    key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
+    key = key.strip("`\"' ")
+    if not key:
+        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
         return False
-    if current_project_signature() == saved:
-        return False
-    st.session_state.analysis_valid = False
-    st.session_state.analysis_stale_reason = (
-        "Konfigurasi/reference berubah setelah ANALYZE + AUTO REMIX. "
-        "Jalankan ANALYZE + AUTO REMIX lagi sebelum membuat storyboard atau prompt."
-    )
-    invalidate_from_analysis()
+    
+    genai.configure(api_key=key)
     return True
 
+def ask(prompt: str, parts=None, json_mode: bool = False) -> str:
+    if not configure_api():
+        raise RuntimeError("API Key belum terkonfigurasi.")
 
-def require_current_analysis():
-    if not st.session_state.get("analysis"):
-        return False, "Analisis belum tersedia. Jalankan ANALYZE + AUTO REMIX terlebih dahulu."
-    mark_analysis_stale_if_needed()
-    if not st.session_state.get("analysis_valid"):
-        return False, st.session_state.get("analysis_stale_reason") or (
-            "Analisis tidak lagi sinkron dengan konfigurasi project. Jalankan ANALYZE + AUTO REMIX lagi."
-        )
-    return True, ""
+    media_parts = list(parts or [])
+    contents = media_parts + [prompt]
 
+    gen_config = {
+        "temperature": 0.3,
+    }
+    if json_mode:
+        gen_config["response_mime_type"] = "application/json"
 
-def invalidate_from_analysis():
-    """Clear every artifact derived from the current reference analysis."""
-    st.session_state.storyboard = []
-    st.session_state.scene_prompts = {}
-    st.session_state.scene_prompt_notes = {}
-    st.session_state.scene_prompt_input_signatures = {}
-    st.session_state.scene_frames = {}
-    st.session_state.continuity_bridges = {}
-    st.session_state.current_scene = 1
-    st.session_state.storyboard_duration = None
-    st.session_state.target_scene_count = None
-    st.session_state.target_duration_label = None
-    st.session_state.seo = {}
+    models_to_try = [MODEL_NAME] + FALLBACK_MODELS
+    last_exception = None
 
-
-def invalidate_from_reference_change(clear_duration=True):
-    """Invalidate all reference-derived state after a reference/type change."""
-    st.session_state.analysis = {}
-    st.session_state.analysis_project_signature = None
-    st.session_state.analysis_valid = False
-    st.session_state.analysis_stale_reason = ""
-    st.session_state.emotion_performance = {}
-    st.session_state.reference_fidelity = {}
-    st.session_state.remix_strategy = {}
-    st.session_state.reference_ground_truth = {}
-    st.session_state.character = {}
-    invalidate_from_analysis()
-    st.session_state.detected_reference_duration = None
-    st.session_state.duration_extension = None
-    st.session_state.reference_signature = None
-    st.session_state.gemini_reference_cache = {}
-    if clear_duration:
-        st.session_state.duration = "8 detik"
-        st.session_state.duration_selector = "8 detik"
-
-
-# ============================================================
-# SIDEBAR
-# ============================================================
-with st.sidebar:
-    st.title("🎮 GTA V Parkour Remix Studio")
-    app_version_short = APP_VERSION.split(" — ")[0]
-    st.caption(f"Referensi → Continuity Analysis → Storyboard → Flow/Veo · v{app_version_short}")
-    st.text_input("Gemini API Key", type="password", key="api_key", placeholder="AIza...")
-    st.divider()
-    if st.button("Beranda", use_container_width=True):
-        go("home")
-    if st.button("Analisis Referensi", use_container_width=True):
-        go("analysis")
-    if st.button("Storyboard", use_container_width=True):
-        # Storyboard is only a compatibility view; it never reveals future scene prompts.
-        go("storyboard")
-    if st.button("Prompt Adegan", use_container_width=True):
-        go("scenes")
-    seo_unlocked = bool(
-        st.session_state.analysis
-        and scene_count() > 0
-        and len(st.session_state.storyboard) >= scene_count()
-    )
-    if st.button("SEO YouTube", use_container_width=True, disabled=not seo_unlocked):
-        go("seo")
-    if not seo_unlocked:
-        st.caption("🔒 SEO terbuka setelah semua scene selesai.")
-    st.divider()
-    if st.session_state.get("analysis"):
-        if st.session_state.get("analysis_valid"):
-            st.success("ANALYSIS: SYNCED")
-        else:
-            st.warning("ANALYSIS: STALE — ANALYZE ULANG")
-    st.divider()
-    st.button(
-        "Proyek Baru",
-        use_container_width=True,
-        on_click=reset_project_callback,
-    )
-
-
-# ============================================================
-# HOME
-# ============================================================
-def render_home():
-    mark_analysis_stale_if_needed()
-    st.title("GTA V Parkour Remix Studio")
-    st.write(
-        "Mesin reference-to-remix khusus GTA V parkour yang membedah video acuan secara berurutan, memetakan lokasi, "
-        "kamera, karakter, properti, aksi, dan keadaan akhir setiap adegan sebelum membuat prompt Flow/Veo."
-    )
-
-    st.subheader("1. Referensi")
-    previous_type = st.session_state.get("reference_type_last", st.session_state.reference_type)
-    st.radio("Jenis referensi", REFERENCE_OPTIONS, horizontal=True, key="reference_type")
-    ref_type = st.session_state.reference_type
-
-    # Changing the input mode is a new reference even if the same widget values
-    # happen to remain. Clear old analysis before accepting the new source.
-    if ref_type != previous_type:
-        invalidate_from_reference_change(clear_duration=True)
-        st.session_state.reference_text = ""
-        st.session_state.reference_type_last = ref_type
-    else:
-        st.session_state.reference_type_last = ref_type
-
-    if ref_type == "Video":
-        uploaded_reference = st.file_uploader(
-            "Upload video referensi",
-            type=["mp4", "mov", "webm", "avi", "mkv"],
-            key=f"ref_upload_{st.session_state.project_nonce}",
-        )
-        st.session_state.reference_file = uploaded_reference
-        st.session_state.reference_files = []
-
-        if uploaded_reference is None:
-            if st.session_state.reference_content_signature is not None:
-                invalidate_from_reference_change(clear_duration=True)
-                st.session_state.reference_content_signature = None
-        else:
-            raw_reference = uploaded_reference.getvalue()
-            signature = (
-                "Video",
-                getattr(uploaded_reference, "name", ""),
-                len(raw_reference),
-                hashlib.sha256(raw_reference).hexdigest(),
+    for model_candidate in models_to_try:
+        try:
+            model = genai.GenerativeModel(
+                model_name=model_candidate,
+                generation_config=gen_config
             )
-            is_new_reference = signature != st.session_state.reference_content_signature
-            detected = detect_video_duration(uploaded_reference)
+            response = model.generate_content(contents)
+            text = getattr(response, "text", None)
+            if text and text.strip():
+                return text
+        except Exception as exc:
+            last_exception = exc
+            time.sleep(1.0)
 
-            if detected is not None and detected > MAX_SUPPORTED_SECONDS + 0.25:
-                if is_new_reference:
-                    invalidate_from_reference_change(clear_duration=False)
-                    st.session_state.reference_content_signature = signature
-                    st.session_state.reference_signature = signature
-                st.error(
-                    f"Referensi {detected:.1f} detik melebihi batas maksimum proyek "
-                    f"({MAX_SUPPORTED_SECONDS} detik / 5 menit). Potong referensi menjadi 5 menit atau kurang."
-                )
-            elif is_new_reference:
-                invalidate_from_reference_change(clear_duration=False)
-                st.session_state.reference_content_signature = signature
-                st.session_state.reference_signature = signature
+    raise RuntimeError(f"Gagal terhubung ke Gemini API ({models_to_try}): {last_exception}")
 
-            if detected is not None:
-                st.session_state.detected_reference_duration = detected
-                target_label, target_seconds = choose_target_duration(detected)
-                if is_new_reference and target_label:
-                    st.session_state.duration_selector = target_label
-                    st.session_state.duration = target_label
-                    if target_seconds > detected + 0.25:
-                        st.session_state.duration_extension = {
-                            "reference_seconds": round(detected, 2),
-                            "target_seconds": target_seconds,
-                            "target_duration": target_label,
-                            "added_seconds": round(target_seconds - detected, 2),
-                        }
-                    else:
-                        st.session_state.duration_extension = None
+def scene_count() -> int:
+    val = DURATION_SCENES.get(st.session_state.duration, 0)
+    if val == 0:
+        return st.session_state.detected_scenes
+    return val
 
-            if st.session_state.duration_extension:
-                ext = st.session_state.duration_extension
-                st.info(
-                    f"Referensi terdeteksi {ext['reference_seconds']:.1f} detik. "
-                    f"Target minimum otomatis: {ext['target_duration']} ({ext['target_seconds']} detik / "
-                    f"{DURATION_SCENES[ext['target_duration']]} scene). "
-                    f"AI akan menambahkan sekitar {ext['added_seconds']:.1f} detik aksi kecil yang natural dan nyambung dengan alur."
-                )
+def get_active_config():
+    analysis = st.session_state.get("analysis", {})
+    mutation = analysis.get("remixed_mutation", {})
 
-    elif ref_type == "Screenshot":
-        uploaded_references = st.file_uploader(
-            "Upload screenshot referensi secara berurutan",
-            type=["png", "jpg", "jpeg", "webp"],
-            accept_multiple_files=True,
-            key=f"ref_screens_{st.session_state.project_nonce}",
-        )
-        st.session_state.reference_files = uploaded_references or []
-        st.session_state.reference_file = None
+    runner = st.session_state.get("runner_choice", RUNNER_PRESETS[1])
+    if runner == "Custom / Ketik Sendiri":
+        runner = st.session_state.get("custom_runner") or "Unique funny character"
 
-        if not uploaded_references:
-            if st.session_state.reference_content_signature is not None:
-                invalidate_from_reference_change(clear_duration=True)
-                st.session_state.reference_content_signature = None
-        else:
-            signatures = []
-            for item in uploaded_references:
-                data = item.getvalue()
-                signatures.append((
-                    getattr(item, "name", ""),
-                    len(data),
-                    hashlib.sha256(data).hexdigest(),
-                ))
-            signature = ("Screenshot", tuple(signatures))
-            if signature != st.session_state.reference_content_signature:
-                invalidate_from_reference_change(clear_duration=False)
-                st.session_state.reference_content_signature = signature
+    target_doll = st.session_state.get("target_doll_choice", TARGET_DOLL_PRESETS[0])
+    target_desc = TARGET_DOLL_PROMPT_MAP.get(target_doll, "a row of unique comedic non-humanoid ragdoll entities")
 
-    else:
-        reference_text = st.text_area(
-            "Tulis referensi atau ide",
-            value=st.session_state.reference_text,
-            height=160,
-        )
-        st.session_state.reference_text = reference_text
-        st.session_state.reference_file = None
-        st.session_state.reference_files = []
+    map_env = st.session_state.get("selected_map")
+    if not map_env or map_env == "Auto (Ikuti Remix UGC)":
+        map_env = mutation.get("map_environment", "Vivid 3D Game Environment")
 
-        if not reference_text.strip():
-            if st.session_state.reference_content_signature is not None:
-                invalidate_from_reference_change(clear_duration=True)
-                st.session_state.reference_content_signature = None
-        else:
-            signature = ("Teks / ide", hashlib.sha256(reference_text.encode("utf-8")).hexdigest())
-            if signature != st.session_state.reference_content_signature:
-                invalidate_from_reference_change(clear_duration=False)
-                st.session_state.reference_content_signature = signature
+    prop_stand = st.session_state.get("selected_prop_stand")
+    if not prop_stand or prop_stand == "Auto (Ikuti Remix UGC)":
+        prop_stand = mutation.get("prop_stand", "Container Roof Platforms")
 
-    st.subheader("PROJECT: GTA V PARKOUR")
-    st.info("Identity lock berasal dari reference. Tidak ada karakter default; runner, outfit, obstacle, route, camera, dan supporting subject diambil dari reference analysis.")
-
-    st.subheader("2. Pengaturan Video")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.selectbox("Gaya visual", STYLE_OPTIONS, key="visual_style")
-        st.selectbox("Rasio video", ASPECT_OPTIONS, key="aspect_ratio")
-    with col2:
-        duration_options = list(DURATION_SCENES.keys())
-        detected = st.session_state.detected_reference_duration
-        minimum_duration = None
-        if detected is not None and detected <= MAX_SUPPORTED_SECONDS + 0.25:
-            minimum_duration, _ = choose_target_duration(detected)
-            minimum_index = duration_options.index(minimum_duration)
-            # A reference cannot be analyzed into a shorter target. The selector
-            # therefore starts at the automatic minimum and only offers equal or
-            # longer durations. This is evaluated BEFORE the widget is created.
-            duration_options = duration_options[minimum_index:]
-            if st.session_state.duration_selector not in duration_options:
-                st.session_state.duration_selector = minimum_duration
-
-        selected_duration = st.selectbox(
-            "Durasi video",
-            duration_options,
-            key="duration_selector",
-        )
-        st.session_state.duration = selected_duration
-
-        # Keep duration-extension metadata synchronized when the user chooses a
-        # longer target after the automatic minimum was calculated.
-        detected = st.session_state.detected_reference_duration
-        if detected is not None:
-            chosen_seconds = DURATION_SCENES[selected_duration] * 8
-            if chosen_seconds > detected + 0.25:
-                st.session_state.duration_extension = {
-                    "reference_seconds": round(detected, 2),
-                    "target_seconds": chosen_seconds,
-                    "target_duration": selected_duration,
-                    "added_seconds": round(chosen_seconds - detected, 2),
-                }
-            else:
-                st.session_state.duration_extension = None
-
-        st.text_area(
-            "Instruksi tambahan",
-            key="custom_instruction",
-            height=100,
-            placeholder="Contoh: ending lebih lucu, tempo tetap cepat, ekspresi lebih jelas.",
-        )
-
-    n = scene_count()
-    detected = st.session_state.detected_reference_duration
-    if detected is not None:
-        chosen_seconds = DURATION_SCENES[st.session_state.duration] * 8
-        if detected > MAX_SUPPORTED_SECONDS + 0.25:
-            st.error(
-                f"Referensi {detected:.1f} detik melebihi batas maksimum 5 menit. "
-                "Potong referensi terlebih dahulu sebelum analisis."
-            )
-        elif chosen_seconds + 0.25 < detected:
-            st.warning(
-                f"Durasi {st.session_state.duration} lebih pendek dari referensi ({detected:.1f} detik). "
-                "Untuk menjaga alur referensi, target tidak boleh lebih pendek dari durasi sumber. "
-                "Pilih durasi yang sama atau lebih panjang dari target minimum otomatis."
-            )
-        else:
-            st.info(
-                f"{st.session_state.duration} = {n} adegan. Setiap adegan sekitar 8 detik. "
-                "Jumlah adegan hanya membagi waktu; alur tidak boleh melompat."
-            )
-    else:
-        st.info(
-            f"{st.session_state.duration} = {n} adegan. Setiap adegan sekitar 8 detik. "
-            "Jumlah adegan hanya membagi waktu; alur tidak boleh melompat."
-        )
-
-    st.subheader("3. Prinsip Continuity")
-    st.write(
-        "Sistem tidak langsung membuat prompt. Referensi dibedah dulu menjadi urutan kejadian, "
-        "peta lokasi, posisi kamera, posisi karakter, status properti, start state, action, dan end state."
-    )
-    st.write(
-        "Adegan berikutnya wajib dimulai dari end state adegan sebelumnya. Tidak boleh tiba-tiba "
-        "muncul pintu, orang, lokasi, properti, atau kamera baru tanpa sebab yang sudah dibangun."
-    )
-    st.write(
-        "Video viral dari platform sosial mana pun boleh digunakan sebagai referensi yang kamu upload. "
-        "Identitas karakter utama dan supporting subject harus mengikuti reference; project ini khusus GTA V parkour."
-    )
-
-    if st.button("ANALYZE + AUTO REMIX", type="primary", use_container_width=True):
-        run_analysis()
-
-
-# ============================================================
-# EMOTION PERFORMANCE NORMALIZATION / REPAIR
-# ============================================================
-def build_fallback_emotion_profile(subject: dict) -> dict:
-    """Build a continuity-safe local performance profile without another Gemini call."""
-    sid = str(subject.get("id", "")).strip()
-    role = str(subject.get("peran") or "supporting")
-    baseline = str(subject.get("ekspresi_emosi") or "netral / observatif")
-    action = str(subject.get("aksi_perilaku") or "mempertahankan aksi saat ini")
-    orientation = str(subject.get("orientasi") or "")
-    interactions = subject.get("interaksi_dengan") or []
-    if not isinstance(interactions, list):
-        interactions = [str(interactions)]
-    function = str(subject.get("fungsi_dalam_humor_atau_emosi") or "")
-
-    allowed_roles = {"leader", "contrast", "late_reactor", "support", "reaction"}
-    emotional_role = role if role in allowed_roles else "support"
-    attention_targets = [str(x) for x in interactions if str(x).strip()] or ["aksi utama / pemicu kejadian"]
+    climax_act = st.session_state.get("selected_climax_action")
+    if not climax_act or climax_act == "Auto (Ikuti Remix UGC)":
+        climax_act = analysis.get("climax_action", "Multi-hit combo with sacrifice fall")
 
     return {
-        "subject_id": sid,
-        "baseline_emotion": baseline,
-        "emotional_role": emotional_role,
-        "trigger_map": [
-            "Bereaksi terhadap perubahan visual yang benar-benar terjadi pada scene.",
-            f"Pemicu utama mengikuti aksi/peran subjek: {action}."
-        ],
-        "arc": [baseline, "pergeseran perhatian", "reaksi terbaca", "kembali stabil sesuai end state"],
-        "facial_performance": [
-            f"Pertahankan ekspresi dasar: {baseline}.",
-            "Gunakan perubahan mata, alis, mulut/paruh, atau wajah yang terlihat saat pemicu terjadi."
-        ],
-        "head_and_gaze": [
-            f"Pertahankan orientasi awal: {orientation}." if orientation else "Arahkan kepala/pandangan mengikuti pemicu yang benar-benar terlihat.",
-            "Perubahan gaze harus mengikuti perhatian subjek, bukan berubah secara acak."
-        ],
-        "body_performance": [
-            f"Lanjutkan perilaku utama: {action}.",
-            "Perlihatkan perubahan postur atau ketegangan secara proporsional ketika pemicu terjadi."
-        ],
-        "hands_or_paws": [
-            "Pertahankan posisi tangan/kaki/paw yang sudah ada.",
-            "Tambahkan micro-reaction kecil hanya jika secara fisik masuk akal dan tidak merusak continuity."
-        ],
-        "movement_quality": [
-            "Gerakan natural, berkesinambungan, dan cause-driven.",
-            "Hindari perpindahan posisi mendadak tanpa sebab visual."
-        ],
-        "micro_reactions": [
-            "glance singkat ke pemicu",
-            "perubahan postur kecil",
-            "jeda reaksi singkat sebelum kembali ke aksi utama"
-        ],
-        "attention_targets": attention_targets,
-        "timing_logic": (
-            "Subjek mempertahankan baseline sampai ada pemicu visual; setelah pemicu, "
-            "reaksi meningkat secara bertahap lalu berakhir pada state yang konsisten dengan bridge."
-        ),
-        "reference_function": function,
-        "profile_repaired": True
+        "runner": runner,
+        "target_doll": target_doll,
+        "target_desc": target_desc,
+        "map_env": map_env,
+        "prop_stand": prop_stand,
+        "climax_act": climax_act,
+        "idle_style": st.session_state.get("target_idle_choice", TARGET_IDLE_PRESETS[0]),
+        "camera": st.session_state.get("selected_camera", CAMERA_OPTIONS[0]),
+        "style": st.session_state.get("visual_style", STYLE_OPTIONS[0]),
+        "aspect": st.session_state.get("aspect_ratio", ASPECT_OPTIONS[0]),
+        "visual_token": mutation.get("visual_anchor_token", runner)
     }
 
-
-def normalize_emotion_profiles(data: dict) -> tuple[dict, list[dict]]:
-    """Ensure every detected subject has exactly one usable performance profile.
-
-    Missing profiles are repaired locally so a model omission does not waste another
-    Gemini request or block the whole analysis. Existing model-generated cues are kept.
-    """
-    emotion_data = data.get("emotion_performance_analysis")
-    if not isinstance(emotion_data, dict):
-        raise ValueError("emotion_performance_analysis harus berupa object performance yang lengkap.")
-
-    roster = data.get("subject_roster")
-    if not isinstance(roster, list) or not roster:
-        raise ValueError("subject_roster harus berupa list hasil deteksi seluruh subjek reference.")
-
-    raw_profiles = emotion_data.get("subject_emotion_profiles", [])
-    if not isinstance(raw_profiles, list):
-        raise ValueError("subject_emotion_profiles harus berupa list.")
-
-    roster_by_id = {}
-    for subject in roster:
-        if not isinstance(subject, dict) or not subject.get("id"):
-            continue
-        roster_by_id[str(subject["id"])] = subject
-
-    profiles_by_id = {}
-    repair_log = []
-    duplicate_ids = []
-    for profile in raw_profiles:
-        if not isinstance(profile, dict) or not profile.get("subject_id"):
-            continue
-        sid = str(profile["subject_id"])
-        if sid not in roster_by_id:
-            # Unknown profile IDs are rejected later; do not silently attach them.
-            profiles_by_id[sid] = profile
-            continue
-        if sid in profiles_by_id:
-            duplicate_ids.append(sid)
-            continue
-        profiles_by_id[sid] = profile
-
-    for sid, subject in roster_by_id.items():
-        if sid not in profiles_by_id:
-            profiles_by_id[sid] = build_fallback_emotion_profile(subject)
-            repair_log.append({
-                "subject_id": sid,
-                "reason": "missing_profile",
-                "action": "local_fallback",
-            })
-            continue
-
-        # Fill only genuinely missing fields; never overwrite model-generated cues.
-        fallback = build_fallback_emotion_profile(subject)
-        profile = profiles_by_id[sid]
-        filled = []
-        for key, fallback_value in fallback.items():
-            if key == "subject_id":
-                continue
-            value = profile.get(key)
-            missing = value is None or value == "" or (isinstance(value, list) and not value)
-            if missing:
-                profile[key] = deepcopy(fallback_value)
-                filled.append(key)
-        if filled:
-            repair_log.append({
-                "subject_id": sid,
-                "reason": "incomplete_profile",
-                "action": "local_fill_missing_fields",
-                "fields": filled,
-            })
-
-    if duplicate_ids:
-        repair_log.append({
-            "subject_id": ",".join(sorted(set(duplicate_ids))),
-            "reason": "duplicate_profile",
-            "action": "kept_first_profile",
-        })
-
-    normalized_profiles = [profiles_by_id[sid] for sid in roster_by_id]
-    emotion_data["subject_emotion_profiles"] = normalized_profiles
-    if repair_log:
-        emotion_data["performance_profile_repaired"] = True
-        emotion_data["performance_profile_repair_log"] = repair_log
-    else:
-        emotion_data["performance_profile_repaired"] = False
-        emotion_data["performance_profile_repair_log"] = []
-
-    # Final structural checks after repair.
-    roster_ids = set(roster_by_id)
-    profile_ids = {str(p.get("subject_id")) for p in normalized_profiles if p.get("subject_id")}
-    important_ids = {
-        str(x.get("id")) for x in roster
-        if isinstance(x, dict) and x.get("wajib_terlihat") is True and x.get("id")
-    }
-    if important_ids - profile_ids:
-        raise ValueError(f"Performance profile tetap hilang setelah repair: {sorted(important_ids - profile_ids)}")
-    if profile_ids - roster_ids:
-        raise ValueError(f"subject_emotion_profiles mengandung subject_id yang tidak ada di subject_roster: {sorted(profile_ids - roster_ids)}")
-
-    data["emotion_performance_analysis"] = emotion_data
-    return data, repair_log
-
-
-# ============================================================
-# REFERENCE ANALYSIS — TEMPORAL + SPATIAL + STATE
-# ============================================================
-def _parse_time_seconds(value):
-    """Parse common mm:ss / ss formats used by the model's temporal blueprint."""
-    if value is None:
-        return None
-    text = str(value).strip()
-    match = re.search(r'(\d+):(\d+(?:\.\d+)?)\s*[-–]\s*(\d+):(\d+(?:\.\d+)?)', text)
-    if match:
-        start = int(match.group(1)) * 60 + float(match.group(2))
-        end = int(match.group(3)) * 60 + float(match.group(4))
-        return start, end
-    match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*s?', text, re.I)
-    if match:
-        return float(match.group(1)), float(match.group(2))
-    return None
-
-
-def temporal_beats_for_scene(scene_number):
-    """Return only reference beats overlapping the source-time window for this scene.
-
-    The full temporal blueprint remains in analysis, but scene-level generation receives
-    only the relevant beats. This reduces accidental import of later payoff events.
-    """
-    analysis = st.session_state.get("analysis", {})
-    beats = analysis.get("temporal_breakdown", []) or []
-    target_start = (scene_number - 1) * 8.0
-    target_end = scene_number * 8.0
-    selected = []
-    for beat in beats:
-        if not isinstance(beat, dict):
-            continue
-        parsed = _parse_time_seconds(beat.get("waktu") or beat.get("source_time") or beat.get("time"))
-        if parsed is None:
-            continue
-        start, end = parsed
-        if end > target_start and start < target_end:
-            selected.append(beat)
-    if selected:
-        return selected
-    # For extension scenes beyond the source duration, use the extension plan rather
-    # than borrowing an arbitrary later beat.
-    duration = st.session_state.get("detected_reference_duration")
-    if duration is not None and target_start >= float(duration):
-        return [{
-            "beat": f"extension_scene_{scene_number}",
-            "waktu": f"{target_start:.1f}-{target_end:.1f}s",
-            "start_state": "lanjutkan END STATE sumber terakhir",
-            "action": "micro-action extension yang sudah direncanakan",
-            "cause": "mengikuti duration_extension_plan",
-            "end_state": "state yang menyatu dengan alur",
-            "extension_only": True,
-        }]
+def reference_parts(file_uploader_obj):
+    if file_uploader_obj is not None:
+        try:
+            data = file_uploader_obj.getvalue()
+            size_mb = len(data) / (1024 * 1024)
+            if size_mb > MAX_FILE_SIZE_MB:
+                st.warning(f"⚠️ Ukuran file video ({size_mb:.1f} MB) melebihi batas {MAX_FILE_SIZE_MB} MB. Switch ke deskripsi teks.")
+                if st.session_state.reference_text.strip():
+                    return [st.session_state.reference_text]
+                return []
+            mime = getattr(file_uploader_obj, "type", None) or "video/mp4"
+            return [{"mime_type": mime, "data": data}]
+        except Exception as exc:
+            st.warning(f"Gagal membaca file video: {exc}")
+            return []
+    if st.session_state.reference_text.strip():
+        return [st.session_state.reference_text]
     return []
 
-
-def _source_time_window(scene_number):
-    return {
-        "start_seconds": float((scene_number - 1) * 8),
-        "end_seconds": float(scene_number * 8),
-        "label": f"{(scene_number - 1) * 8:02d}-{scene_number * 8:02d}s",
-    }
-
-
 def run_analysis():
-    client = get_client()
-    if not client:
+    ref_file = st.session_state.get("ref_file_input")
+    parts = reference_parts(ref_file)
+    if not parts and not st.session_state.reference_text.strip():
+        st.warning("Masukkan atau upload video/skenario referensi terlebih dahulu.")
         return
 
-    # Reject an over-limit video before uploading it to Gemini.
-    detected = st.session_state.detected_reference_duration
-    if detected is not None and detected > MAX_SUPPORTED_SECONDS + 0.25:
-        st.error(
-            f"Referensi {detected:.1f} detik melebihi batas maksimum proyek "
-            f"({MAX_SUPPORTED_SECONDS} detik / 5 menit). Potong referensi terlebih dahulu."
-        )
-        return
+    cfg = get_active_config()
+    target_scenes = scene_count()
+    if target_scenes == 0:
+        target_scenes = 4
 
-    parts = reference_analysis_parts(client)
-    if not parts:
-        st.warning("Masukkan atau upload referensi terlebih dahulu.")
-        return
-
-    # The Home selector already prevents a target shorter than the reference.
-    # Re-check here defensively, but never write to a widget key during the same run.
-    detected = st.session_state.detected_reference_duration
-    if detected is not None:
-        min_label, min_seconds = choose_target_duration(detected)
-        chosen_seconds = DURATION_SCENES[st.session_state.duration] * 8
-        if min_label and chosen_seconds + 0.25 < detected:
-            # Defensive fallback only; the Home selector normally prevents this.
-            st.session_state.duration = min_label
-            st.session_state.duration_extension = {
-                "reference_seconds": round(detected, 2),
-                "target_seconds": min_seconds,
-                "target_duration": min_label,
-                "added_seconds": round(min_seconds - detected, 2),
-            }
-
-    target_scenes = DURATION_SCENES[st.session_state.duration]
-    extension = st.session_state.duration_extension or {}
     prompt = f"""
-Anda adalah showrunner dan continuity supervisor untuk video pendek komedi sinematik.
-Analisis referensi yang diberikan SECARA TEMPORAL dan SPATIAL sebelum membuat storyboard.
-Jangan langsung menulis prompt video.
+Anda adalah AI Master Creative Director khusus konten viral 3D Game / Parkour / Obstacle Challenge.
 
-EVIDENCE PRIORITY: video asli adalah sumber utama. Timestamped keyframes yang menyertai video adalah bukti audit tambahan. Bandingkan keyframe awal, tengah, transisi, dan akhir untuk mendeteksi perubahan posisi, ekspresi, prop, motion, debu/efek lingkungan, dan payoff. Jangan menyimpulkan seluruh video dari satu frame.
+HIRARKI ATURAN UTAMA:
+1. UTAMA: Gunakan Pilihan Manual UI User ({cfg['runner']}, {cfg['target_doll']}, {cfg['map_env']}, {cfg['prop_stand']}, {cfg['climax_act']}) sebagai fondasi utama adegan.
+2. SEKUNDER: Gunakan Video Referensi HANYA untuk mengambil inspirasi gaya kamera, pencahayaan, dan tempo gerakan.
+3. STORYBOARD LENGTH LOCK: Hasilkan skenario runtut tepat sebanyak {target_scenes} adegan/scene.
 
-TUJUAN:
-Membangun satu sumber kebenaran (single source of truth) tentang apa yang terjadi,
-di mana karakter berada, dari mana objek datang, bagaimana kamera melihat kejadian,
-dan bagaimana satu kejadian menyebabkan kejadian berikutnya.
+PENGATURAN SCENE DARI USER:
+- Style Visual: {cfg['style']}
+- Map Background: {cfg['map_env']}
+- Target Stand: {cfg['prop_stand']}
+- Action Climax Scene Akhir: {cfg['climax_act']}
 
-ATURAN KERAS — REFERENCE GROUND TRUTH:
-1. VIDEO ASLI adalah sumber kebenaran utama. Timestamped keyframes adalah bukti audit tambahan. Jangan merangkum video hanya dari frame pembuka.
-2. Lakukan SELF-AUDIT sebelum output: cek ulang setiap beat terhadap timeline, posisi subjek, kamera, objek, motion, prop, emosi, dan payoff. Jika ada konflik antar-frame, pilih keadaan yang benar-benar terlihat pada timestamp yang relevan dan tandai transisinya.
-3. Pisahkan tiga hal: (A) FAKTA YANG TERLIHAT DI REFERENCE, (B) INFERENSI YANG MASIH WAJAR, (C) PENINGKATAN REMIX. Jangan mencampur B/C ke dalam fakta reference.
-4. Urutan kejadian harus mengikuti reference. Jangan memindahkan payoff akhir ke scene awal. Jangan membuat kejadian baru untuk "membuat lebih menarik" di dalam reference timeline.
-5. Setiap beat WAJIB memiliki START STATE → CAUSE → ACTION → END STATE. END STATE harus konsisten dengan beat berikutnya.
-6. Jika suatu objek/subjek baru muncul, catat kapan pertama terlihat dan dari mana ia masuk. Jika hilang, catat kapan dan bagaimana ia keluar/hilang. Jangan menganggap teleport.
-7. Deteksi SEMUA subjek penting sepanjang video, bukan hanya subjek yang paling besar pada frame awal.
-8. Untuk setiap subjek, bedakan SCREEN POSITION dengan PHYSICAL POSITION. Jangan memakai "kiri/kanan" saja. Gunakan koordinat relatif terhadap kendaraan/ruangan dan terhadap kamera.
-9. Jika kendaraan/kabin memiliki kursi, WAJIB buat SEAT MAP: row (front/rear), physical side (driver/passenger/center), screen position, occupant, dan adjacency. Jangan pernah menyebut subject sebagai rear passenger jika sebenarnya berada di front passenger seat.
-10. Untuk beberapa subjek yang duduk berdampingan, catat hubungan: SAME ROW, ADJACENT SEAT, DEPTH, dan OCCUPANT. Posisi ini adalah LOCK, bukan sekadar deskripsi.
-11. Kamera WAJIB dipetakan sebagai physical camera placement: mounting/handheld position, row, side, height, distance, orientation, framing, perspective/lens feel, dan camera movement. Hubungkan kamera dengan anchor objects seperti steering wheel, dashboard, seats, doors, windows.
-12. Jangan mengubah perspektif kamera hanya agar prompt terdengar lebih sinematik. Kamera adalah bagian dari hook bila reference mengandalkannya.
-13. MOTION MAP WAJIB memisahkan: vehicle motion, camera motion, background motion, subject inertia, wheel/ground contact, environmental effects, dan direction.
-14. Setiap efek seperti debu, asap, air, serpihan, atau gerakan lingkungan WAJIB memiliki EFFECT SOURCE + SOURCE ZONE + DIRECTION + TIMING. Jangan menaruh efek di lokasi lain hanya karena secara visual "bagus".
-15. Untuk payoff fisik, catat keadaan tepat SEBELUM, SAAT, dan SESUDAH kejadian. Contoh: vehicle nose/front contact → vehicle stops/halts → dust erupts from the front ground contact zone. Jangan ubah menjadi dust behind the vehicle bila reference menunjukkan sumber di depan.
-16. Tandai ACTION-CRITICAL PROP: benda yang digigit, dipegang, ditarik, diinjak, dipakai, atau menjadi pemicu aksi. Catat owner, body contact, posisi, status, first_seen, last_seen, allowed transitions, forbidden changes.
-17. Performance harus dianalisis sebagai perilaku yang terlihat: face, eyes, brows, mouth, head, gaze, torso, limbs/paws, grip, posture, movement quality, reaction delay, dan perubahan intensitas. Jangan cukup menulis "confident" atau "panicked".
-18. EMOTION TIMELINE harus terikat pada trigger nyata. Gunakan CAUSE → EMOTION → PERFORMANCE → CONSEQUENCE.
-19. REACTION HIERARCHY: tentukan siapa yang bereaksi dulu, siapa terlambat, siapa menjadi contrast/comedic foil. Jangan membuat semua subjek bereaksi bersamaan tanpa bukti.
-20. HOOK ANALYSIS: jelaskan apa yang terlihat pada 1–3 detik pertama, anomaly, attention anchor, curiosity gap, escalation signal, dan payoff promise. Hook mechanism harus dipertahankan dalam remix.
-21. PAYOFF FIDELITY: payoff reference harus tetap terjadi pada bagian waktu yang benar. Remix boleh memperjelas ekspresi/reaction/absurdity, tetapi tidak boleh mengganti causal core atau memajukan payoff.
-22. REMIX ENHANCEMENT harus dibatasi. Default: boleh meningkatkan ekspresi, timing reaction, micro-gesture, curiosity, visual comedy, dan readability. JANGAN menambah aksi kausal besar, kendaraan baru, prop baru, perpindahan lokasi, atau event baru kecuali memang diperlukan oleh duration extension dan disebut eksplisit dalam plan.
-23. Untuk video yang lebih pendek dari target, extension hanya boleh terjadi SETELAH END STATE reference terakhir. Extension tidak boleh menyisipkan event baru di tengah reference timeline.
-24. Untuk setiap target scene, buat SCENE COVERAGE MAP: source_time_window, source_beats, must_preserve, allowed_remix_enhancement, forbidden_drift. Scene berikutnya tidak boleh mengambil beat dari scene lain.
-25. Semua nilai JSON Bahasa Indonesia.
-
-REFERENCE FIDELITY SELF-CHECK:
-- Apakah posisi fisik setiap subjek benar?
-- Apakah seat row dan adjacency benar?
-- Apakah kamera benar-benar berada di posisi reference?
-- Apakah arah gerak kendaraan dan background konsisten?
-- Apakah efek lingkungan berasal dari sumber spatial yang benar?
-- Apakah action-critical prop tetap ada?
-- Apakah ekspresi/performance mengikuti trigger?
-- Apakah payoff berada di waktu yang benar?
-- Apakah remix enhancement tidak mengganti causal core?
-
-CHARACTER LOCK:
-{json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
-
-PROJECT PROFILE:
-{json.dumps(PROJECT_PROFILE, ensure_ascii=False, indent=2)}
-
-PENGATURAN:
-Gaya visual: {st.session_state.visual_style}
-Rasio: {st.session_state.aspect_ratio}
-Durasi target: {st.session_state.duration}
-Jumlah scene target: {target_scenes}
-Durasi reference terdeteksi: {st.session_state.detected_reference_duration}
-Instruksi pengguna: {st.session_state.custom_instruction}
-
-DURATION EXTENSION:
-{json.dumps(extension, ensure_ascii=False)}
-Jika reference lebih pendek dari target, extension hanya ditempatkan SETELAH END STATE reference terakhir.
-Micro-action extension harus continuity-safe, tidak boleh mengganti payoff reference atau menyisipkan event baru di tengah timeline.
-
-Kembalikan HANYA JSON yang mematuhi schema API REFERENCE_ANALYSIS_SCHEMA. Jangan menambahkan markdown, komentar, atau teks di luar JSON.
+HASILKAN JSON LENGKAP:
+{{
+  "video_duration_seconds": {target_scenes * 8},
+  "original_reference": {{
+    "runner_asli": "Karakter di referensi",
+    "boss_asli": "Target di referensi",
+    "track_asli": "Jalur di referensi"
+  }},
+  "remixed_mutation": {{
+    "runner_baru": "{cfg['runner']}",
+    "boss_baru": "{cfg['target_doll']}",
+    "target_idle_behavior": "{cfg['idle_style']}",
+    "camera_movement": "{cfg['camera']}",
+    "track_baru": "Lintasan 3D game dengan dudukan {cfg['prop_stand']}",
+    "map_environment": "{cfg['map_env']}",
+    "prop_stand": "{cfg['prop_stand']}",
+    "visual_anchor_token": "3D stylized game character {cfg['runner']}",
+    "alasan_remix": "Penggabungan otomatis berbasis hirarki UI"
+  }},
+  "storyboard_plan": [
+    {", ".join([f'{{"scene": {i}, "fokus_aksi": "Aksi spesifik adegan {i}"}}' for i in range(1, target_scenes + 1)])}
+  ],
+  "climax_action": "{cfg['climax_act']}",
+  "spatial_layout": "Third-person tracking shot"
+}}
 """
-
-    with st.spinner("Membedah referensi penuh: timeline, seat map, kamera, geography, motion physics, prop state, performance, hook, dan payoff..."):
+    with st.spinner("Membedah roadmap 1:1 & meracik Flow AI No-Edit Prompt..."):
         try:
-            data = extract_json(ask(client, prompt, parts, json_mode=True, schema=_response_schema_for("analysis")))
-            data.setdefault("duration_extension_plan", "")
-            required_analysis = (
-                "ringkasan", "niche", "hook", "sebab_akibat", "tujuan_emosi",
-                "pacing_logic", "payoff", "world_lock", "camera_lock",
-                "subject_roster", "object_inventory", "spatial_layout", "temporal_breakdown",
-                "emotion_performance_analysis", "reference_fidelity", "remix_strategy", "reference_ground_truth",
-            )
-            missing_analysis = [key for key in required_analysis if key not in data]
-            if missing_analysis:
-                raise ValueError(f"Analisis reference tidak lengkap; field hilang: {missing_analysis}")
-            if not isinstance(data.get("subject_roster"), list) or not data.get("subject_roster"):
-                raise ValueError("subject_roster kosong; runner/subjek harus terdeteksi dari reference.")
-            subject_ids = [str(x.get("id")) for x in data.get("subject_roster", []) if isinstance(x, dict) and x.get("id")]
-            if not subject_ids:
-                raise ValueError("subject_roster tidak memiliki subject_id yang valid.")
-            if not isinstance(data.get("character_lock"), dict) or not data.get("character_lock"):
-                data["character_lock"] = {
-                    "mode": "reference-derived-repair",
-                    "primary_subject_ids": subject_ids[:3],
-                    "all_subject_ids": subject_ids,
-                    "rule": "Use only identities evidenced by the current reference analysis."
-                }
-            emotion_data = data.get("emotion_performance_analysis")
-            if not isinstance(emotion_data, dict):
-                raise ValueError("emotion_performance_analysis harus berupa object performance yang lengkap.")
-            data, repair_log = normalize_emotion_profiles(data)
-            if repair_log:
-                st.warning(
-                    "⚠️ Performance profile tidak lengkap dari model untuk sebagian subject. "
-                    "Sistem mengisi continuity-safe fallback secara lokal tanpa menambah request Gemini. "
-                    f"Repair: {len(repair_log)} item."
-                )
-            if not isinstance(data.get("object_inventory"), list):
-                raise ValueError("object_inventory harus berupa list hasil inventaris objek reference.")
-            if not isinstance(data.get("spatial_layout"), dict):
-                raise ValueError("spatial_layout harus berupa object layout reference.")
-            if not isinstance(data.get("world_lock"), dict) or not isinstance(data.get("camera_lock"), dict):
-                raise ValueError("world_lock dan camera_lock harus berupa object continuity reference.")
-            if not isinstance(data.get("temporal_breakdown"), list) or not data.get("temporal_breakdown"):
-                raise ValueError("temporal_breakdown harus berupa list beat yang tidak kosong.")
-            if not isinstance(data.get("emotion_performance_analysis"), dict):
-                raise ValueError("emotion_performance_analysis harus berupa object performance yang lengkap.")
-            if not isinstance(data.get("reference_fidelity"), dict) or not data.get("reference_fidelity"):
-                raise ValueError("reference_fidelity kosong; analisis video harus menghasilkan fidelity map.")
-            if not isinstance(data.get("reference_ground_truth"), dict) or not data.get("reference_ground_truth"):
-                raise ValueError("reference_ground_truth kosong; analisis harus menghasilkan spatial/motion ground truth.")
-            if not isinstance(data.get("remix_strategy"), dict) or not data.get("remix_strategy"):
-                raise ValueError("remix_strategy kosong; analisis harus menentukan peningkatan hook tanpa merusak causal core.")
-            data["karakter_utama"] = deepcopy(data.get("character_lock") or data.get("subject_roster") or {})
+            raw = ask(prompt, parts=parts, json_mode=True)
+            data = extract_json(raw)
             st.session_state.analysis = data
-            st.session_state.character = {}
-            invalidate_from_analysis()
-            # Keep the performance analysis after clearing downstream artifacts.
-            st.session_state.emotion_performance = deepcopy(data.get("emotion_performance_analysis", {}))
-            st.session_state.reference_fidelity = deepcopy(data.get("reference_fidelity", {}))
-            st.session_state.remix_strategy = deepcopy(data.get("remix_strategy", {}))
-            st.session_state.reference_ground_truth = deepcopy(data.get("reference_ground_truth", {}))
-            # Freeze the project duration/scene count at analysis time.
-            st.session_state.target_scene_count = target_scenes
-            st.session_state.target_duration_label = st.session_state.duration
-            st.session_state.analysis_project_signature = current_project_signature()
-            st.session_state.analysis_valid = True
-            st.session_state.analysis_stale_reason = ""
-            go("analysis")
+            st.session_state.storyboard = data.get("storyboard_plan", [])
+            
+            raw_seconds = data.get("video_duration_seconds", target_scenes * 8)
+            if DURATION_SCENES.get(st.session_state.duration, 0) == 0:
+                calculated_scenes = math.ceil(raw_seconds / 8)
+                st.session_state.detected_scenes = max(1, min(calculated_scenes, 50))
+            else:
+                st.session_state.detected_scenes = target_scenes
+            
+            st.session_state.scene_prompts = {}
+            st.session_state.scene_frames = {}
+            st.session_state.current_scene = 1
+            st.session_state.page = "analysis"
+            st.rerun()
         except Exception as exc:
             st.error(f"Analisis gagal: {exc}")
 
+def generate_scene_prompt(scene_number: int) -> bool:
+    cfg = get_active_config()
+    storyboard = st.session_state.analysis.get("storyboard_plan", [])
+    total_scenes = scene_count()
+    is_final_scene = (scene_number == total_scenes)
 
-# ============================================================
-# ANALYSIS PAGE
-# ============================================================
-def render_analysis():
-    ok, reason = require_current_analysis()
-    if not ok:
-        st.warning(reason)
-        return
-    st.title("Analisis Referensi + Continuity Map")
-    analysis = st.session_state.analysis
-    if not analysis:
-        st.info("Belum ada analisis. Kembali ke Beranda dan analisis referensi.")
-        return
-
-    if st.session_state.duration_extension:
-        ext = st.session_state.duration_extension
-        st.info(
-            f"Duration extension aktif: {ext['reference_seconds']:.1f}s → {ext['target_duration']} "
-            f"({ext['target_seconds']}s). AI mengisi sekitar {ext['added_seconds']:.1f}s dengan micro-action yang menyatu dengan alur."
-        )
-
-    st.info(
-        f"Target proyek terkunci: {st.session_state.target_duration_label or st.session_state.duration} "
-        f"→ {scene_count()} scene. Jumlah scene tidak akan berubah selama proses sequential."
-    )
-
-    st.subheader("Alur yang Dikunci")
-    for label, key in [
-        ("Niche", "niche"),
-        ("Hook", "hook"),
-        ("Sebab-akibat", "sebab_akibat"),
-        ("Tujuan emosi", "tujuan_emosi"),
-        ("Pacing", "pacing_logic"),
-        ("Payoff", "payoff"),
-    ]:
-        st.write(f"**{label}:** {safe_text(analysis.get(key))}")
-
-    st.subheader("👥 Subject Roster — Semua Subjek Reference")
-    roster = analysis.get("subject_roster", [])
-    if roster:
-        for i, subject in enumerate(roster, 1):
-            st.markdown(
-                f"**{i}. {safe_text(subject.get('jenis'))}** — {safe_text(subject.get('peran'))} | "
-                f"Posisi: {safe_text(subject.get('posisi_awal'))} | "
-                f"Emosi: {safe_text(subject.get('ekspresi_emosi'))}"
-            )
-    else:
-        st.warning("Subject roster kosong — hasil analisis reference tidak lengkap.")
-
-    st.subheader("🧰 Object Inventory")
-    objects = analysis.get("object_inventory", [])
-    if objects:
-        for i, obj in enumerate(objects, 1):
-            st.markdown(
-                f"**{i}. {safe_text(obj.get('nama'))}** — {safe_text(obj.get('kategori'))} | "
-                f"Posisi: {safe_text(obj.get('posisi'))} | "
-                f"Fungsi: {safe_text(obj.get('fungsi_dalam_aksi'))}"
-            )
-    else:
-        st.info("Tidak ada objek penting yang terdeteksi.")
-
-    st.subheader("📐 Spatial Layout")
-    st.write(safe_text(analysis.get("spatial_layout", {})))
-
-    world = analysis.get("world_lock", {})
-    camera = analysis.get("camera_lock", {})
-
-    st.subheader("World / Geography Lock")
-    st.write(f"**Lokasi utama:** {safe_text(world.get('lokasi_utama'))}")
-    st.write(f"**Geografi:** {safe_text(world.get('geografi'))}")
-    st.write(f"**Elemen tetap:** {safe_text(world.get('elemen_tetap'))}")
-    st.write(f"**Titik masuk/keluar:** {safe_text(world.get('titik_masuk_keluar'))}")
-    st.write(f"**Aturan lokasi:** {safe_text(world.get('aturan_lokasi'))}")
-
-    st.subheader("Camera Lock")
-    for label, key in [
-        ("Posisi", "posisi"),
-        ("Tinggi", "tinggi"),
-        ("Arah pandang", "arah_pandang"),
-        ("Framing", "framing"),
-        ("Perspektif/lensa", "perspektif_lensa"),
-        ("Gerakan", "gerakan"),
-    ]:
-        st.write(f"**{label}:** {safe_text(camera.get(key))}")
-
-    ground_truth = analysis.get("reference_ground_truth", {})
-    fidelity = analysis.get("reference_fidelity", {})
-    remix = analysis.get("remix_strategy", {})
-    st.subheader("🧭 Reference Ground Truth")
-    st.write(f"**Seat map:** {safe_text(ground_truth.get('seat_map'))}")
-    st.write(f"**Camera anchors:** {safe_text(ground_truth.get('camera_anchor_relationships'))}")
-    st.write(f"**Effect event map:** {safe_text(ground_truth.get('effect_event_map'))}")
-    st.write(f"**Payoff state:** {safe_text(ground_truth.get('payoff_state'))}")
-
-    st.subheader("🎯 Reference Fidelity + Motion Map")
-    st.write(f"**Camera geometry:** {safe_text(fidelity.get('camera_geometry'))}")
-    st.write(f"**Subject geography:** {safe_text(fidelity.get('subject_geography'))}")
-    st.write(f"**Motion / physics:** {safe_text(fidelity.get('motion_physics_map'))}")
-    st.write(f"**Action-critical props:** {safe_text(fidelity.get('action_critical_props'))}")
-    st.write(f"**Hook mechanics:** {safe_text(fidelity.get('hook_mechanics'))}")
-    st.write(f"**Payoff fidelity:** {safe_text(fidelity.get('payoff_fidelity'))}")
-    st.subheader("🧨 Remix Enhancement Strategy")
-    st.write(f"**Causal core:** {safe_text(remix.get('causal_core_to_preserve'))}")
-    st.write(f"**Hook:** {safe_text(remix.get('hook_to_preserve'))}")
-    st.write(f"**Emotion:** {safe_text(remix.get('emotion_to_preserve'))}")
-    st.write(f"**Enhancements:** {safe_text(remix.get('safe_enhancements'))}")
-    st.write(f"**Forbidden drift:** {safe_text(remix.get('forbidden_drift'))}")
-    st.write(f"**Absurdity strategy:** {safe_text(remix.get('absurdity_strategy'))}")
-
-    st.subheader("Reference-Derived Subject Lock")
-    lock = analysis.get("character_lock") or {}
-    roster = analysis.get("subject_roster") or []
-    st.write("**Mode:** reference-derived")
-    st.write(f"**Primary subject lock:** {safe_text(lock.get('primary_subject_ids') or lock.get('primary_subjects') or 'diturunkan dari reference')}")
-    st.write(f"**Detected subjects:** {len(roster)}")
-    st.warning("Identitas setiap subject dikunci oleh reference analysis. Posisi dan keadaan hanya boleh berubah melalui aksi yang tervalidasi oleh continuity contract.")
-
-    beats = analysis.get("temporal_breakdown", [])
-    st.subheader("Temporal Blueprint")
-    st.success(
-        f"Blueprint {len(beats)} beat sudah dianalisis dan disimpan sebagai referensi internal. "
-        "Beat tidak ditampilkan sebagai daftar scene agar workflow tetap satu-per-satu."
-    )
-    st.info(
-        "Alur sekarang: Scene 1 → generate → upload screenshot frame terakhir → Scene 2 → generate → "
-        "upload screenshot → Scene 3, dan seterusnya. Tidak ada prompt semua scene sekaligus."
-    )
-
-    ep = analysis.get("emotion_performance_analysis", {})
-    st.subheader("🎭 Emotion & Performance Engine")
-    st.write(f"**Emotional arc:** {safe_text(ep.get('emotional_arc_global'))}")
-    st.write(f"**Performance principles:** {safe_text(ep.get('performance_principles'))}")
-    profiles = ep.get("subject_emotion_profiles", [])
-    if profiles:
-        for profile in profiles:
-            with st.expander(f"Subject {safe_text(profile.get('subject_id'))} — {safe_text(profile.get('emotional_role'))}"):
-                st.write(f"**Baseline:** {safe_text(profile.get('baseline_emotion'))}")
-                st.write(f"**Arc:** {safe_text(profile.get('arc'))}")
-                st.write(f"**Trigger:** {safe_text(profile.get('trigger_map'))}")
-                st.write(f"**Face:** {safe_text(profile.get('facial_performance'))}")
-                st.write(f"**Head/Gaze:** {safe_text(profile.get('head_and_gaze'))}")
-                st.write(f"**Body:** {safe_text(profile.get('body_performance'))}")
-                st.write(f"**Micro-reactions:** {safe_text(profile.get('micro_reactions'))}")
-    curiosity = ep.get("curiosity_beats", [])
-    if curiosity:
-        st.write(f"**Curiosity beats:** {safe_text(curiosity)}")
-    if st.button("MULAI SCENE 1", type="primary", use_container_width=True):
-        st.session_state.current_scene = 1
-        go("scenes")
-
-
-# ============================================================
-# SEQUENTIAL SCENE ENGINE
-# ============================================================
-def scene_contract_prompt(scene_number, previous_frame_exists=False):
-    analysis = st.session_state.analysis
-    n = scene_count()
-    beats = analysis.get("temporal_breakdown", [])
-    scene_beats = temporal_beats_for_scene(scene_number)
-    source_window = _source_time_window(scene_number)["label"]
-    previous_contract = st.session_state.storyboard[-1] if st.session_state.storyboard else {}
-    frame_note = (
-        "A last-frame screenshot from the previous generated scene will be supplied. "
-        "Treat that image as the strongest visual starting-state reference."
-        if previous_frame_exists else
-        "There is no previous generated scene. Start from the reference's initial state."
-    )
-    return f"""
-Anda adalah continuity supervisor untuk konten GTA V parkour berbasis reference pengguna.
-Buat HANYA contract untuk SCENE {scene_number} dari total {n} scene.
-JANGAN membuat contract scene lain. JANGAN membuat prompt video di tahap ini.
-
-{frame_note}
-
-TUJUAN UTAMA:
-Scene {scene_number} harus merupakan potongan sekitar 8 detik yang benar-benar terjadi setelah
-scene sebelumnya. Tidak boleh terasa seperti adegan baru yang berdiri sendiri.
-
-ATURAN KERAS:
-1. Buat HANYA contract Scene {scene_number}. Jangan mengambil kejadian dari scene lain.
-2. SOURCE TIME WINDOW LOCK: Scene {scene_number} hanya boleh memakai beat reference yang overlap dengan {source_window}. Untuk extension, hanya gunakan extension plan setelah reference selesai.
-3. Gunakan SCENE-SPECIFIC REFERENCE BEATS di bawah sebagai sumber temporal utama. Jangan membaca payoff scene lain lalu memajukannya ke scene ini.
-4. Scene 1 harus dimulai dari initial state reference. Scene 2+ harus dimulai dari screenshot last-frame scene sebelumnya dan END STATE sebelumnya.
-5. Untuk Scene 2+, continuity_bridge harus dideskripsikan dari screenshot yang benar-benar terlihat. Jangan mengarang posisi baru.
-6. PHYSICAL GEOGRAPHY LOCK: jika S1 dan S2 berada di kursi depan, tulis eksplisit bahwa keduanya berada pada FRONT ROW dan ADJACENT SEATS. Bedakan physical seat side dari screen-left/screen-right.
-7. CAMERA LOCK: pertahankan physical camera placement, height, distance, orientation, framing, perspective, dan anchor objects. Jangan mengubah ke kamera generik.
-8. MOTION LOCK: setiap gerakan kendaraan, background, tubuh, kamera, dan efek lingkungan harus memiliki arah dan sumber yang jelas.
-9. EFFECT SOURCE LOCK: debu/kotoran/asap/efek lain harus berasal dari SOURCE ZONE yang sama dengan reference. Jika payoff terjadi di bagian depan kendaraan, efek tidak boleh dipindah ke belakang.
-10. ACTION-CRITICAL PROP LOCK: prop yang digigit/dipegang/dipakai tetap pada owner dan body contact sampai ada aksi eksplisit yang mengubah statusnya. Tidak boleh disappear.
-11. CAUSE/EFFECT LOCK: setiap action memiliki cause dan menghasilkan consequence yang terlihat. Jangan menambahkan gear shift, laugh, object movement, crash, atau event baru hanya karena terdengar lucu jika reference/scene coverage tidak mendukungnya.
-12. REMIX ENHANCEMENT default hanya performance, reaction timing, micro-gesture, curiosity, readable escalation, dan safe visual comedy. Jangan mengganti causal core.
-13. HOOK LOCK: pertahankan attention anchor dan anomaly dari reference pada bagian waktu yang tepat. Curiosity boleh ditingkatkan dengan delay/readability, bukan dengan event palsu.
-14. EMOTION LOCK: protagonis dan subject lain harus mempertahankan emotional contrast reference. Jika S1 tetap percaya diri/cuek saat chaos, jangan membuatnya panik tanpa trigger.
-15. PAYOFF LOCK: payoff harus berada pada source beat yang benar. Contract wajib menyebut pre-payoff, payoff event, post-payoff state, dan protagonist reaction.
-16. START STATE → ACTION → END STATE harus konsisten. END STATE scene ini menjadi sumber scene berikutnya.
-17. Jangan membuat loncatan frame/time. Tidak boleh ada perubahan lokasi, seat row, camera position, prop state, vehicle state, atau subject pose yang tidak dijelaskan sebagai continuous transition.
-18. Semua nilai JSON Bahasa Indonesia.
-
-SCENE-SPECIFIC REFERENCE BEATS:
-{json.dumps(scene_beats, ensure_ascii=False, indent=2)}
-
-DETERMINISTIC SOURCE WINDOW:
-{source_window}
-
-REFERENCE GROUND TRUTH:
-{json.dumps(analysis.get('reference_ground_truth', {}), ensure_ascii=False, indent=2)}
-
-REFERENCE FIDELITY:
-{json.dumps(analysis.get('reference_fidelity', {}), ensure_ascii=False, indent=2)}
-
-REMIX STRATEGY:
-{json.dumps(analysis.get('remix_strategy', {}), ensure_ascii=False, indent=2)}
-
-EMOTION PERFORMANCE:
-{json.dumps(analysis.get('emotion_performance_analysis', {}), ensure_ascii=False, indent=2)}
-
-DURATION EXTENSION:
-{json.dumps(st.session_state.duration_extension or {}, ensure_ascii=False, indent=2)}
-
-CHARACTER LOCK:
-{json.dumps(CHARACTER_LOCK, ensure_ascii=False, indent=2)}
-
-WORLD LOCK:
-{json.dumps(analysis.get('world_lock', {}), ensure_ascii=False, indent=2)}
-
-CAMERA LOCK:
-{json.dumps(analysis.get('camera_lock', {}), ensure_ascii=False, indent=2)}
-
-SUBJECT ROSTER:
-{json.dumps(analysis.get('subject_roster', []), ensure_ascii=False, indent=2)}
-
-OBJECT INVENTORY:
-{json.dumps(analysis.get('object_inventory', []), ensure_ascii=False, indent=2)}
-
-SPATIAL LAYOUT:
-{json.dumps(analysis.get('spatial_layout', {}), ensure_ascii=False, indent=2)}
-
-SCENE-SPECIFIC TEMPORAL EVIDENCE:
-{json.dumps(scene_beats, ensure_ascii=False, indent=2)}
-
-DURATION EXTENSION:
-{json.dumps(st.session_state.duration_extension or {}, ensure_ascii=False, indent=2)}
-
-REFERENCE FIDELITY MAP:
-{json.dumps(analysis.get('reference_fidelity', {}), ensure_ascii=False, indent=2)}
-
-REMIX ENHANCEMENT STRATEGY:
-{json.dumps(analysis.get('remix_strategy', {}), ensure_ascii=False, indent=2)}
-
-EMOTION & PERFORMANCE ANALYSIS:
-{json.dumps(analysis.get('emotion_performance_analysis', {}), ensure_ascii=False, indent=2)}
-
-PREVIOUS SCENE END STATE:
-{json.dumps(previous_contract.get('end_state', {}), ensure_ascii=False, indent=2)}
-
-Kembalikan HANYA JSON yang mematuhi schema API SCENE_CONTRACT_SCHEMA. Jangan menambahkan markdown, komentar, atau teks di luar JSON.
-"""
-
-
-def ask_with_image_fallback(client, prompt, frame, purpose, schema=None):
-    """Try the screenshot as inline bytes, then fall back to its already-grounded contract.
-
-    A 404/NOT_FOUND from the image request is treated as a request-level failure, not
-    as evidence that the screenshot itself is invalid. This prevents Scene 2 from
-    crashing the whole workflow.
-    """
-    parts = frame_parts(frame) if frame else []
-    try:
-        return ask(client, prompt, parts, json_mode=purpose.startswith("Contract"), schema=schema), False
-    except Exception as exc:
-        message = str(exc)
-        if frame and ("404" in message or "NOT_FOUND" in message):
-            fallback = (
-                prompt
-                + "\n\nThe previous scene screenshot is already stored and was used to establish the "
-                  "current continuity contract. Do not request or invent another image. "
-                  "Generate only from the contract and locked state already supplied above."
-            )
-            return ask(client, fallback, [], json_mode=purpose.startswith("Contract"), schema=schema), True
-        raise RuntimeError(f"{purpose} gagal: {message}") from exc
-
-
-def validate_scene_spatial_fidelity(scene: dict, scene_number: int):
-    """Reject obvious spatial contradictions against the reference ground truth.
-
-    This is deliberately conservative: it catches high-impact contradictions such as
-    moving a front-row passenger to the rear, while leaving ordinary narrative wording
-    to the model. Scene 2+ uses the actual screenshot bridge as the stronger source.
-    """
-    if scene_number != 1:
-        return
-    analysis = st.session_state.get("analysis", {})
-    ground = analysis.get("reference_ground_truth", {}) or {}
-    seat_map = ground.get("seat_map") or analysis.get("seat_map") or []
-    if not isinstance(seat_map, list):
-        return
-    state = scene.get("start_state") or {}
-    subjects = state.get("subjects") or []
-    subject_text = {str(x.get("id")): json.dumps(x, ensure_ascii=False).lower() for x in subjects if isinstance(x, dict) and x.get("id")}
-    for seat in seat_map:
-        if not isinstance(seat, dict):
-            continue
-        sid = str(seat.get("occupied_by") or "")
-        row = str(seat.get("row") or "").lower()
-        if not sid or sid not in subject_text:
-            continue
-        text = subject_text[sid]
-        if row == "front" and any(token in text for token in ("rear", "belakang", "kursi belakang", "baris belakang")):
-            raise ValueError(
-                f"Scene {scene_number} spatial contradiction: {sid} terdeteksi sebagai kursi FRONT di reference "
-                "tetapi start_state menyebut REAR/BELAKANG."
-            )
-        if row == "rear" and any(token in text for token in ("front", "depan", "kursi depan", "baris depan")):
-            raise ValueError(
-                f"Scene {scene_number} spatial contradiction: {sid} terdeteksi sebagai kursi REAR di reference "
-                "tetapi start_state menyebut FRONT/DEPAN."
-            )
-
-
-def generate_scene_contract(scene_number):
-    ok, reason = require_current_analysis()
-    if not ok:
-        st.warning(reason)
-        return False
-    client = get_client()
-    if not client:
-        return False
-    n = scene_count()
-    if scene_number < 1 or scene_number > n:
-        st.error(f"Nomor scene tidak valid: {scene_number}.")
-        return False
-    if scene_number > 1 and not st.session_state.scene_frames.get(scene_number - 1):
-        st.warning(f"Scene {scene_number} terkunci. Upload screenshot akhir Scene {scene_number - 1} dulu.")
-        return False
-
-    previous_frame = st.session_state.scene_frames.get(scene_number - 1)
-    prompt = scene_contract_prompt(scene_number, previous_frame is not None)
-    with st.spinner(f"Menyusun contract Scene {scene_number}..."):
+    prompt_parts = []
+    prev_scene = scene_number - 1
+    
+    if prev_scene in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene]:
         try:
-            raw, used_fallback = ask_with_image_fallback(
-                client, prompt, previous_frame, f"Contract Scene {scene_number}",
-                schema=_response_schema_for("scene_contract"),
-            )
-            scene = extract_json(raw)
-            if not isinstance(scene, dict):
-                raise ValueError("AI tidak mengembalikan object scene yang valid.")
-            scene["nomor"] = scene_number
-            scene["source_time_window"] = scene.get("source_time_window") or _source_time_window(scene_number)["label"]
-            if scene["source_time_window"] != _source_time_window(scene_number)["label"]:
-                # Keep the deterministic project window authoritative.
-                scene["source_time_window"] = _source_time_window(scene_number)["label"]
-            deterministic_source_beats = [
-                str(item.get("beat")) for item in temporal_beats_for_scene(scene_number)
-                if isinstance(item, dict) and item.get("beat") is not None
-            ]
-            scene["source_beats"] = deterministic_source_beats
-            scene.setdefault("waktu", f"{(scene_number - 1) * 8:02d}-{scene_number * 8:02d}")
-            scene.setdefault("start_state", {})
-            scene.setdefault("end_state", {})
-            scene.setdefault("cause", "")
-            scene.setdefault("aksi", "")
-            scene.setdefault("kontinuitas", "")
-            scene.setdefault("continuity_bridge", {})
-            scene.setdefault("emotion_performance", {})
-            if not isinstance(scene.get("emotion_performance"), dict) or not scene.get("emotion_performance"):
-                raise ValueError(f"Scene {scene_number} emotion_performance kosong; contract ditolak agar performance tidak datar.")
-            if scene_number > 1:
-                bridge = scene.get("continuity_bridge") or {}
-                required_bridge_fields = ("visual_truth", "camera", "framing", "subjects", "objects", "environment", "lighting", "locked_at_opening", "allowed_transition")
-                missing_bridge = [k for k in required_bridge_fields if k not in bridge]
-                if missing_bridge:
-                    raise ValueError(
-                        f"Scene {scene_number} continuity bridge tidak lengkap: {missing_bridge}. "
-                        "Contract ditolak agar sambungan visual tidak longgar."
-                    )
-            scene["_image_fallback_used"] = bool(used_fallback)
-            if not scene["start_state"] or not scene["end_state"]:
-                raise ValueError(f"Scene {scene_number} tidak memiliki START STATE/END STATE lengkap.")
+            frame_file = st.session_state.scene_frames[prev_scene]
+            img = Image.open(frame_file)
+            prompt_parts.append(img)
+            frame_context = f"REAL-TIME VISUAL CONTINUITY: Maintain identical aesthetic, color palette, and character design as shown in Scene {prev_scene}'s frame."
+        except Exception as e:
+            frame_context = f"No previous image loaded ({e})."
+    else:
+        frame_context = "No previous frame image attached."
 
-            required_ids = {
-                str(item.get("id"))
-                for item in st.session_state.analysis.get("subject_roster", [])
-                if item.get("wajib_terlihat") is True and item.get("id")
-            }
-            for state_name in ("start_state", "end_state"):
-                state = scene.get(state_name) or {}
-                seen_ids = {str(item.get("id")) for item in (state.get("subjects") or []) if item.get("id")}
-                missing = sorted(required_ids - seen_ids)
-                if missing:
-                    raise ValueError(
-                        f"Scene {scene_number} menghilangkan subject wajib {missing} pada {state_name}. "
-                        "Contract ditolak agar supporting subject tidak hilang."
-                    )
+    custom_obstacle = st.session_state.user_scene_obstacles.get(scene_number, "")
+    custom_maneuver = st.session_state.user_scene_maneuvers.get(scene_number, "")
+    
+    scene_focus = ""
+    if storyboard and len(storyboard) >= scene_number:
+        scene_focus = storyboard[scene_number - 1].get("fokus_aksi", "")
+    
+    if not scene_focus:
+        if is_final_scene:
+            scene_focus = f"Klimaks aksi: {cfg['climax_act']}."
+        else:
+            obs_name = [k for k, v in OBSTACLE_OPTIONS.items() if v == custom_obstacle]
+            obs_desc = obs_name[0] if obs_name else "rintangan jalur"
+            scene_focus = f"Runner berlari kencang melewati {obs_desc}, menendang target ragdoll."
 
-            expected_window = _source_time_window(scene_number)["label"]
-            if scene.get("source_time_window") != expected_window:
-                raise ValueError(f"Scene {scene_number} source_time_window tidak sesuai window proyek: expected {expected_window}.")
+    obstacle_str = f"OBSTACLE MECHANIC: {custom_obstacle}" if custom_obstacle else ""
+    maneuver_str = MANEUVER_PROMPT_MAP.get(custom_maneuver, "")
 
-            validate_scene_spatial_fidelity(scene, scene_number)
-
-            fidelity_audit = scene.get("fidelity_audit") or {}
-            if not isinstance(fidelity_audit, dict) or not fidelity_audit:
-                raise ValueError(f"Scene {scene_number} fidelity_audit kosong; contract harus membuktikan hook/motion/geography tetap terjaga.")
-            fidelity_required = ("reference_beat_source", "hook_element_preserved", "camera_geometry_preserved", "motion_physics", "action_critical_props_preserved", "emotion_contrast_preserved", "remix_enhancement", "payoff_or_curiosity_progress")
-            missing_fidelity = [k for k in fidelity_required if k not in fidelity_audit]
-            if missing_fidelity:
-                raise ValueError(f"Scene {scene_number} fidelity_audit tidak lengkap: {missing_fidelity}")
-
-            emotion_contract = scene.get("emotion_performance") or {}
-            hierarchy = emotion_contract.get("reaction_hierarchy") or []
-            allowed_subject_ids = {str(x.get("id")) for x in st.session_state.analysis.get("subject_roster", []) if isinstance(x, dict) and x.get("id")}
-            if isinstance(hierarchy, list):
-                bad_hierarchy = [str(x) for x in hierarchy if str(x) not in allowed_subject_ids]
-                if bad_hierarchy:
-                    raise ValueError(f"Scene {scene_number} emotion reaction hierarchy memakai subject ID tidak dikenal: {bad_hierarchy}")
-            timeline = emotion_contract.get("performance_timeline") or []
-            if not isinstance(timeline, list) or len(timeline) < 2:
-                raise ValueError(f"Scene {scene_number} performance_timeline harus memiliki minimal opening dan perubahan/end state.")
-            for phase in timeline:
-                if not isinstance(phase, dict):
-                    raise ValueError(f"Scene {scene_number} performance_timeline memiliki item tidak valid.")
-                intensity = phase.get("intensity")
-                if intensity is not None:
-                    try:
-                        if not 1 <= int(intensity) <= 5:
-                            raise ValueError(f"Scene {scene_number} emotion intensity harus 1-5.")
-                    except (TypeError, ValueError):
-                        raise ValueError(f"Scene {scene_number} emotion intensity harus integer 1-5.")
-
-            # Never let AI rewrite already completed scenes.
-            if len(st.session_state.storyboard) >= scene_number:
-                st.session_state.storyboard[scene_number - 1] = scene
-            else:
-                st.session_state.storyboard.append(scene)
-            return True
-        except Exception as exc:
-            st.error(f"Contract Scene {scene_number} gagal dibuat: {exc}")
-            return False
-
-
-def ask_scene_prompt(client, prompt, previous_frame):
-    return ask_with_image_fallback(client, prompt, previous_frame, "Prompt adegan")
-
-
-def generate_scene_prompt(scene_number):
-    ok, reason = require_current_analysis()
-    if not ok:
-        st.warning(reason)
-        return False
-    client = get_client()
-    if not client:
-        return False
-    scenes = st.session_state.storyboard
-    ready, reason = scene_ready_for_prompt(scene_number)
-    if not ready:
-        st.warning(reason)
-        return False
-
-    if scene_number > 1 and not st.session_state.scene_frames.get(scene_number - 1):
-        st.warning(f"Prompt Scene {scene_number} terkunci. Upload screenshot akhir Scene {scene_number - 1} terlebih dahulu.")
-        return False
-
-    current_signature = scene_prompt_input_signature(scene_number)
-    scene = scenes[scene_number - 1]
-    previous_frame = st.session_state.scene_frames.get(scene_number - 1)
-    analysis = st.session_state.analysis
-    previous = scenes[scene_number - 2] if scene_number > 1 else {}
+    if scene_number == 1 and not is_final_scene:
+        action_instructions = f"""
+- PHASE 1 (0-2s) HOOK: High-contrast comedic opening. Target entities ({cfg['target_desc']}) perform idle antics on {cfg['prop_stand']}. Runner ({cfg['runner']}) executes funny acceleration start.
+- PHASE 2 (2-4s) IMPACT: Runner delivers heavy kick into Target Entity A.
+- PHASE 3 (4-8s) AFTERMATH: Target A catapulted off into void.
+- FOOTING LOCK: Runner lands safely on track and continues forward.
+"""
+    elif is_final_scene:
+        action_instructions = f"""
+- CLIMAX ACTION: {cfg['climax_act']}.
+- ACTION: Runner ({cfg['runner']}) strikes remaining target entities on {cfg['prop_stand']}.
+- SACRIFICE FALL: Runner loses balance and tumbles off edge together into {cfg['map_env']}.
+"""
+    else:
+        action_instructions = f"""
+- SCENE {scene_number} ACTION: {scene_focus}.
+{f"- {maneuver_str}" if maneuver_str else ""}
+- ACTION: Runner ({cfg['runner']}) strikes target entity ({cfg['target_desc']}) off {cfg['prop_stand']}.
+- FOOTING LOCK: Runner lands safely on track and continues forward.
+"""
 
     prompt = f"""
-Write ONE production-ready Google Flow / Veo prompt in ENGLISH for Scene {scene_number} only.
-This is a CONTINUATION TASK, not a new concept.
+System Directive: Convert sequence into ONE compact English prompt (<110 words) for Flow AI.
 
-PROMPT PRIORITY ORDER — NEVER OVERRIDE A HIGHER LEVEL:
-P0 = previous final-frame / opening visual bridge (highest priority).
-P1 = exact reference beat and physical geography for this scene.
-P2 = cause → action → consequence and action-critical props/effects.
-P3 = visible emotional performance and reaction hierarchy.
-P4 = curiosity/retention enhancement that does not alter causal mechanics.
-P5 = safe remix micro-enhancement.
-P6 = visual style/cinematic polish.
-If a lower-priority instruction conflicts with a higher-priority lock, omit it.
+{frame_context}
 
-ABSOLUTE CONTINUITY RULES:
-- The opening image must match the previous scene's final visual state exactly when a previous scene exists.
-- Use the uploaded last-frame screenshot as the strongest visual reference for Scene {scene_number} when supplied.
-- The first visual beat is a HARD CONTINUITY HOLD: do not immediately zoom out, cut, reframe, relocate, add characters, or alter the environment.
-- Treat CONTINUITY BRIDGE below as a locked visual contract extracted from the previous scene's actual last frame.
-- Any change listed under allowed_transition must happen progressively after the opening hold, never as a jump at frame 0.
-- Never teleport or relocate any detected subject, props, obstacles, vehicles, environment elements, or camera.
-- Never introduce a new location or unexplained object/person.
-- ANY important subject detected in SUBJECT ROSTER must remain represented unless the reference explicitly has that subject leave the frame.
-- Do not collapse a multi-subject composition into a single-subject close-up.
-- Preserve each subject's role, relative position, interaction, expression/emotional function, and visibility requirements.
-- Preserve left/right/front/back geography and subject-to-object relationships.
-- Any movement must be caused by the visible action.
-- Preserve camera position and perspective unless a continuous camera move is explicitly required.
-- If multiple important subjects are marked wajib_terlihat, use framing/coverage that keeps them simultaneously readable whenever the reference does so.
-- PERFORMANCE IS MANDATORY: show emotion through visible facial expression, head movement, gaze/attention, body language, hand/paw behavior, and movement quality. Do not rely on emotion labels alone.
-- Every emotional change must have a visible trigger and causal transition. Use CAUSE → EMOTION → PERFORMANCE → CONSEQUENCE.
-- Preserve emotional contrast and reaction hierarchy; primary, secondary, and background subjects must not all react identically.
-- Use the emotion_performance contract as a timed visual-performance plan, while keeping the opening hold locked to the bridge.
-- Use fidelity_audit + REFERENCE FIDELITY MAP as non-negotiable evidence that this scene still follows the reference mechanism.
-- Preserve the actual camera geography exactly. If the reference camera is inside the front cabin at seat/dashboard level, keep that same physical placement and relationship to the front seats, steering wheel, dashboard, doors, and windows.
-- Preserve motion causality: vehicle movement, subject inertia, background motion, and dust/debris must visibly originate from the correct spatial source.
-- Preserve action-critical props exactly where they are attached/held/bitten until an explicit action changes them. Never make them disappear between beats.
-- Remix only by enhancing performance, reaction timing, micro-gestures, readable curiosity, or safe visual comedy after the locked opening. Do NOT invent a new causal action unless CURRENT SCENE CONTRACT explicitly lists it under allowed_remix_enhancement.
-- Never invent a gear shift, steering action, laugh, crash, object release, dust burst, camera relocation, seat relocation, or new prop merely to make the prompt more entertaining.
-- Every physical event must be traceable to CURRENT SCENE CONTRACT -> source beat -> cause -> action -> consequence.
-- If a detail is not in the current scene contract and is not a continuity-safe micro-enhancement, omit it rather than guessing.
-- For vehicle scenes, explicitly preserve FRONT-ROW SEATING and ADJACENCY when the contract says subjects occupy adjacent front seats. Never reinterpret an adjacent front passenger as a rear passenger.
-- For environmental effects, state the effect source zone and direction exactly as specified by the contract; do not relocate dust/debris behind the vehicle when the source is at the front ground-contact zone.
-- The first seconds must contain the hook's attention anchor and a clear unanswered question or escalating signal.
-- Build curiosity through information gaps, delayed reveal, escalation, and readable reaction when the contract specifies them.
-- The final frame must visibly establish each required subject's emotional state, gaze/attention, pose, and action state for the next bridge.
-- Every detected subject must remain visually consistent unless the scene contract explicitly changes or removes it.
-- The final image must clearly establish the END STATE below for the next scene.
-- Do not create an abrupt cut that destroys spatial continuity.
+SCENE PARAMETERS:
+- Style: {cfg['style']}, 9:16 aspect ratio.
+- Environment: {cfg['map_env']}.
+- Character: {cfg['visual_token']}
+- Target Entities: {cfg['target_desc']} on {cfg['prop_stand']}
+- Camera: {cfg['camera']}
+{obstacle_str}
 
-REFERENCE-DERIVED SUBJECT LOCK:
-{CHARACTER_LOCK_EN}
+ACTION SEQUENCE:
+{action_instructions}
 
-WORLD LOCK:
-{json.dumps(analysis.get('world_lock', {}), ensure_ascii=False, indent=2)}
-
-CAMERA LOCK:
-{json.dumps(analysis.get('camera_lock', {}), ensure_ascii=False, indent=2)}
-
-SUBJECT ROSTER:
-{json.dumps(analysis.get('subject_roster', []), ensure_ascii=False, indent=2)}
-
-OBJECT INVENTORY:
-{json.dumps(analysis.get('object_inventory', []), ensure_ascii=False, indent=2)}
-
-SPATIAL LAYOUT:
-{json.dumps(analysis.get('spatial_layout', {}), ensure_ascii=False, indent=2)}
-
-CURRENT SCENE CONTRACT:
-{json.dumps(scene, ensure_ascii=False, indent=2)}
-
-SCENE SOURCE WINDOW:
-{json.dumps(_source_time_window(scene_number), ensure_ascii=False, indent=2)}
-
-SCENE SOURCE BEATS:
-{json.dumps(temporal_beats_for_scene(scene_number), ensure_ascii=False, indent=2)}
-
-PREVIOUS SCENE CONTRACT:
-{json.dumps(previous, ensure_ascii=False, indent=2)}
-
-CONTINUITY BRIDGE:
-{json.dumps(scene.get("continuity_bridge", {}), ensure_ascii=False, indent=2)}
-
-EMOTION & PERFORMANCE CONTRACT:
-{json.dumps(scene.get("emotion_performance", {}), ensure_ascii=False, indent=2)}
-
-FIDELITY AUDIT:
-{json.dumps(scene.get("fidelity_audit", {}), ensure_ascii=False, indent=2)}
-
-REFERENCE GROUND TRUTH:
-{json.dumps(analysis.get("reference_ground_truth", {}), ensure_ascii=False, indent=2)}
-
-REFERENCE FIDELITY MAP:
-{json.dumps(analysis.get("reference_fidelity", {}), ensure_ascii=False, indent=2)}
-
-REMIX ENHANCEMENT STRATEGY:
-{json.dumps(analysis.get("remix_strategy", {}), ensure_ascii=False, indent=2)}
-
-PROJECT PROFILE:
-{json.dumps(PROJECT_PROFILE, ensure_ascii=False, indent=2)}
-
-STYLE: {st.session_state.visual_style}
-ASPECT: {st.session_state.aspect_ratio}
-
-SCENE-SPECIFIC USER INSTRUCTION:
-{st.session_state.get("scene_custom_instructions", {}).get(scene_number, "") or "(none)"}
-
-INSTRUCTION PRIORITY:
-- Apply the scene-specific user instruction only where it is compatible with the locked continuity bridge.
-- Never let the instruction override the exact opening visual state, geography, subject identity, or required continuity.
-- If the instruction requests a new expression, gesture, reaction, camera move, prop action, or micro-beat, introduce it AFTER the hard opening hold unless it is already visible in the bridge.
-- Never add a new subject, location, or major prop unless the existing scene contract explicitly allows it.
-
-Write one detailed English paragraph. Begin by describing a very short opening hold that matches the CONTINUITY BRIDGE exactly, then describe only the allowed transition and subsequent action. Include opening composition with ALL required subjects, fixed geography, subject-to-subject and subject-to-object relationships, the exact reference-derived appearance of each required subject, continuous cause-and-effect action, camera movement, lighting continuity, sound when useful, and the exact final state. Explicitly stage the emotional performance as visible action: facial change, eyes/gaze, head direction, body posture, hand/paw tension, movement quality, reaction delay, and escalation/relief where specified. The viewer must be able to read the emotional shift without narration. Do not omit or silently remove any important supporting subject from the roster.
-Do not add anything outside the contracts.
+OUTPUT FORMAT: Provide ONLY the final prompt text in English.
 """
-    with st.spinner(f"Membuat prompt Scene {scene_number}..."):
+    try:
+        res_prompt = ask(prompt, parts=prompt_parts, json_mode=False)
+        st.session_state.scene_prompts[scene_number] = res_prompt.strip()
+        return True
+    except Exception as exc:
+        st.error(f"⚠️ Gagal menyusun Prompt Scene {scene_number}: {exc}")
+        return False
+# ==========================================
+# BAGIAN 2 dari 2: SEO GENERATOR, UI RENDERING, & MAIN ROUTING
+# ==========================================
+
+# ==========================================
+# 4. SEO GENERATOR LOGIC
+# ==========================================
+def generate_seo_metadata():
+    cfg = get_active_config()
+    prompt = f"""
+Anda adalah pakar SEO & Content Strategist Media Sosial (TikTok, YouTube Shorts, Instagram Reels) khusus ceruk konten viral "GTA V Style Ragdoll & Obstacle Challenge".
+
+Buatkan paket metadata SEO lengkap berbasis konfigurasi berikut:
+- Character / Runner: {cfg['runner']}
+- Target Entity: {cfg['target_doll']}
+- Map / Environment: {cfg['map_env']}
+- Style Visual: {cfg['style']}
+
+HASILKAN JSON LENGKAP:
+{{
+  "judul_viral": [
+    "5 Pilihan Judul Clickbait & High-CTR dalam Bahasa Indonesia (pake emoji)"
+  ],
+  "deskripsi_video": "Deskripsi lengkap 2-3 paragraf optimasi kata kunci untuk deskripsi Shorts/Reels/TikTok.",
+  "hashtags": [
+    "#Hashtag1", "#Hashtag2", "#Hashtag3", "#Hashtag4", "#Hashtag5",
+    "#Hashtag6", "#Hashtag7", "#Hashtag8", "#Hashtag9", "#Hashtag10"
+  ],
+  "tags_keywords": "gta 5 ragdoll, obstacle challenge, parkour game, ugc remix, tiktok game viral"
+}}
+"""
+    with st.spinner("Membuat metadata SEO viral..."):
         try:
-            result, used_text_fallback = ask_scene_prompt(client, prompt, previous_frame)
-            result = result.strip()
-            if not result:
-                raise ValueError("Prompt kosong.")
-            st.session_state.scene_prompts[scene_number] = result
-            st.session_state.setdefault("scene_prompt_input_signatures", {})[scene_number] = current_signature
-            if used_text_fallback:
-                st.session_state.setdefault("scene_prompt_notes", {})
-                st.session_state.scene_prompt_notes[scene_number] = (
-                    "Screenshot sudah dipakai saat membuat contract scene ini. "
-                    "Gemini menolak pengiriman gambar ulang pada request prompt, jadi prompt dibuat dari contract yang sudah screenshot-grounded."
-                )
+            raw = ask(prompt, json_mode=True)
+            st.session_state.seo = extract_json(raw)
             return True
         except Exception as exc:
-            st.error(f"Prompt Scene {scene_number} gagal: {exc}")
+            st.error(f"Gagal generate SEO: {exc}")
             return False
 
 
-def render_storyboard():
-    ok, reason = require_current_analysis()
-    if not ok:
-        st.warning(reason)
-        return
-    """Storyboard is now a single active scene contract, not a dump of all scenes."""
-    st.title("Storyboard — Sequential Continuity")
-    if not st.session_state.analysis:
-        st.info("Analisis referensi belum tersedia.")
-        return
+# ==========================================
+# 5. UI RENDERING FUNCTIONS
+# ==========================================
+def render_sidebar():
+    with st.sidebar:
+        st.title("⚙️ Control Panel")
+        st.caption(f"App Version: {APP_VERSION}")
+        st.markdown("---")
 
-    n = scene_count()
-    current = st.session_state.current_scene
-    st.progress(current / n)
-    st.markdown(f"### SCENE {current} / {n}")
-
-    if current == 1 and not st.session_state.storyboard:
-        st.info("Scene 1 belum dibuat. AI sudah menyimpan blueprint referensi secara internal.")
-        if st.button("BUAT SCENE 1", type="primary", use_container_width=True):
-            if generate_scene_contract(1):
-                st.rerun()
-        return
-
-    if len(st.session_state.storyboard) < current:
-        st.warning(f"Scene {current} belum dibuka. Selesaikan Scene {current - 1} terlebih dahulu.")
-        return
-
-    scene = st.session_state.storyboard[current - 1]
-    st.subheader(f"Scene {current} — {scene.get('waktu', '')}")
-    st.write(f"**Tujuan:** {safe_text(scene.get('tujuan'))}")
-    if current > 1 and scene.get("continuity_bridge"):
-        with st.expander("🔒 Continuity Bridge — START STATE LOCK", expanded=True):
-            st.write(f"**Visual truth:** {safe_text(scene['continuity_bridge'].get('visual_truth'))}")
-            st.write(f"**Camera:** {safe_text(scene['continuity_bridge'].get('camera'))}")
-            st.write(f"**Framing:** {safe_text(scene['continuity_bridge'].get('framing'))}")
-            st.write(f"**Locked opening:** {safe_text(scene['continuity_bridge'].get('locked_at_opening'))}")
-            st.write(f"**Allowed transition:** {safe_text(scene['continuity_bridge'].get('allowed_transition'))}")
-    st.write(f"**START STATE:** {safe_text(scene.get('start_state'))}")
-    st.write(f"**CAUSE:** {safe_text(scene.get('cause'))}")
-    st.write(f"**ACTION:** {safe_text(scene.get('aksi'))}")
-    st.write(f"**END STATE:** {safe_text(scene.get('end_state'))}")
-    st.write(f"**Continuity:** {safe_text(scene.get('kontinuitas'))}")
-    if scene.get("emotion_performance"):
-        with st.expander("🎭 Emotion & Performance Contract", expanded=True):
-            ep_scene = scene.get("emotion_performance", {})
-            st.write(f"**Arc:** {safe_text(ep_scene.get('emotional_arc'))}")
-            st.write(f"**Trigger:** {safe_text(ep_scene.get('trigger'))}")
-            st.write(f"**Cause → Emotion:** {safe_text(ep_scene.get('cause_to_emotion'))}")
-            st.write(f"**Reaction hierarchy:** {safe_text(ep_scene.get('reaction_hierarchy'))}")
-            st.write(f"**Performance timeline:** {safe_text(ep_scene.get('performance_timeline'))}")
-
-    if current not in st.session_state.scene_prompts:
-        if st.button(f"BUAT PROMPT SCENE {current}", type="primary", use_container_width=True):
-            if generate_scene_prompt(current):
-                st.rerun()
-    else:
-        st.success(f"Prompt Scene {current} siap.")
-        st.text_area("Prompt Flow/Veo", st.session_state.scene_prompts[current], height=380)
-        st.info("Generate video ini di Flow/Veo. Setelah selesai, upload screenshot frame TERAKHIR di halaman Prompt Adegan.")
-
-
-def scene_prompt_input_signature(scene_number):
-    """Fingerprint every input that can change a scene prompt.
-
-    This prevents a stale prompt from surviving after the user edits the
-    per-scene instruction, replaces the previous-frame bridge, or changes
-    prompt-relevant project settings.
-    """
-    scenes = st.session_state.get("storyboard", [])
-    if scene_number < 1 or scene_number > len(scenes):
-        return None
-    scene = scenes[scene_number - 1]
-    previous = scenes[scene_number - 2] if scene_number > 1 and len(scenes) >= scene_number else {}
-    bridge_frame = st.session_state.get("scene_frames", {}).get(scene_number - 1) if scene_number > 1 else None
-    bridge_fp = (bridge_frame or {}).get("fingerprint") if isinstance(bridge_frame, dict) else None
-    payload = {
-        "scene_number": scene_number,
-        "scene": scene,
-        "previous_scene": previous,
-        "bridge_fingerprint": bridge_fp,
-        "scene_instruction": st.session_state.get("scene_custom_instructions", {}).get(scene_number, ""),
-        "visual_style": st.session_state.get("visual_style"),
-        "aspect_ratio": st.session_state.get("aspect_ratio"),
-        "analysis_signature": st.session_state.get("reference_content_signature") or st.session_state.get("reference_signature"),
-    }
-    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def invalidate_scene_prompt(scene_number):
-    """Remove only the prompt artifacts for one scene."""
-    st.session_state.setdefault("scene_prompts", {}).pop(scene_number, None)
-    st.session_state.setdefault("scene_prompt_notes", {}).pop(scene_number, None)
-    st.session_state.setdefault("scene_prompt_input_signatures", {}).pop(scene_number, None)
-
-
-def scene_ready_for_prompt(scene_number):
-    """Validate the sequential state before any prompt request is allowed."""
-    n = scene_count()
-    if scene_number < 1 or scene_number > n:
-        return False, "Nomor scene di luar target proyek."
-    if len(st.session_state.storyboard) < scene_number:
-        return False, f"Contract Scene {scene_number} belum tersedia."
-    if scene_number > 1 and not st.session_state.scene_frames.get(scene_number - 1):
-        return False, f"Screenshot akhir Scene {scene_number - 1} belum tersedia."
-    return True, ""
-
-
-def frame_fingerprint(frame):
-    """Small deterministic identity for a screenshot bridge."""
-    if not frame or not frame.get("data"):
-        return None
-    import hashlib
-    return hashlib.sha256(frame["data"]).hexdigest()
-
-
-def store_scene_frame(scene_number, uploaded_file):
-    """Store exactly one bridge and invalidate only work after that bridge."""
-    frame = normalize_frame(uploaded_file)
-    if not frame:
-        return False
-
-    fp = frame_fingerprint(frame)
-    existing = st.session_state.scene_frames.get(scene_number)
-    if existing and existing.get("fingerprint") == fp:
-        return False
-
-    frame["fingerprint"] = fp
-    st.session_state.scene_frames[scene_number] = frame
-
-    # Anything after this bridge depends on its visual state. Remove it so a
-    # replaced screenshot can never leave stale contracts/prompts behind.
-    for key in list(st.session_state.scene_prompts):
-        if key > scene_number:
-            st.session_state.scene_prompts.pop(key, None)
-    for key in list(st.session_state.scene_prompt_notes):
-        if key > scene_number:
-            st.session_state.scene_prompt_notes.pop(key, None)
-    # Keep the user's future scene instructions. They are independent intent,
-    # while contracts/prompts are the artifacts that depend on the replaced bridge.
-    for key in list(st.session_state.get("scene_prompt_input_signatures", {})):
-        if key > scene_number:
-            st.session_state.scene_prompt_input_signatures.pop(key, None)
-    while len(st.session_state.storyboard) > scene_number:
-        st.session_state.storyboard.pop()
-    for key in list(st.session_state.scene_frames):
-        if key > scene_number:
-            st.session_state.scene_frames.pop(key, None)
-    for key in list(st.session_state.continuity_bridges):
-        if key > scene_number:
-            st.session_state.continuity_bridges.pop(key, None)
-    st.session_state.seo = {}
-    return True
-
-
-
-
-def validate_bridge(scene_number):
-    """Validate that the bridge exists, is an image, and can actually be decoded."""
-    frame = st.session_state.scene_frames.get(scene_number)
-    if not frame or not frame.get("data"):
-        return False, f"Screenshot akhir Scene {scene_number} belum tersedia."
-    mime = frame.get("mime_type", "")
-    if not mime.startswith("image/"):
-        return False, "File bridge bukan gambar yang didukung."
-    data = frame.get("data", b"")
-    if len(data) < 128:
-        return False, "Screenshot bridge terlalu kecil atau kosong."
-    try:
-        import numpy as np
-        image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
-        if image is None or image.size == 0:
-            return False, "Screenshot bridge tidak bisa dibaca sebagai gambar yang valid."
-    except Exception:
-        # If OpenCV decoding is unavailable for a rare image format, the MIME/byte
-        # checks still provide a safe minimum rather than blocking the workflow.
-        pass
-    return True, ""
-def render_scenes():
-    st.title("Prompt Adegan — Sequential Visual Bridge")
-    if not st.session_state.analysis:
-        st.info("Analisis referensi belum tersedia.")
-        return
-
-    n = scene_count()
-    current = max(1, min(int(st.session_state.current_scene), n))
-    st.session_state.current_scene = current
-    st.progress(current / n)
-    st.markdown(f"### SCENE {current} / {n}")
-
-    # ------------------------------------------------------------
-    # GATE: every scene after Scene 1 requires the previous scene's
-    # final screenshot BEFORE its contract/prompt can be created.
-    # ------------------------------------------------------------
-    if current > 1:
-        previous_frame = st.session_state.scene_frames.get(current - 1)
-        if not previous_frame:
-            st.subheader(f"🔒 Scene {current} terkunci")
-            st.info(
-                f"Generate Scene {current - 1} di Flow/Veo, lalu upload SCREENSHOT FRAME TERAKHIR. "
-                f"Screenshot tersebut menjadi visual bridge wajib untuk membuka Scene {current}."
-            )
-
-            uploaded = st.file_uploader(
-                f"Upload screenshot FRAME TERAKHIR Scene {current - 1}",
-                type=["png", "jpg", "jpeg", "webp"],
-                key=f"gate_frame_{st.session_state.project_nonce}_{current}",
-            )
-
-            if uploaded is not None:
-                frame = normalize_frame(uploaded)
-                if frame:
-                    fp = frame_fingerprint(frame)
-                    existing = st.session_state.scene_frames.get(current - 1)
-                    if not existing or existing.get("fingerprint") != fp:
-                        frame["fingerprint"] = fp
-                        st.session_state.scene_frames[current - 1] = frame
-                        # Do not call Gemini merely because the uploader changed.
-                        # The explicit validation button below is the transaction
-                        # boundary. This prevents upload -> API call -> rerun races.
-                        st.session_state.pop(
-                            f"frame_validated_{st.session_state.project_nonce}_{current}",
-                            None,
-                        )
-                        st.success("Screenshot tersimpan sebagai visual bridge. Klik VALIDASI untuk membuka scene.")
-                    else:
-                        st.success("Screenshot bridge sudah tersimpan.")
-
-            if st.session_state.scene_frames.get(current - 1):
-                if st.button(
-                    f"VALIDASI SCREENSHOT → BUKA SCENE {current}",
-                    type="primary",
-                    use_container_width=True,
-                    key=f"validate_frame_{st.session_state.project_nonce}_{current}",
-                ):
-                    ok, reason = validate_bridge(current - 1)
-                    if not ok:
-                        st.error(reason)
-                    elif generate_scene_contract(current):
-                        st.session_state[f"frame_validated_{st.session_state.project_nonce}_{current}"] = True
-                        st.session_state.current_scene = current
-                        st.rerun()
-            return
-
-    # Scene 1 (or a newly unlocked scene) gets exactly one contract.
-    if len(st.session_state.storyboard) < current:
-        if generate_scene_contract(current):
-            st.rerun()
-        return
-
-    scene = st.session_state.storyboard[current - 1]
-    st.subheader(f"Scene {current} — {scene.get('waktu', '')}")
-    if current > 1 and scene.get("continuity_bridge"):
-        with st.expander("🔒 Continuity Bridge — START STATE LOCK", expanded=True):
-            st.write(f"**Visual truth:** {safe_text(scene['continuity_bridge'].get('visual_truth'))}")
-            st.write(f"**Camera:** {safe_text(scene['continuity_bridge'].get('camera'))}")
-            st.write(f"**Framing:** {safe_text(scene['continuity_bridge'].get('framing'))}")
-            st.write(f"**Locked opening:** {safe_text(scene['continuity_bridge'].get('locked_at_opening'))}")
-            st.write(f"**Allowed transition:** {safe_text(scene['continuity_bridge'].get('allowed_transition'))}")
-    st.write(f"**START STATE:** {safe_text(scene.get('start_state'))}")
-    st.write(f"**CAUSE:** {safe_text(scene.get('cause'))}")
-    st.write(f"**ACTION:** {safe_text(scene.get('aksi'))}")
-    st.write(f"**END STATE:** {safe_text(scene.get('end_state'))}")
-
-    # ------------------------------------------------------------
-    # Scene-specific instruction: this affects only the current scene prompt.
-    # It cannot override the locked visual bridge.
-    # ------------------------------------------------------------
-    scene_instruction_key = f"scene_instruction_{st.session_state.project_nonce}_{current}"
-    existing_scene_instruction = st.session_state.get("scene_custom_instructions", {}).get(current, "")
-    scene_instruction = st.text_area(
-        f"Instruksi tambahan untuk hasil Prompt Scene {current}",
-        value=existing_scene_instruction,
-        height=100,
-        placeholder=(
-            "Contoh: setelah opening hold, buat the runner terlihat lebih kaget, "
-            "lalu menoleh ke kiri sebelum melanjutkan aksi utama."
-        ),
-        key=scene_instruction_key,
-        help=(
-            "Instruksi ini hanya berlaku untuk scene ini. Continuity bridge tetap menjadi "
-            "aturan tertinggi untuk frame pembuka."
-        ),
-    )
-    st.session_state.setdefault("scene_custom_instructions", {})[current] = scene_instruction
-
-    # If the user edits the instruction after a prompt was generated, the old
-    # prompt is no longer authoritative. Remove it immediately so the next
-    # explicit generation uses the new instruction.
-    stored_signature = st.session_state.get("scene_prompt_input_signatures", {}).get(current)
-    current_signature = scene_prompt_input_signature(current)
-    if current in st.session_state.scene_prompts and stored_signature != current_signature:
-        invalidate_scene_prompt(current)
-        st.info("Instruksi Scene berubah — prompt lama dibatalkan. Klik BUAT PROMPT untuk menghasilkan versi terbaru.")
-
-    # ------------------------------------------------------------
-    # Prompt generation is a separate explicit action.
-    # ------------------------------------------------------------
-    if current not in st.session_state.scene_prompts:
-        if st.button(
-            f"BUAT PROMPT SCENE {current}",
-            type="primary",
-            use_container_width=True,
-            key=f"make_prompt_{st.session_state.project_nonce}_{current}",
-        ):
-            if generate_scene_prompt(current):
-                st.rerun()
-        return
-
-    st.success(f"Prompt Scene {current} siap.")
-    note = st.session_state.scene_prompt_notes.get(current)
-    if note:
-        st.caption(note)
-    st.text_area(
-        "Prompt Flow/Veo — Bahasa Inggris",
-        st.session_state.scene_prompts[current],
-        height=430,
-        key=f"prompt_display_{st.session_state.project_nonce}_{current}",
-    )
-
-    # ------------------------------------------------------------
-    # Bridge upload for the next scene. Uploading alone NEVER opens the
-    # next scene; the user explicitly confirms the bridge.
-    # ------------------------------------------------------------
-    if current < n:
-        st.divider()
-        st.subheader(f"Lanjut ke Scene {current + 1}")
-        st.info(
-            f"Generate Scene {current} di Flow/Veo. Ambil SCREENSHOT FRAME TERAKHIR, "
-            f"upload di bawah, lalu konfirmasi. Baru Scene {current + 1} terbuka."
-        )
-
-        next_uploaded = st.file_uploader(
-            f"Upload screenshot FRAME TERAKHIR Scene {current}",
-            type=["png", "jpg", "jpeg", "webp"],
-            key=f"advance_frame_{st.session_state.project_nonce}_{current}",
-        )
-
-        if next_uploaded is not None:
-            frame = normalize_frame(next_uploaded)
-            if frame:
-                fp = frame_fingerprint(frame)
-                existing = st.session_state.scene_frames.get(current)
-                if not existing or existing.get("fingerprint") != fp:
-                    frame["fingerprint"] = fp
-                    st.session_state.scene_frames[current] = frame
-                    # The next scene contract/prompt does not exist yet, so no
-                    # downstream data should survive a replacement bridge.
-                    for key in list(st.session_state.scene_prompts):
-                        if key > current:
-                            st.session_state.scene_prompts.pop(key, None)
-                    for key in list(st.session_state.scene_prompt_notes):
-                        if key > current:
-                            st.session_state.scene_prompt_notes.pop(key, None)
-                    for key in list(st.session_state.get("scene_prompt_input_signatures", {})):
-                        if key > current:
-                            st.session_state.scene_prompt_input_signatures.pop(key, None)
-                    while len(st.session_state.storyboard) > current:
-                        st.session_state.storyboard.pop()
-                    for key in list(st.session_state.continuity_bridges):
-                        if key > current:
-                            st.session_state.continuity_bridges.pop(key, None)
-                    st.session_state.seo = {}
-                st.success("Screenshot Scene terakhir tersimpan sebagai visual bridge.")
-
-            if st.button(
-                f"KONFIRMASI FRAME → BUKA SCENE {current + 1}",
-                type="primary",
-                use_container_width=True,
-                key=f"open_next_{st.session_state.project_nonce}_{current}",
-            ):
-                ok, reason = validate_bridge(current)
-                if not ok:
-                    st.error(reason)
-                else:
-                    st.session_state.current_scene = current + 1
-                    st.rerun()
+        # API Key Input
+        env_key = os.getenv("GEMINI_API_KEY", "")
+        if env_key:
+            st.success("🔑 API Key terdeteksi dari Environment System.")
         else:
-            st.caption(f"🔒 Scene {current + 1} tetap terkunci sampai screenshot akhir Scene {current} tersedia.")
-    else:
-        st.success("🎬 Semua scene selesai. Sekarang bisa lanjut ke SEO.")
-        if st.button(
-            "LANJUT KE SEO",
-            type="primary",
-            use_container_width=True,
-            key=f"finish_seo_{st.session_state.project_nonce}",
-        ):
+            api_key_input = st.text_input(
+                "Gemini API Key",
+                value=st.session_state.api_key,
+                type="password",
+                help="Masukkan API Key Google Gemini Anda di sini."
+            )
+            st.session_state.api_key = api_key_input
+
+        st.markdown("---")
+
+        # Navigation
+        st.subheader("🧭 Navigasi Modul")
+        if st.button("🏠 1. Setup Konfigurasi & Analisis", use_container_width=True):
+            go("home")
+        
+        btn_disabled_analysis = not bool(st.session_state.analysis)
+        if st.button("📊 2. Blueprint & Spatial Layout", use_container_width=True, disabled=btn_disabled_analysis):
+            go("analysis")
+
+        if st.button("🎬 3. Scene Prompt Studio", use_container_width=True, disabled=btn_disabled_analysis):
+            go("scenes")
+
+        if st.button("🚀 4. Viral SEO Generator", use_container_width=True, disabled=btn_disabled_analysis):
             go("seo")
 
-# ============================================================
-# SEO
-# ============================================================
-def run_seo():
-    ok, reason = require_current_analysis()
-    if not ok:
-        st.warning(reason)
-        return
-    client = get_client()
-    if not client:
-        return
+        st.markdown("---")
+        if st.button("🔄 Reset Semua State", type="secondary", use_container_width=True):
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
+            st.rerun()
+
+
+def render_home():
+    st.title("🎬 UGC Remix Studio v14.2")
+    st.subheader("Generator Prompt AI Video Viral untuk Flow AI & UGC Engine")
+    st.markdown("---")
+
+    col_left, col_right = st.columns([1, 1], gap="large")
+
+    with col_left:
+        st.markdown("### 📥 1. Referensi Skenario & Video")
+        
+        uploaded_file = st.file_uploader(
+            "Upload Video Referensi (MP4/MOV, Max 15MB)",
+            type=["mp4", "mov", "avi", "webm"],
+            key="ref_file_input"
+        )
+        
+        ref_text = st.text_area(
+            "Atau Tuliskan Deskripsi Skenario Referensi Teks",
+            value=st.session_state.reference_text,
+            placeholder="Contoh: Pocong melompat cepat di atas lintasan peti kemas rooftop, menendang kapsul kuning hingga jatuh...",
+            height=120
+        )
+        st.session_state.reference_text = ref_text
+
+        st.markdown("---")
+        st.markdown("### ⚙️ 2. Format & Durasi Video")
+        
+        dur_choice = st.selectbox(
+            "Target Durasi & Jumlah Scene",
+            options=list(DURATION_SCENES.keys()),
+            index=list(DURATION_SCENES.keys()).index(st.session_state.duration) if st.session_state.duration in DURATION_SCENES else 0
+        )
+        st.session_state.duration = dur_choice
+
+        asp_choice = st.selectbox(
+            "Aspect Ratio Video",
+            options=ASPECT_OPTIONS,
+            index=ASPECT_OPTIONS.index(st.session_state.aspect_ratio)
+        )
+        st.session_state.aspect_ratio = asp_choice
+
+        style_choice = st.selectbox(
+            "Gaya Visual / Graphic Engine",
+            options=STYLE_OPTIONS,
+            index=STYLE_OPTIONS.index(st.session_state.visual_style)
+        )
+        st.session_state.visual_style = style_choice
+
+        cam_choice = st.selectbox(
+            "Kamera / Pergerakan View",
+            options=CAMERA_OPTIONS,
+            index=CAMERA_OPTIONS.index(st.session_state.selected_camera)
+        )
+        st.session_state.selected_camera = cam_choice
+
+    with col_right:
+        st.markdown("### 🎭 3. Preset Karakter & Arena (Override UI)")
+
+        runner_c = st.selectbox(
+            "🏃 Karakter Utama (Runner)",
+            options=RUNNER_PRESETS,
+            index=RUNNER_PRESETS.index(st.session_state.runner_choice) if st.session_state.runner_choice in RUNNER_PRESETS else 0
+        )
+        st.session_state.runner_choice = runner_c
+
+        if runner_c == "Custom / Ketik Sendiri":
+            c_runner = st.text_input(
+                "Ketik Deskripsi Karakter Custom",
+                value=st.session_state.custom_runner,
+                placeholder="Contoh: Robot Transformers merah bertopeng topeng monyet..."
+            )
+            st.session_state.custom_runner = c_runner
+
+        doll_c = st.selectbox(
+            "🎯 Karakter Target / Ragdoll Doll",
+            options=TARGET_DOLL_PRESETS,
+            index=TARGET_DOLL_PRESETS.index(st.session_state.target_doll_choice) if st.session_state.target_doll_choice in TARGET_DOLL_PRESETS else 0
+        )
+        st.session_state.target_doll_choice = doll_c
+
+        idle_c = st.selectbox(
+            "💃 Gaya Idle / Pose Target",
+            options=TARGET_IDLE_PRESETS,
+            index=TARGET_IDLE_PRESETS.index(st.session_state.target_idle_choice) if st.session_state.target_idle_choice in TARGET_IDLE_PRESETS else 0
+        )
+        st.session_state.target_idle_choice = idle_c
+
+        map_c = st.selectbox(
+            "🗺️ Arena / Map Environment",
+            options=MAP_OPTIONS,
+            index=MAP_OPTIONS.index(st.session_state.selected_map) if st.session_state.selected_map in MAP_OPTIONS else 0
+        )
+        st.session_state.selected_map = map_c
+
+        prop_c = st.selectbox(
+            "📦 Dudukan / Prop Stand Target",
+            options=PROP_STAND_OPTIONS,
+            index=PROP_STAND_OPTIONS.index(st.session_state.selected_prop_stand) if st.session_state.selected_prop_stand in PROP_STAND_OPTIONS else 0
+        )
+        st.session_state.selected_prop_stand = prop_c
+
+        climax_c = st.selectbox(
+            "💥 Action Klimaks Scene Akhir",
+            options=CLIMAX_ACTION_OPTIONS,
+            index=CLIMAX_ACTION_OPTIONS.index(st.session_state.selected_climax_action) if st.session_state.selected_climax_action in CLIMAX_ACTION_OPTIONS else 0
+        )
+        st.session_state.selected_climax_action = climax_c
+
+    st.markdown("---")
+    if st.button("🚀 MULAI ANALISIS & RACIK ROADMAP PROMPT", type="primary", use_container_width=True):
+        run_analysis()
+
+
+def render_analysis():
+    st.title("📊 Blueprint & Spatial Layout")
+    st.caption("Hasil analisis skenario referensi & konfigurasi remix AI.")
+    st.markdown("---")
 
     analysis = st.session_state.analysis
-    storyboard = st.session_state.storyboard
+    if not analysis:
+        st.warning("Belum ada data analisis. Silakan kembali ke Home.")
+        if st.button("⬅️ Kembali ke Home"):
+            go("home")
+        return
 
-    # Google Search is an optional enrichment pass. SEO generation must remain
-    # fully usable when grounding is unavailable, quota-limited, or unsupported.
-    research_prompt = f"""
-Anda adalah YouTube SEO researcher untuk konten GTA V parkour dengan target GLOBAL.
-Jika Google Search tersedia, gunakan untuk memeriksa phrasing pencarian yang relevan.
-Jika Search tidak tersedia, tetap lakukan riset semantik dari isi video dan jangan berhenti.
+    col1, col2 = st.columns([1, 1])
 
-VIDEO ANALYSIS:
-{json.dumps(analysis, ensure_ascii=False)}
+    with col1:
+        st.markdown("### 🔄 Remixed Mutation Plan")
+        mutation = analysis.get("remixed_mutation", {})
+        st.json(mutation)
 
-SCENE CONTRACTS:
-{json.dumps(storyboard, ensure_ascii=False)}
+        st.markdown("### 📽️ Track & Spatial Layout")
+        st.info(analysis.get("spatial_layout", "Third-person dynamic tracking shot."))
 
-Tugas:
-1. Identifikasi search intent utama video.
-2. Buat konsep broad, mid-tail, dan long-tail yang benar-benar sesuai isi.
-3. Prioritaskan istilah yang kemungkinan dipakai penonton global untuk mencari video sejenis.
-4. Buat padanan Indonesia yang natural.
-5. Hindari keyword yang tidak ada hubungannya, nama brand/karakter yang tidak muncul, tren palsu,
-   keyword stuffing, dan clickbait.
-6. Jangan mengklaim search volume, ranking, atau trend score tanpa data nyata.
-7. Jika Search aktif, rangkum maksimal 5 query/sumber yang paling membantu. Jika tidak aktif,
-   nyatakan bahwa hasil berasal dari semantic SEO analysis.
+    with col2:
+        st.markdown("### 📋 Storyboard Flow Plan")
+        storyboard = analysis.get("storyboard_plan", [])
+        for idx, item in enumerate(storyboard, start=1):
+            with st.expander(f"Scene {idx}: {item.get('fokus_aksi', 'Aksi Scene')}", expanded=True):
+                st.write(f"**Focus**: {item.get('fokus_aksi', '-')}")
 
-Berikan ringkasan riset yang ringkas dan dapat dipakai oleh generator metadata.
-"""
+    st.markdown("---")
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("⬅️ Edit Setup Konfigurasi", use_container_width=True):
+            go("home")
+    with col_btn2:
+        if st.button("🎬 Lanjut ke Scene Prompt Studio ➡️", type="primary", use_container_width=True):
+            go("scenes")
 
-    with st.spinner("🔎 Riset SEO global + semantic relevance..."):
-        try:
-            research = ask(client, research_prompt, google_search=True)
-        except Exception as exc:
-            research = (
-                "OPTIONAL GOOGLE SEARCH UNAVAILABLE. "
-                "Continue with semantic SEO from the actual video analysis and scene contracts. "
-                f"Reason: {exc}"
+
+def render_scenes():
+    st.title("🎬 Scene Prompt Studio")
+    st.caption("Generate prompt presisi untuk setiap scene video Flow AI Anda.")
+    st.markdown("---")
+
+    total_scenes = scene_count()
+    if total_scenes == 0:
+        st.warning("Data scene belum terkonfigurasi.")
+        return
+
+    # Navigation tabs for scenes
+    scene_tabs = [f"Scene {i}" for i in range(1, total_scenes + 1)]
+    active_tab_idx = min(st.session_state.current_scene - 1, total_scenes - 1)
+    
+    selected_tab = st.radio("Pilih Scene:", scene_tabs, index=active_tab_idx, horizontal=True)
+    current_sc = int(selected_tab.replace("Scene ", ""))
+    st.session_state.current_scene = current_sc
+
+    st.markdown(f"### 📍 Mengedit & Generate Prompt: Scene {current_sc} dari {total_scenes}")
+
+    col_ctrl, col_res = st.columns([1, 1], gap="large")
+
+    with col_ctrl:
+        st.markdown("#### 🛠️ Modifier Kustom Adegan")
+        
+        # Obstacle Selection
+        current_obs = st.session_state.user_scene_obstacles.get(current_sc, "")
+        obs_keys = list(OBSTACLE_OPTIONS.keys())
+        default_obs_idx = 0
+        for i, k in enumerate(obs_keys):
+            if OBSTACLE_OPTIONS[k] == current_obs:
+                default_obs_idx = i
+                break
+
+        sel_obs_key = st.selectbox(
+            f"⚡ Rintangan Khusus (Scene {current_sc})",
+            options=obs_keys,
+            index=default_obs_idx
+        )
+        st.session_state.user_scene_obstacles[current_sc] = OBSTACLE_OPTIONS[sel_obs_key]
+
+        # Maneuver Selection
+        current_man = st.session_state.user_scene_maneuvers.get(current_sc, "")
+        man_keys = MANEUVER_OPTIONS
+        default_man_idx = 0
+        if current_man in man_keys:
+            default_man_idx = man_keys.index(current_man)
+
+        sel_man_key = st.selectbox(
+            f"🏃 Gerakan/Aksi Khusus (Scene {current_sc})",
+            options=man_keys,
+            index=default_man_idx
+        )
+        st.session_state.user_scene_maneuvers[current_sc] = sel_man_key
+
+        # Image frame continuity uploader for previous scene
+        if current_sc > 1:
+            st.markdown(f"#### 🖼️ Frame Continuity (Reference Scene {current_sc - 1})")
+            uploaded_frame = st.file_uploader(
+                f"Upload Frame Gambar Hasil Render Scene {current_sc - 1}",
+                type=["jpg", "jpeg", "png", "webp"],
+                key=f"frame_uploader_{current_sc - 1}"
             )
-            st.info("ℹ️ Riset Google Search opsional tidak tersedia. SEO tetap dibuat penuh dari isi video + semantic search intent.")
+            if uploaded_frame:
+                st.session_state.scene_frames[current_sc - 1] = uploaded_frame
+                st.image(uploaded_frame, caption=f"Frame Acuan Continuity Scene {current_sc - 1}", use_column_width=True)
 
-    prompt = f"""
-Buat paket metadata YouTube untuk konten GTA V parkour berdasarkan ISI VIDEO AKTUAL dan hasil riset di bawah.
-Target audiens GLOBAL, tetapi output wajib memiliki versi ENGLISH dan INDONESIAN.
+        st.markdown("---")
+        if st.button(f"✨ Generate Prompt Scene {current_sc}", type="primary", use_container_width=True):
+            if generate_scene_prompt(current_sc):
+                st.success(f"Prompt Scene {current_sc} berhasil dibuat!")
 
-PRINSIP UTAMA:
-- Relevansi terhadap isi video lebih penting daripada keyword populer.
-- Jangan keyword stuffing.
-- Jangan memasukkan topik, karakter, objek, atau tren yang tidak benar-benar relevan.
-- Jangan menjanjikan viral, ranking, atau feed tertentu.
-- Judul harus menarik tetapi tetap jujur terhadap isi.
-- English adalah versi utama untuk target global; Indonesian adalah versi lokal yang natural.
-- Deskripsi harus jelas, natural, dan memasukkan istilah relevan secara wajar.
-- Hashtag harus terbatas dan sangat relevan.
-- Tags adalah variasi istilah relevan EN + ID, bukan daftar kata acak.
-- Wajib menghasilkan TEPAT 15 global tags total, gabungan EN + ID.
-- Distribusi default 8 English + 7 Indonesian, kecuali isi video jelas lebih cocok dengan distribusi berbeda.
-- Jaga setiap tag singkat (umumnya 1-4 kata) agar 15 tag tetap praktis untuk ditempel ke YouTube Studio.
-- Setiap tag harus merupakan frasa pencarian yang natural dan benar-benar relevan.
-- Jangan menambahkan # pada tags.
-- Hindari duplikat, sinonim yang hampir sama, nama yang tidak ada di video, dan keyword populer yang tidak relevan.
-- Gunakan detail dari scene contracts untuk menangkap hook, aksi, karakter, emosi, dan payoff aktual.
-- Judul: 3 opsi yang searchable + curiosity, tetapi tetap akurat.
-- Description: 2-3 baris pertama harus langsung menjelaskan video dan memuat 1-2 istilah utama secara natural.
-- Hashtags: 3-5 hashtag yang sangat relevan, bukan tumpukan keyword.
-- Sertakan alasan singkat mengapa primary keywords dipilih.
+        if st.button(f"⚡ Generate SEMUA Prompt ({total_scenes} Scene)", use_container_width=True):
+            progress_bar = st.progress(0)
+            for sc in range(1, total_scenes + 1):
+                generate_scene_prompt(sc)
+                progress_bar.progress(sc / total_scenes)
+            st.success("Semua prompt scene berhasil dibuat!")
+            st.rerun()
 
-VIDEO ANALYSIS:
-{json.dumps(analysis, ensure_ascii=False)}
+    with col_res:
+        st.markdown("#### 📝 Hasil Prompt Flow AI")
+        prompt_text = st.session_state.scene_prompts.get(current_sc, "")
 
-SCENE CONTRACTS:
-{json.dumps(storyboard, ensure_ascii=False)}
+        if prompt_text:
+            st.text_area(
+                f"Prompt Ready-to-Copy (Scene {current_sc})",
+                value=prompt_text,
+                height=220
+            )
+            st.code(prompt_text, language="text")
+        else:
+            st.info("Klik tombol 'Generate Prompt' di samping untuk meracik prompt AI Flow.")
 
-HASIL RISET GOOGLE SEARCH:
-{research}
+    st.markdown("---")
+    st.markdown("### 📜 Ringkasan Semua Prompt Scene")
+    for sc in range(1, total_scenes + 1):
+        p_txt = st.session_state.scene_prompts.get(sc, "*Belum digenerate*")
+        with st.expander(f"🎬 Scene {sc} Prompt", expanded=False):
+            st.code(p_txt, language="text")
 
-Kembalikan HANYA JSON yang mematuhi schema API SEO_SCHEMA. Jangan menambahkan markdown, komentar, atau teks di luar JSON.
-"""
-    with st.spinner("🧠 Menyusun metadata EN + ID..."):
-        try:
-            seo_data = extract_json(ask(client, prompt, json_mode=True, schema=_response_schema_for("seo")))
-            if not isinstance(seo_data, dict):
-                raise ValueError("SEO response bukan object JSON.")
-
-            # Deterministically enforce the user's requested 15 bilingual global tags.
-            def _clean_tags(values):
-                out = []
-                seen = set()
-                for value in values if isinstance(values, list) else []:
-                    tag = re.sub(r"^#+", "", str(value).strip())
-                    if not tag:
-                        continue
-                    key = tag.casefold()
-                    if key not in seen:
-                        seen.add(key)
-                        out.append(tag)
-                return out
-
-            global_tags = _clean_tags(seo_data.get("global_tags_15"))
-            en_tags = _clean_tags((seo_data.get("english") or {}).get("tags"))
-            id_tags = _clean_tags((seo_data.get("indonesian") or {}).get("tags"))
-
-            # Prefer an explicit global list, then fill from EN/ID without duplicates.
-            for tag in en_tags + id_tags:
-                if len(global_tags) >= 15:
-                    break
-                if tag.casefold() not in {x.casefold() for x in global_tags}:
-                    global_tags.append(tag)
-
-            if len(global_tags) < 15:
-                raise ValueError(
-                    f"AI hanya menghasilkan {len(global_tags)} global tags unik; minimal/tepat 15 diperlukan."
-                )
-            global_tags = global_tags[:15]
-            seo_data["global_tags_15"] = global_tags
-
-            # Keep language-specific lists usable too, while the global list is the
-            # canonical upload-ready set requested by the user.
-            seo_data.setdefault("seo_strategy", {})
-            seo_data["seo_strategy"]["global_tag_count"] = len(global_tags)
-            seo_data["seo_strategy"]["global_tag_language_mix"] = {
-                "english_candidates": len(en_tags),
-                "indonesian_candidates": len(id_tags),
-            }
-            seo_data["research"] = research
-            st.session_state.seo = seo_data
-        except Exception as exc:
-            st.error(f"SEO gagal dibuat: {exc}")
+    st.markdown("---")
+    if st.button("🚀 Lanjut ke Viral SEO Generator ➡️", type="primary", use_container_width=True):
+        go("seo")
 
 
 def render_seo():
-    st.title("SEO YouTube")
-    if not st.session_state.analysis:
-        st.info("Analisis referensi belum tersedia.")
-        return
+    st.title("🚀 Viral SEO Metadata Generator")
+    st.caption("Optimasi Judul, Deskripsi, dan Hashtag untuk TikTok, Shorts, & Reels.")
+    st.markdown("---")
+
     if not st.session_state.seo:
-        if st.button("BUAT SEO", type="primary", use_container_width=True):
-            run_seo()
+        if st.button("✨ Generate Metadata SEO Sekarang", type="primary", use_container_width=True):
+            generate_seo_metadata()
+
+    seo_data = st.session_state.seo
+    if seo_data:
+        col1, col2 = st.columns([1, 1], gap="large")
+
+        with col1:
+            st.markdown("### 📌 Pilihan Judul High-CTR (Clickbait)")
+            titles = seo_data.get("judul_viral", [])
+            for i, t in enumerate(titles, start=1):
+                st.markdown(f"**{i}.** {t}")
+
+            st.markdown("### 🏷️ Hashtag Optimal")
+            hashtags = seo_data.get("hashtags", [])
+            st.code(" ".join(hashtags), language="text")
+
+            st.markdown("### 🔑 Tags / Keywords")
+            st.code(seo_data.get("tags_keywords", ""), language="text")
+
+        with col2:
+            st.markdown("### 📝 Deskripsi Video Optimized")
+            st.text_area(
+                "Copy Deskripsi",
+                value=seo_data.get("deskripsi_video", ""),
+                height=300
+            )
+
+        st.markdown("---")
+        if st.button("🔄 Regenerate SEO Metadata", use_container_width=True):
+            generate_seo_metadata()
             st.rerun()
-        return
-
-    seo = st.session_state.seo
-    en = seo.get("english", {}) if isinstance(seo.get("english", {}), dict) else {}
-    idn = seo.get("indonesian", {}) if isinstance(seo.get("indonesian", {}), dict) else {}
-
-    global_tags = seo.get("global_tags_15", [])
-    st.subheader("🌍 15 Global Tags — EN + ID")
-    st.caption("15 tag final untuk dipakai sebagai satu set. Tags membantu relevansi, tetapi YouTube menyebut judul, thumbnail, dan deskripsi lebih penting.")
-    st.text_area("Global Tags (15)", ", ".join(map(str, global_tags)), height=90)
-
-    st.subheader("🌍 English — Global")
-    for index, title in enumerate(en.get("titles", []), 1):
-        st.text_input(f"English Title {index}", str(title), key=f"title_en_{index}")
-    st.text_area("English Description", safe_text(en.get("description")), height=220)
-    st.text_area("English Hashtags", " ".join(map(str, en.get("hashtags", []))), height=100)
-    st.text_area("English Tags", ", ".join(map(str, en.get("tags", []))), height=100)
-
-    st.subheader("🇮🇩 Indonesian")
-    for index, title in enumerate(idn.get("titles", []), 1):
-        st.text_input(f"Indonesian Title {index}", str(title), key=f"title_id_{index}")
-    st.text_area("Indonesian Description", safe_text(idn.get("description")), height=220)
-    st.text_area("Indonesian Hashtags", " ".join(map(str, idn.get("hashtags", []))), height=100)
-    st.text_area("Indonesian Tags", ", ".join(map(str, idn.get("tags", []))), height=100)
-
-    strategy = seo.get("seo_strategy", {}) if isinstance(seo.get("seo_strategy", {}), dict) else {}
-    st.subheader("SEO Strategy")
-    st.write(f"**Primary topic:** {safe_text(strategy.get('primary_topic'))}")
-    st.write(f"**Search intent:** {safe_text(strategy.get('primary_search_intent'))}")
-    st.text_area("Core Keywords", ", ".join(map(str, strategy.get("core_keywords", []))), height=90)
-    st.text_area("Relevance Notes", "\n".join(map(str, strategy.get("relevance_notes", []))), height=120)
-
-    st.subheader("Creative Support")
-    st.text_input("Teks thumbnail", safe_text(seo.get("teks_thumbnail")))
-    st.text_area("Konsep thumbnail", safe_text(seo.get("konsep_thumbnail")), height=100)
-    st.text_area("Komentar tersemat", safe_text(seo.get("komentar_tersemat")), height=100)
-    st.text_area("Ajakan", safe_text(seo.get("ajakan")), height=100)
-    st.success("Alur proyek selesai.")
 
 
-# ============================================================
-# ROUTER
-# ============================================================
-if st.session_state.page == "home":
-    render_home()
-elif st.session_state.page == "analysis":
-    render_analysis()
-elif st.session_state.page == "storyboard":
-    render_storyboard()
-elif st.session_state.page == "scenes":
-    render_scenes()
-elif st.session_state.page == "seo":
-    render_seo()
+# ==========================================
+# 6. MAIN ENTRYPOINT & ROUTING
+# ==========================================
+def main():
+    render_sidebar()
+
+    current_page = st.session_state.get("page", "home")
+
+    if current_page == "home":
+        render_home()
+    elif current_page == "analysis":
+        render_analysis()
+    elif current_page == "scenes":
+        render_scenes()
+    elif current_page == "seo":
+        render_seo()
+    else:
+        render_home()
+
+
+if __name__ == "__main__":
+    main()
