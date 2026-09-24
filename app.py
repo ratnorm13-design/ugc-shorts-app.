@@ -7,16 +7,22 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
+# ==========================================
+# 1. KONFIGURASI HALAMAN & MODEL UTAMA
+# ==========================================
 st.set_page_config(
     page_title="UGC Remix Studio v10.3 — Complete Entity, Physics & SEO Engine",
     page_icon="🎬",
     layout="wide"
 )
 
-# Model API resmi & stabil
+# Model resmi yang stabil dan tersedia
 MODEL_NAME = "gemini-3.6-flash"
 
-# TARGET DURATION SCENE OPTIONS
+
+# ==========================================
+# 2. DEFINISI OPSI & PRESET DATA
+# ==========================================
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
     "8 detik (1 Scene - Shorts Kilat)": 1,
@@ -36,7 +42,6 @@ STYLE_OPTIONS = [
     "Sinematik Realistis 3D",
 ]
 
-# RUNNER PRESETS
 RUNNER_PRESETS = [
     "Pocong Gesit (Hantu lokal berbalut kain kafan putih melompat absurd & kencang)",
     "Bebek Karet Raksasa (Mainan bebek mandi kuning licin membal dengan kaki robotik)",
@@ -55,7 +60,6 @@ RUNNER_PRESETS = [
     "Custom / Ketik Sendiri"
 ]
 
-# PILIHAN TARGET BONEKA / RAGDOLL
 TARGET_DOLL_OPTIONS = [
     "Crash Test Dummies (Boneka uji tabrak manekin kuning-hitam ikonik)",
     "Giant Yellow Rubber Ducks (Bebek karet kuning raksasa elastis)",
@@ -68,7 +72,6 @@ TARGET_DOLL_OPTIONS = [
     "Custom / Ketik Sendiri"
 ]
 
-# PILIHAN GERAKAN IDLE / PASIF TARGET (PHYSICS STATE)
 IDLE_MOTION_OPTIONS = [
     "Subtle Breathing & Wind Swaying (Bergoyang lembut tertiup angin & bernapas pasif)",
     "Anxious Trembling / Scared Wobble (Bergetar ketakutan oleng di atas pijakan)",
@@ -79,7 +82,6 @@ IDLE_MOTION_OPTIONS = [
     "Custom / Ketik Sendiri"
 ]
 
-# MAP OPTIONS
 MAP_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
     "Maze Bank Tower Rooftop (Downtown Los Santos Skyscraper)",
@@ -94,7 +96,6 @@ MAP_OPTIONS = [
     "Lava Volcano Caldera Arena (Active Volcano Lava Pit)"
 ]
 
-# PROP STAND OPTIONS
 PROP_STAND_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
     "Direct Concrete Rooftop / Flat Container Surface",
@@ -109,7 +110,6 @@ PROP_STAND_OPTIONS = [
     "Steel Spring Coil Platforms"
 ]
 
-# CLIMAX ACTION OPTIONS
 CLIMAX_ACTION_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
     "Double Hit Combo + Sacrifice Fall (Runner hits 2 targets & falls off edge together)",
@@ -124,7 +124,6 @@ CLIMAX_ACTION_OPTIONS = [
     "Sliding Tackle Multi-Target Clear + Edge Overshoot Fall"
 ]
 
-# OBSTACLE OPTIONS
 OBSTACLE_OPTIONS = {
     "None / Lari Datar": "",
     "⛓️ Swinging Giant Pendulums & Hammers": "ENVIRONMENT MECHANIC: Giant swinging pendulums and massive hammers obstruct the path; runner must weave and dodge around them skillfully.",
@@ -141,7 +140,10 @@ OBSTACLE_OPTIONS = {
 
 ASPECT_OPTIONS = ["9:16 — Shorts / Reels / TikTok", "16:9 — YouTube Long", "1:1 — Kotak"]
 
-# INITIAL STATE DEFAULTS
+
+# ==========================================
+# 3. INISIALISASI SESSION STATE
+# ==========================================
 DEFAULTS = {
     "page": "home",
     "api_key": "",
@@ -175,12 +177,15 @@ for key, value in DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
+
+# ==========================================
+# 4. FUNGSI UTILITAS & API GEMINI
+# ==========================================
 def go(page: str):
     st.session_state.page = page
     st.rerun()
 
 def reset_remix_state():
-    """Membersihkan sisa data lama saat meracik ulang video"""
     st.session_state.analysis = {}
     st.session_state.storyboard = []
     st.session_state.entity_mapping = {}
@@ -198,7 +203,7 @@ def scene_count() -> int:
 
 def get_client():
     key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
-    key = key.strip("`\"' ")
+    key = key.strip("`\"' \n\r\t") # Pembersihan menyeluruh karakter aneh/kutip
     if not key:
         st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
         return None
@@ -252,6 +257,10 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
                 raise RuntimeError(f"Gagal terhubung ke Gemini: {exc}")
             time.sleep(1.5)
 
+
+# ==========================================
+# 5. CORE LOGIC (ANALYSIS, PROMPTS, & SEO)
+# ==========================================
 def run_analysis():
     reset_remix_state()
     client = get_client()
@@ -397,8 +406,8 @@ FORMATTING RULE: Output EXACTLY in this categorized format without any other int
         except Exception as exc:
             st.error(f"Gagal membuat prompt: {exc}")
             return "ERROR_API"
+
 def generate_seo():
-    """Fungsi Generator Metadata SEO Viral untuk Shorts/TikTok/Reels"""
     client = get_client()
     if not client:
         return False
@@ -436,6 +445,9 @@ HASILKAN DALAM FORMAT JSON PERSIS SEPERTI INI:
             return False
 
 
+# ==========================================
+# 6. RENDER ANTARMUKA HALAMAN (VIEWS)
+# ==========================================
 def render_home():
     st.title("🎬 UGC Remix Studio v10.3 — Entity, Physics & SEO")
     st.caption("Auto Duration Engine, Anti-Plagiarism Flow Jacking, & Dedicated Idle Physics Control.")
@@ -523,7 +535,6 @@ def render_home():
     st.markdown("---")
     st.button("🚀 BONGKAR VIDEO & BUAT BLUEPRINT REMIX", type="primary", use_container_width=True, on_click=run_analysis)
 
-
 def render_analysis():
     st.title("🛡️ Anti-Plagiarism Verification & Storyboard")
     
@@ -563,7 +574,6 @@ def render_analysis():
     if st.button("LANJUT KE GENERATOR PROMPT SCENE 1 🎥", type="primary", use_container_width=True):
         go("scenes")
 
-
 def render_scenes():
     st.title("🎥 Sequential Scene Prompt Generator")
     n = scene_count()
@@ -571,7 +581,6 @@ def render_scenes():
 
     st.subheader(f"Adegan {current} dari {n} " + ("💥 (Final Extended Climax)" if current == n else "⚡ (Action & Setup)"))
 
-    # Gatekeeper Pengecekan Frame Sebelumnya
     if current > 1 and current - 1 not in st.session_state.scene_frames:
         st.error(f"🛑 STOP! Anda belum mengunggah Gambar Last Frame dari Scene {current-1}. Alur ditahan untuk mencegah AI berhalusinasi (menjaga continuity posisi karakter).")
         if st.button("← Kembali ke Scene Sebelumnya", type="primary"):
@@ -579,7 +588,6 @@ def render_scenes():
             st.rerun()
         return
 
-    # Trigger Awal Generate
     if current not in st.session_state.scene_prompts:
         with st.spinner("Mempersiapkan Prompt Terstruktur (Physics & Continuity checked)..."):
             status = generate_scene_prompt(current)
@@ -589,7 +597,6 @@ def render_scenes():
                 st.error("Frame scene sebelumnya tidak ditemukan.")
                 return
 
-    # Tampilan Jika Prompt Sudah Ada
     if current in st.session_state.scene_prompts:
         st.text_area(f"Salin Prompt Scene {current} (Terformat Standar Industri):", value=st.session_state.scene_prompts[current], height=220)
 
@@ -632,9 +639,7 @@ def render_scenes():
                 if st.button("LANJUT KE GENERATOR SEO & METADATA 🏷️", type="primary", use_container_width=True):
                     go("seo")
 
-
 def render_seo():
-    """Tampilan Halaman Generator SEO & Metadata Viral"""
     st.title("🏷️ SEO & Metadata Generator Viral")
     st.caption("Racikan judul clickbait, deskripsi, dan hashtag optimal untuk Shorts, Reels, & TikTok.")
 
@@ -671,7 +676,9 @@ def render_seo():
             st.rerun()
 
 
-# SIDEBAR ROUTING CONTROLS
+# ==========================================
+# 7. SIDEBAR CONTROLS & MAIN ROUTER
+# ==========================================
 with st.sidebar:
     st.title("⚙️ Studio Controls")
     st.text_input("Gemini API Key", key="api_key", type="password")
@@ -686,8 +693,7 @@ with st.sidebar:
     if st.button("4. 🏷️ Generator SEO & Metadata", use_container_width=True):
         go("seo")
 
-
-# PAGE ROUTER
+# Routing Halaman Aktif
 page = st.session_state.page
 if page == "home":
     render_home()
