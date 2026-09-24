@@ -8,7 +8,7 @@ from google import genai
 from google.genai import types
 
 st.set_page_config(
-    page_title="UGC Remix Studio v9.6 — Full Presets & Physical Continuity Engine",
+    page_title="UGC Remix Studio v9.7 — Compact Scene Controls & Physical Engine",
     page_icon="🎬",
     layout="wide"
 )
@@ -123,7 +123,7 @@ DEFAULTS = {
     "reference_file": None,
     "reference_text": "",
     "visual_style": STYLE_OPTIONS[0],
-    "runner_choice": RUNNER_PRESETS[6], # Default: Funny Green Frog
+    "runner_choice": RUNNER_PRESETS[6],
     "custom_runner": "",
     "map_choice": MAP_OPTIONS[0],
     "prop_stand_choice": PROP_STAND_OPTIONS[0],
@@ -328,7 +328,6 @@ def generate_scene_prompt(scene_number: int) -> bool:
     map_context = f"MAP ARENA: {st.session_state.map_choice}" if st.session_state.map_choice != "Auto (Ikuti Remix UGC)" else ""
     stand_context = f"TARGET STAND: Targets sit directly on {st.session_state.prop_stand_choice}" if st.session_state.prop_stand_choice != "Auto (Ikuti Remix UGC)" else ""
 
-    # DUAL CONTINUITY: SCREENSHOT LAST FRAME + TEXT PROMPT PREVIOUS SCENE
     parts_list = []
     prev_scene_num = scene_number - 1
     prev_prompt_text = st.session_state.scene_prompts.get(prev_scene_num, "")
@@ -383,8 +382,8 @@ Output ONLY the raw English generation prompt string without any markdown format
 
 # UI COMPONENT RENDERING
 def render_home():
-    st.title("🎬 UGC Remix Studio v9.6 — Full Presets & Continuity Engine")
-    st.caption("Engine Otomasi Video Prompt 3D Parkour dengan Pemetaan Kausalitas Fisik & Multimodal Frame Bridge Engine.")
+    st.title("🎬 UGC Remix Studio v9.7 — Dynamic Compact Controls")
+    st.caption("Engine Otomasi Video Prompt 3D Parkour dengan Pemetaan Kausalitas Fisik & Ringkas Per-Scene Control.")
 
     st.subheader("1. Referensi Video / Skenario Manual")
     st.file_uploader("Upload Video Referensi (Shorts / Video Panjang)", type=["mp4", "mov", "webm"], key="ref_file_input")
@@ -411,24 +410,54 @@ def render_home():
         st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=70, placeholder="Misal: Buat efek lontaran ban lebih tinggi...")
 
     st.markdown("---")
-    st.subheader("🧭 Navigasi & Rintangan Ekstrem Per-Scene (Opsional)")
+    
+    # REVISED: Dynamic Compact Obstacle Selector per 4 Scenes (Batch/Tab View)
     calculated_scenes = DURATION_SCENES.get(st.session_state.duration, 0)
     if calculated_scenes == 0:
         calculated_scenes = st.session_state.get("detected_scenes", 22)
 
-    st.write(f"**Total Scene Pengaturan:** {calculated_scenes} Scene ({calculated_scenes * 8} Detik Total Durasi)")
+    st.subheader("🧭 Navigasi Rintangan Per-Scene (Disesuaikan Durasi)")
+    st.write(f"**Total Scene Ditampilkan:** {calculated_scenes} Scene ({calculated_scenes * 8} Detik Total Durasi)")
 
-    cols = st.columns(2)
-    for i in range(1, calculated_scenes + 1):
-        col_idx = (i - 1) % 2
-        with cols[col_idx]:
-            chosen_obs = st.selectbox(
-                f"Rintangan Scene {i}:",
-                options=list(OBSTACLE_OPTIONS.keys()),
-                index=0,
-                key=f"obstacle_select_scene_{i}"
-            )
-            st.session_state.user_scene_obstacles[i] = OBSTACLE_OPTIONS[chosen_obs]
+    scenes_per_group = 4
+    total_groups = (calculated_scenes + scenes_per_group - 1) // scenes_per_group
+
+    if total_groups == 1:
+        # Menampilkan langsung 1-4 scene jika durasi singkat (16 - 32 detik)
+        cols = st.columns(2)
+        for i in range(1, calculated_scenes + 1):
+            col_idx = (i - 1) % 2
+            with cols[col_idx]:
+                chosen_obs = st.selectbox(
+                    f"Rintangan Scene {i}:",
+                    options=list(OBSTACLE_OPTIONS.keys()),
+                    index=0,
+                    key=f"obstacle_select_scene_{i}"
+                )
+                st.session_state.user_scene_obstacles[i] = OBSTACLE_OPTIONS[chosen_obs]
+    else:
+        # Pengelompokan Tab Per-4 Scene agar tampilan ringkas jika durasi panjang (1-3 menit)
+        tab_labels = [
+            f"Scene {g * scenes_per_group + 1} - {min((g + 1) * scenes_per_group, calculated_scenes)}" 
+            for g in range(total_groups)
+        ]
+        tabs = st.tabs(tab_labels)
+
+        for g, tab in enumerate(tabs):
+            with tab:
+                cols = st.columns(2)
+                start_s = g * scenes_per_group + 1
+                end_s = min((g + 1) * scenes_per_group, calculated_scenes)
+                for idx, scene_idx in enumerate(range(start_s, end_s + 1)):
+                    col_idx = idx % 2
+                    with cols[col_idx]:
+                        chosen_obs = st.selectbox(
+                            f"Rintangan Scene {scene_idx}:",
+                            options=list(OBSTACLE_OPTIONS.keys()),
+                            index=0,
+                            key=f"obstacle_select_scene_{scene_idx}"
+                        )
+                        st.session_state.user_scene_obstacles[scene_idx] = OBSTACLE_OPTIONS[chosen_obs]
 
     st.markdown("---")
     st.button("🚀 PROSES & BUAT ROADMAP SCENE LINIER", type="primary", use_container_width=True, on_click=run_analysis)
@@ -489,7 +518,6 @@ def render_scenes():
                 st.session_state.current_scene += 1
                 st.rerun()
 
-        # AUTOMATIC SEO GENERATOR AT FINAL SCENE
         if current == n:
             st.markdown("---")
             st.subheader("🎯 Finalisasi Metadata & SEO Generator")
