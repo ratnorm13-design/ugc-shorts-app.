@@ -9,10 +9,10 @@ import google.generativeai as genai
 # ==========================================
 # 1. PAGE CONFIG & CONSTANTS
 # ==========================================
-st.set_page_config(page_title="UGC Remix Studio v14.3", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="UGC Remix Studio v14.4", page_icon="🎬", layout="wide")
 
 PRIMARY_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"]
-APP_VERSION = "14.3 — Clean & Secured Edition"
+APP_VERSION = "14.4 — Restored & Fully Integrated"
 
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
@@ -191,6 +191,7 @@ DEFAULTS = {
     "selected_map": MAP_OPTIONS[0], "selected_prop_stand": PROP_STAND_OPTIONS[0],
     "selected_climax_action": CLIMAX_ACTION_OPTIONS[0], "aspect_ratio": ASPECT_OPTIONS[0],
     "duration": "32 detik (4 Scene - Standar UGC)",
+    "reference_file": None, "reference_text": "",
     "user_scene_obstacles": {}, "user_scene_maneuvers": {}, "analysis": {},
     "scene_prompts": {}, "scene_frames": {}, "seo": {}
 }
@@ -208,7 +209,7 @@ def check_password():
         st.title("🔒 Akses Terbatas (Private UGC Studio)")
         st.caption("Aplikasi ini dikunci untuk penggunaan pribadi. Masukkan Master Password.")
         
-        PASSWORD_LOKAL = st.secrets.get("APP_PASSWORD", "ugc123")
+        PASSWORD_LOKAL = st.secrets.get("APP_PASSWORD", "Zagrest1988")
         
         user_input = st.text_input("Master Password:", type="password")
         if st.button("🔑 Masuk", type="primary"):
@@ -285,21 +286,40 @@ def get_active_config():
         "runner": runner, "target_doll": st.session_state.target_doll_choice,
         "map_env": st.session_state.selected_map, "prop_stand": st.session_state.selected_prop_stand,
         "climax_act": st.session_state.selected_climax_action, "style": st.session_state.visual_style,
-        "camera": st.session_state.selected_camera, "idle_style": st.session_state.target_idle_choice
+        "camera": st.session_state.selected_camera, "idle_style": st.session_state.target_idle_choice,
+        "reference_text": st.session_state.reference_text
     }
 
 def run_analysis():
     cfg = get_active_config()
     target_scenes = scene_count()
+    parts = []
+
+    # Jika user upload file referensi (gambar/video)
+    if st.session_state.reference_file:
+        try:
+            ref_bytes = st.session_state.reference_file.getvalue()
+            mime_type = st.session_state.reference_file.type
+            parts.append({"mime_type": mime_type, "data": ref_bytes})
+        except Exception as e:
+            st.warning(f"File referensi tidak dapat dibaca, melanjutkan dengan parameter teks saja: {e}")
+
+    ref_desc_prompt = f"\nDESKRIPSI REFERENSI MANUAL USER:\n{cfg['reference_text']}\n" if cfg['reference_text'] else ""
 
     prompt = f"""
-Buatkan plan video {target_scenes} adegan berbasis 3D Parkour Obstacle.
-Runner: {cfg['runner']}, Target: {cfg['target_doll']}, Map: {cfg['map_env']}, Climax: {cfg['climax_act']}.
+Buatkan plan video {target_scenes} adegan berbasis 3D Parkour Obstacle UGC.
+{ref_desc_prompt}
+Parameter Tambahan:
+- Runner: {cfg['runner']}
+- Target: {cfg['target_doll']}
+- Map: {cfg['map_env']}
+- Climax: {cfg['climax_act']}
+
 Hasilkan JSON: {{"video_duration_seconds": {target_scenes * 8}, "storyboard_plan": [{{"scene": 1, "fokus_aksi": "..."}}]}}
 """
-    with st.spinner("Meracik Roadmap..."):
+    with st.spinner("Meracik Roadmap berdasarkan parameter & referensi..."):
         try:
-            raw = ask(prompt, json_mode=True)
+            raw = ask(prompt, parts=parts, json_mode=True)
             data = extract_json(raw)
             st.session_state.analysis = data
             raw_seconds = data.get("video_duration_seconds", target_scenes * 8)
@@ -376,6 +396,26 @@ def render_sidebar():
 
 def render_home():
     st.title("🎬 Setup Engine Parameter")
+    
+    # --- FITUR REFERENSI KONTEN (RESTORED) ---
+    st.subheader("📹 Input Referensi Konten (Mentahan UGC)")
+    col_ref1, col_ref2 = st.columns(2)
+    with col_ref1:
+        st.session_state.reference_file = st.file_uploader(
+            "Upload Video / Gambar Referensi (Opsional):", 
+            type=["mp4", "mov", "avi", "jpg", "png", "webp"],
+            help="Upload sampel mentahan video UGC yang ingin Anda tiru/remix alurnya."
+        )
+    with col_ref2:
+        st.session_state.reference_text = st.text_area(
+            "Deskripsi / Catatan Referensi Manual (Opsional):",
+            value=st.session_state.reference_text,
+            placeholder="Contoh: Ikuti alur video di mana karakter berlari kencang melewati bola raksasa lalu meloncat di akhir...",
+            height=100
+        )
+    
+    st.markdown("---")
+    st.subheader("⚙️ Parameter Karakter & Arena")
     col1, col2 = st.columns(2)
     with col1:
         st.session_state.duration = st.selectbox("Durasi Video (Jml Scene)", list(DURATION_SCENES.keys()), index=4)
