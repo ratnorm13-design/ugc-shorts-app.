@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # Model API resmi & stabil
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "gemini-2.5-flash"
 
 # TARGET DURATION SCENE OPTIONS
 DURATION_SCENES = {
