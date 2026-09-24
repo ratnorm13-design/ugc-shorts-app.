@@ -11,7 +11,7 @@ import google.generativeai as genai
 # ==========================================
 st.set_page_config(page_title="UGC Remix Studio v14.4", page_icon="🎬", layout="wide")
 
-PRIMARY_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"]
+PRIMARY_MODELS = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"]
 APP_VERSION = "14.4 — Restored & Fully Integrated"
 
 DURATION_SCENES = {
