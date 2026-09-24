@@ -8,14 +8,14 @@ from google import genai
 from google.genai import types
 
 st.set_page_config(
-    page_title="UGC Remix Studio v9.7 — Compact Scene Controls & Physical Engine",
+    page_title="UGC Remix Studio v10.1 — Full Edition",
     page_icon="🎬",
     layout="wide"
 )
 
 MODEL_NAME = "gemini-3.6-flash"
 
-# TARGET DURATION SCENE OPTIONS
+# DIKEMBALIKAN 100%: TARGET DURATION SCENE OPTIONS
 DURATION_SCENES = {
     "Auto (Sesuai Durasi & Video Referensi)": 0,
     "8 detik (1 Scene - Shorts Kilat)": 1,
@@ -35,7 +35,7 @@ STYLE_OPTIONS = [
     "Sinematik Realistis 3D",
 ]
 
-# FULL RESTORED RUNNER PRESETS
+# DIKEMBALIKAN 100%: RUNNER PRESETS
 RUNNER_PRESETS = [
     "Custom / Ketik Sendiri",
     "Pocong Gesit (Hantu lokal berbalut kain kafan putih melompat absurd & kencang)",
@@ -54,7 +54,7 @@ RUNNER_PRESETS = [
     "Udindindun (Karakter khas Italian brainrot yang konyol dan nyeleneh)"
 ]
 
-# FULL RESTORED MAP OPTIONS
+# DIKEMBALIKAN 100%: MAP OPTIONS
 MAP_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
     "Maze Bank Tower Rooftop (Downtown Los Santos Skyscraper)",
@@ -69,7 +69,7 @@ MAP_OPTIONS = [
     "Lava Volcano Caldera Arena (Active Volcano Lava Pit)"
 ]
 
-# FULL RESTORED PROP STAND OPTIONS
+# DIKEMBALIKAN 100%: PROP STAND OPTIONS
 PROP_STAND_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
     "Direct Concrete Rooftop / Flat Container Surface",
@@ -84,7 +84,7 @@ PROP_STAND_OPTIONS = [
     "Steel Spring Coil Platforms"
 ]
 
-# FULL RESTORED CLIMAX ACTION OPTIONS
+# DIKEMBALIKAN 100%: CLIMAX ACTION OPTIONS
 CLIMAX_ACTION_OPTIONS = [
     "Auto (Ikuti Remix UGC)",
     "Double Hit Combo + Sacrifice Fall (Runner hits 2 targets & falls off edge together)",
@@ -99,7 +99,7 @@ CLIMAX_ACTION_OPTIONS = [
     "Sliding Tackle Multi-Target Clear + Edge Overshoot Fall"
 ]
 
-# FULL RESTORED OBSTACLE OPTIONS
+# DIKEMBALIKAN 100%: OBSTACLE OPTIONS
 OBSTACLE_OPTIONS = {
     "None / Lari Datar": "",
     "⛓️ Swinging Giant Pendulums & Hammers": "ENVIRONMENT MECHANIC: Giant swinging pendulums and massive hammers obstruct the path; runner must weave and dodge around them skillfully.",
@@ -123,21 +123,22 @@ DEFAULTS = {
     "reference_file": None,
     "reference_text": "",
     "visual_style": STYLE_OPTIONS[0],
-    "runner_choice": RUNNER_PRESETS[6],
+    "runner_choice": RUNNER_PRESETS[1],
     "custom_runner": "",
     "map_choice": MAP_OPTIONS[0],
     "prop_stand_choice": PROP_STAND_OPTIONS[0],
     "climax_action_choice": CLIMAX_ACTION_OPTIONS[0],
     "aspect_ratio": ASPECT_OPTIONS[0],
-    "duration": "180 detik (22 Scene - 3 Menit Full Challenge)",
+    "duration": "Auto (Sesuai Durasi & Video Referensi)",
     "custom_instruction": "",
     "user_scene_obstacles": {},
     "analysis": {},
     "storyboard": [],
+    "entity_mapping": {},
     "scene_prompts": {},
     "scene_frames": {},
     "current_scene": 1,
-    "detected_scenes": 22,
+    "detected_scenes": 0,
     "seo": {},
 }
 
@@ -151,10 +152,22 @@ def go(page: str):
     st.rerun()
 
 
+def reset_remix_state():
+    """Membersihkan sisa data lama saat meracik ulang video agar tidak ada bug nyangkut"""
+    st.session_state.analysis = {}
+    st.session_state.storyboard = []
+    st.session_state.entity_mapping = {}
+    st.session_state.scene_prompts = {}
+    st.session_state.scene_frames = {}
+    st.session_state.current_scene = 1
+    st.session_state.detected_scenes = 0
+    st.session_state.seo = {}
+
+
 def scene_count() -> int:
     val = DURATION_SCENES.get(st.session_state.duration, 0)
     if val == 0:
-        return st.session_state.detected_scenes
+        return st.session_state.get("detected_scenes", 1) if st.session_state.get("detected_scenes", 0) > 0 else 0
     return val
 
 
@@ -179,7 +192,6 @@ def extract_json(text: str):
         return json.loads(text)
     except Exception:
         pass
-
     starts = [p for p in (text.find("{"), text.find("[")) if p >= 0]
     if not starts:
         raise ValueError("Respons AI tidak berisi JSON yang valid.")
@@ -219,6 +231,7 @@ def ask(client, prompt: str, parts=None, json_mode: bool = False) -> str:
 
 
 def run_analysis():
+    reset_remix_state()
     client = get_client()
     if not client:
         return
@@ -240,273 +253,276 @@ def run_analysis():
     if chosen_runner == "Custom / Ketik Sendiri":
         chosen_runner = st.session_state.custom_runner or "Custom Parkour Runner"
 
-    chosen_map = st.session_state.map_choice
-    chosen_stand = st.session_state.prop_stand_choice
-    chosen_climax = st.session_state.climax_action_choice
-    total_target_scenes = scene_count()
+    is_auto = (DURATION_SCENES.get(st.session_state.duration, 0) == 0)
+    target_calc = """
+1. AI WAJIB membaca DURASI ASLI video referensi.
+2. Hitung jumlah scene: CEIL(Durasi_Detik / 8). Contoh mutlak: 17 detik -> 3 Scene (Total 24 detik).
+""" if is_auto else f"1. Buat tepat {DURATION_SCENES.get(st.session_state.duration)} Scene (Total {DURATION_SCENES.get(st.session_state.duration)*8} detik)."
 
     prompt = f"""
-Anda adalah AI Master Creative Director khusus konten 3D Parkour / Ragdoll Challenge.
+Anda adalah AI Master Creative Director untuk UGC Flow Jacking. 
+TUGAS: Analisis video/teks referensi terlampir, lalu rombak TOTAL visualnya agar tidak terdeteksi plagiat, namun RITME aksinya dipertahankan.
 
-TUGAS UTAMA:
-Buatkan STORYBOARD LENGKAP untuk EXACT {total_target_scenes} SCENE (Per scene durasi ~8 detik, total {total_target_scenes * 8} detik).
+{target_calc}
 
-ATURAN HUKUM FISIKA KAUSALITAS & CONTINUITY LINIER (SANGAT KETAT):
-1. RUNNER ({chosen_runner}) ADALAH SATU-SATUNYA PEMINCI AKSI DAN KEHANCURAN FISIK.
-2. DILARANG KERAS membuat ban, platform, atau boneka hancur/berhamburan secara gaib tanpa disentuh/ditendang Runner!
-3. Jika Runner diam, lingkungan HARUS diam. Setiap kehancuran HARUS akibat benturan langsung dari aksi Runner.
-4. Setiap item pada array 'storyboard_plan' (harus berisi TEPAT {total_target_scenes} item) WAJIB mendeskripsikan:
-   - Posisi awal Runner
-   - Aksi fisik aktif Runner (misal: lari, melompat keras, menendang target ke-N)
-   - Efek fisik berurutan (misal: target terpelanting karena terkena impak tendangan)
-   - Posisi pendaratan Runner di akhir detik ke-8 untuk disambung oleh scene berikutnya.
+ATURAN FLOW JACKING & ENTITY MAPPING (MUTLAK):
+1. Petakan elemen asli, lalu GANTI TOTAL dengan parameter user. DILARANG membawa entitas asli ke dalam cerita baru!
+   - Runner Baru: "{chosen_runner}" (Sesuaikan gaya fisiknya).
+   - Arena Baru: "{st.session_state.map_choice}"
+   - Pijakan Target: "{st.session_state.prop_stand_choice}"
+   - Climax Action: "{st.session_state.climax_action_choice}"
+2. STRUKTUR 3-BABAK (Ekspansi Durasi): Jika scene yang dihitung lebih panjang dari video asli, sisa scene WAJIB diisi dengan aksi transisi/rintangan tambahan secara logis untuk menjaga tensi, berujung pada Aksi Klimaks di scene terakhir.
 
-DATA PARAMETER USER:
-- Runner Utama: "{chosen_runner}"
-- Map Arena/Place: "{chosen_map}"
-- Target Stand: "{chosen_stand}"
-- Aksi Klimaks Penutup (Scene Terakhir): "{chosen_climax}"
-
-HASILKAN JSON PRESISI DENGAN ARRAY 'storyboard_plan' SEBANYAK TEPAT {total_target_scenes} ITEM:
+HASILKAN JSON FORMAT BERIKUT:
 {{
-  "video_duration_seconds": {total_target_scenes * 8},
-  "calculated_scene_count": {total_target_scenes},
-  "original_reference": {{
-    "runner_asli": "Karakter utama di referensi",
-    "boss_asli": "Target di ujung",
-    "track_asli": "Jalur rintangan"
-  }},
-  "remixed_mutation": {{
-    "runner_baru": "{chosen_runner}",
-    "boss_baru": "Deretan boneka target berurutan di atas {chosen_stand}",
-    "track_baru": "Arena {chosen_map} dengan rantai {chosen_stand}",
-    "visual_anchor_token": "Deskripsi visual spesifik {chosen_runner}",
-    "alasan_remix": "Modifikasi alur fisik kausalitas"
+  "calculated_scene_count": [ANGKA INT],
+  "entity_mapping": {{
+    "runner_asli": "[Aktor di video]",
+    "runner_remix": "{chosen_runner}",
+    "arena_asli": "[Arena di video]",
+    "arena_remix": "{st.session_state.map_choice}"
   }},
   "storyboard_plan": [
     {{
       "scene": 1,
-      "fokus_aksi": "Runner mulai berlari cepat di jalur awal, melompat presisi dan menendang boneka target pertama hingga terpelanting jatuh."
+      "fokus_aksi_dan_kamera": "Deskripsi aksi fisik disesuaikan dengan proporsi badan runner, beserta sudut kamera anti-plagiat (misal: low angle dari bawah)."
     }}
-  ],
-  "climax_action": "{chosen_climax}"
+  ]
 }}
 """
-    with st.spinner(f"Menyusun Roadmap Storyboard {total_target_scenes} Scene Tanpa Cacat Kausalitas..."):
+    with st.spinner("Membongkar Video, Kalkulasi Durasi & Meracik Blueprint Anti-Plagiat..."):
         try:
             raw = ask(client, prompt, parts, json_mode=True)
             data = extract_json(raw)
+            
             st.session_state.analysis = data
+            calculated_count = int(data.get("calculated_scene_count", 0))
+            if calculated_count <= 0:
+                calculated_count = len(data.get("storyboard_plan", [1]))
+
+            st.session_state.detected_scenes = calculated_count
+            st.session_state.entity_mapping = data.get("entity_mapping", {})
             st.session_state.storyboard = data.get("storyboard_plan", [])
-            st.session_state.detected_scenes = total_target_scenes
-            st.session_state.scene_prompts = {}
-            st.session_state.scene_frames = {}
-            st.session_state.current_scene = 1
             go("analysis")
         except Exception as exc:
-            st.error(f"Gagal membuat analisis roadmap: {exc}")
+            st.error(f"Gagal membedah video: {exc}")
 
 
-def generate_scene_prompt(scene_number: int) -> bool:
+def generate_scene_prompt(scene_number: int, custom_tweak: str = ""):
     client = get_client()
     if not client:
         return False
 
     analysis = st.session_state.analysis
-    mutation = analysis.get("remixed_mutation", {})
-    storyboard = analysis.get("storyboard_plan", [])
+    storyboard = st.session_state.storyboard
     total_scenes = scene_count()
     is_final_scene = (scene_number == total_scenes)
+    
+    scene_focus = storyboard[scene_number - 1].get("fokus_aksi_dan_kamera", f"Aksi scene {scene_number}") if storyboard else "Aksi fisik dinamis"
+    
+    custom_obstacle = st.session_state.user_scene_obstacles.get(scene_number, "")
+    obstacle_str = f"\n[OBSTACLE INJECTION]: {custom_obstacle}" if custom_obstacle else ""
+    
+    climax_str = f"\n[FINAL CLIMAX ACTION]: Execute exact climax ending: {st.session_state.climax_action_choice}" if is_final_scene and st.session_state.climax_action_choice != "Auto (Ikuti Remix UGC)" else ""
 
-    scene_focus = f"Runner secara aktif melompat ke pijakan berikutnya dan menendang target fisik ke-{scene_number}."
-    if storyboard and len(storyboard) >= scene_number:
-        scene_focus = storyboard[scene_number - 1].get("fokus_aksi", scene_focus)
-
-    custom_obstacle_instruction = st.session_state.user_scene_obstacles.get(scene_number, "")
-    obstacle_str = f"ENVIRONMENT OBSTACLE INJECTED: {custom_obstacle_instruction}" if custom_obstacle_instruction else ""
-
-    map_context = f"MAP ARENA: {st.session_state.map_choice}" if st.session_state.map_choice != "Auto (Ikuti Remix UGC)" else ""
-    stand_context = f"TARGET STAND: Targets sit directly on {st.session_state.prop_stand_choice}" if st.session_state.prop_stand_choice != "Auto (Ikuti Remix UGC)" else ""
-
+    # Gatekeeping & Frame Continuity Logic
     parts_list = []
-    prev_scene_num = scene_number - 1
-    prev_prompt_text = st.session_state.scene_prompts.get(prev_scene_num, "")
-
     frame_context_str = ""
-    if prev_scene_num in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene_num]:
-        try:
+    prev_scene_num = scene_number - 1
+    
+    if prev_scene_num > 0:
+        if prev_scene_num in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene_num]:
             frame_file = st.session_state.scene_frames[prev_scene_num]
-            img_bytes = frame_file.getvalue()
-            img_mime = getattr(frame_file, "type", "image/png") or "image/png"
-            parts_list.append(types.Part.from_bytes(data=img_bytes, mime_type=img_mime))
-            frame_context_str = f"VISION CONTINUITY REQUIREMENT: Read the attached screenshot showing Scene {prev_scene_num}'s FINAL FRAME. Scene {scene_number} MUST START EXACTLY at the runner's landing coordinates, body posture, and tire/doll positions shown in this image. No positional jumps."
-        except Exception as exc:
-            frame_context_str = f"CONTINUITY REQUIREMENT: Continue directly from Scene {prev_scene_num} ending state: '{prev_prompt_text}'."
-    elif prev_prompt_text:
-        frame_context_str = f"TEXT CONTINUITY REQUIREMENT: Continue directly from Scene {prev_scene_num} ending state: '{prev_prompt_text}'."
+            parts_list.append(types.Part.from_bytes(data=frame_file.getvalue(), mime_type="image/png"))
+            frame_context_str = f"\n[VISION CONTINUITY]: You MUST start this scene matching the exact character posture, location, and scattered objects shown in the attached image from the previous scene."
+        else:
+            return "ERROR_NO_FRAME"
+
+    tweak_instruction = f"\n[USER TWEAK REQUEST]: {custom_tweak}" if custom_tweak else ""
+    custom_global = f"\n[GLOBAL INSTRUCTION]: {st.session_state.custom_instruction}" if st.session_state.custom_instruction else ""
 
     prompt = f"""
-Write ONE ultra-detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes} (~8 seconds segment).
+Write ONE ultra-detailed AI video generation prompt in ENGLISH for Scene {scene_number} of {total_scenes}.
+FORMATTING RULE: Output EXACTLY in this categorized format without any other intro text.
 
-VISUAL STYLE & ENVIRONMENT:
-- Visual Style: {st.session_state.visual_style}
-- Aspect Ratio: {st.session_state.aspect_ratio}
-- Main Character (Runner): {mutation.get('visual_anchor_token')}
-- Target Entities: {mutation.get('boss_baru')}
-- Environment Track: {mutation.get('track_baru')}
-- {map_context}
-- {stand_context}
-- {obstacle_str}
-
-STRICT PHYSICAL CAUSALITY & CONTINUITY LAWS (CRITICAL):
-1. RUNNER-DRIVEN ACTION ONLY: The Runner ({mutation.get('runner_baru')}) is the SOLE physical trigger in this scene. Props, tires, or dolls MUST NOT move, fly, or explode on their own.
-2. NO IDLE RUNNER: The runner DOES NOT stand still. The runner is dynamically sprinting, leaping, or stomping forward.
-3. CAUSE AND EFFECT: Every destruction or ragdoll fall occurs ONLY AFTER direct impact from the runner's feet/body.
-4. SCENE ACTION FOCUS: {scene_focus}
-5. FRAME CONTINUITY BRIDGE: {frame_context_str}
-
-{"6. CLIMAX PAYOFF: Execute high-impact climax physical collapse as the runner tackles the final target combo!" if is_final_scene else ""}
-
-FORMATTING RULE:
-Output ONLY the raw English generation prompt string without any markdown formatting, bullet points, or commentary.
+[SUBJECT & MOTION]: (Describe {analysis.get('entity_mapping', {}).get('runner_remix')} executing action: {scene_focus}. Action physics must match body type).
+[ENVIRONMENT & MAP]: (Set in {analysis.get('entity_mapping', {}).get('arena_remix')} with {st.session_state.prop_stand_choice}).
+[OBJECT IDLE & PHYSICS]: (CRITICAL: Target props/dolls must exhibit subtle passive idle physics like breathing, wobbling, or swaying before impact. Total destruction/ragdoll ONLY occurs upon direct runner impact).
+[CAMERA MOVEMENT]: (Dynamic anti-plagiarism camera angle, distinct from standard front-view).
+[VISUAL STYLE & LIGHTING]: ({st.session_state.visual_style}, {st.session_state.aspect_ratio}, 8k resolution, highly detailed motion blur).
+{obstacle_str}{climax_str}{frame_context_str}{tweak_instruction}{custom_global}
 """
-    with st.spinner(f"Merancang Prompt Scene {scene_number} (Vision & Physical Causality Checked)..."):
+    with st.spinner(f"Merakit Prompt Terstruktur Scene {scene_number}..."):
         try:
             res_prompt = ask(client, prompt, parts=parts_list, json_mode=False)
             st.session_state.scene_prompts[scene_number] = res_prompt.strip()
-            return True
+            return "SUCCESS"
         except Exception as exc:
-            st.error(f"Gagal merancang prompt Scene {scene_number}: {exc}")
-            return False
+            st.error(f"Gagal membuat prompt: {exc}")
+            return "ERROR_API"
 
 
-# UI COMPONENT RENDERING
 def render_home():
-    st.title("🎬 UGC Remix Studio v9.7 — Dynamic Compact Controls")
-    st.caption("Engine Otomasi Video Prompt 3D Parkour dengan Pemetaan Kausalitas Fisik & Ringkas Per-Scene Control.")
+    st.title("🎬 UGC Remix Studio v10.1 — Full Data Restored")
+    st.caption("Auto Duration Engine & Anti-Plagiarism Flow Jacking. Semua opsi telah dikembalikan 100%.")
 
     st.subheader("1. Referensi Video / Skenario Manual")
     st.file_uploader("Upload Video Referensi (Shorts / Video Panjang)", type=["mp4", "mov", "webm"], key="ref_file_input")
-    st.text_area("Deskripsi Manual Referensi (Jika tidak upload video)", key="reference_text", height=70, placeholder="Contoh: Katak melompat satu per satu di atas ban bekas dan menendang boneka berurutan...")
+    st.text_area("Deskripsi Manual Referensi (Opsional)", key="reference_text", height=70)
 
-    st.subheader("2. Pilihan Karakter & Arena (Lengkap)")
+    st.subheader("2. Penyamaran Identitas (Remix Entities & Environment)")
     col1, col2 = st.columns(2)
     with col1:
-        st.selectbox("Pilih Preset Karakter Runner Utama:", RUNNER_PRESETS, key="runner_choice")
+        st.selectbox("Pilih Karakter Runner Baru:", RUNNER_PRESETS, key="runner_choice")
         if st.session_state.runner_choice == "Custom / Ketik Sendiri":
             st.text_input("Tulis Deskripsi Karakter Custom Kamu:", key="custom_runner")
-        st.selectbox("Gaya Visual Render", STYLE_OPTIONS, key="visual_style")
+        st.selectbox("Gaya Visual Render:", STYLE_OPTIONS, key="visual_style")
     with col2:
-        st.selectbox("Pilih Map Arena / Latar Place:", MAP_OPTIONS, key="map_choice")
+        st.selectbox("Pilih Map Arena Baru:", MAP_OPTIONS, key="map_choice")
         st.selectbox("Pilih Pijakan Target (Prop Stand):", PROP_STAND_OPTIONS, key="prop_stand_choice")
 
     st.subheader("3. Durasi Video & Aksi Klimaks Penutup")
     col3, col4 = st.columns(2)
     with col3:
-        st.selectbox("Target Durasi & Jumlah Scene (Hingga 3 Menit):", list(DURATION_SCENES.keys()), key="duration")
-        st.selectbox("Rasio Aspek Video", ASPECT_OPTIONS, key="aspect_ratio")
+        st.selectbox("Target Durasi & Jumlah Scene:", list(DURATION_SCENES.keys()), key="duration")
+        st.selectbox("Rasio Aspek Video:", ASPECT_OPTIONS, key="aspect_ratio")
     with col4:
         st.selectbox("Gaya Aksi Klimaks Penutup (Scene Terakhir):", CLIMAX_ACTION_OPTIONS, key="climax_action_choice")
-        st.text_area("Instruksi Tambahan (Opsional)", key="custom_instruction", height=70, placeholder="Misal: Buat efek lontaran ban lebih tinggi...")
+        st.text_area("Instruksi Tambahan Global (Opsional)", key="custom_instruction", height=70)
 
     st.markdown("---")
     
-    # REVISED: Dynamic Compact Obstacle Selector per 4 Scenes (Batch/Tab View)
+    st.subheader("🧭 Navigasi Rintangan Per-Scene (Opsi Manual)")
     calculated_scenes = DURATION_SCENES.get(st.session_state.duration, 0)
+    
     if calculated_scenes == 0:
-        calculated_scenes = st.session_state.get("detected_scenes", 22)
-
-    st.subheader("🧭 Navigasi Rintangan Per-Scene (Disesuaikan Durasi)")
-    st.write(f"**Total Scene Ditampilkan:** {calculated_scenes} Scene ({calculated_scenes * 8} Detik Total Durasi)")
-
-    scenes_per_group = 4
-    total_groups = (calculated_scenes + scenes_per_group - 1) // scenes_per_group
-
-    if total_groups == 1:
-        # Menampilkan langsung 1-4 scene jika durasi singkat (16 - 32 detik)
-        cols = st.columns(2)
-        for i in range(1, calculated_scenes + 1):
-            col_idx = (i - 1) % 2
-            with cols[col_idx]:
-                chosen_obs = st.selectbox(
-                    f"Rintangan Scene {i}:",
-                    options=list(OBSTACLE_OPTIONS.keys()),
-                    index=0,
-                    key=f"obstacle_select_scene_{i}"
-                )
-                st.session_state.user_scene_obstacles[i] = OBSTACLE_OPTIONS[chosen_obs]
+        st.info("💡 **Mode Auto Durasi Aktif:** Rintangan manual tidak ditampilkan di sini karena jumlah scene belum diketahui. AI akan mengatur variasi rintangan secara dinamis setelah video Anda dianalisis.")
     else:
-        # Pengelompokan Tab Per-4 Scene agar tampilan ringkas jika durasi panjang (1-3 menit)
-        tab_labels = [
-            f"Scene {g * scenes_per_group + 1} - {min((g + 1) * scenes_per_group, calculated_scenes)}" 
-            for g in range(total_groups)
-        ]
-        tabs = st.tabs(tab_labels)
+        st.write(f"**Total Scene Ditampilkan:** {calculated_scenes} Scene ({calculated_scenes * 8} Detik Total Durasi)")
+        scenes_per_group = 4
+        total_groups = (calculated_scenes + scenes_per_group - 1) // scenes_per_group
 
-        for g, tab in enumerate(tabs):
-            with tab:
-                cols = st.columns(2)
-                start_s = g * scenes_per_group + 1
-                end_s = min((g + 1) * scenes_per_group, calculated_scenes)
-                for idx, scene_idx in enumerate(range(start_s, end_s + 1)):
-                    col_idx = idx % 2
-                    with cols[col_idx]:
-                        chosen_obs = st.selectbox(
-                            f"Rintangan Scene {scene_idx}:",
-                            options=list(OBSTACLE_OPTIONS.keys()),
-                            index=0,
-                            key=f"obstacle_select_scene_{scene_idx}"
-                        )
-                        st.session_state.user_scene_obstacles[scene_idx] = OBSTACLE_OPTIONS[chosen_obs]
+        if total_groups == 1:
+            cols = st.columns(2)
+            for i in range(1, calculated_scenes + 1):
+                col_idx = (i - 1) % 2
+                with cols[col_idx]:
+                    chosen_obs = st.selectbox(
+                        f"Rintangan Scene {i}:",
+                        options=list(OBSTACLE_OPTIONS.keys()),
+                        index=0,
+                        key=f"obstacle_select_scene_{i}"
+                    )
+                    st.session_state.user_scene_obstacles[i] = OBSTACLE_OPTIONS[chosen_obs]
+        else:
+            tab_labels = [
+                f"Scene {g * scenes_per_group + 1} - {min((g + 1) * scenes_per_group, calculated_scenes)}" 
+                for g in range(total_groups)
+            ]
+            tabs = st.tabs(tab_labels)
+            for g, tab in enumerate(tabs):
+                with tab:
+                    cols = st.columns(2)
+                    start_s = g * scenes_per_group + 1
+                    end_s = min((g + 1) * scenes_per_group, calculated_scenes)
+                    for idx, scene_idx in enumerate(range(start_s, end_s + 1)):
+                        col_idx = idx % 2
+                        with cols[col_idx]:
+                            chosen_obs = st.selectbox(
+                                f"Rintangan Scene {scene_idx}:",
+                                options=list(OBSTACLE_OPTIONS.keys()),
+                                index=0,
+                                key=f"obstacle_select_scene_{scene_idx}"
+                            )
+                            st.session_state.user_scene_obstacles[scene_idx] = OBSTACLE_OPTIONS[chosen_obs]
 
     st.markdown("---")
-    st.button("🚀 PROSES & BUAT ROADMAP SCENE LINIER", type="primary", use_container_width=True, on_click=run_analysis)
+    st.button("🚀 BONGKAR VIDEO & BUAT BLUEPRINT REMIX", type="primary", use_container_width=True, on_click=run_analysis)
 
 
 def render_analysis():
-    st.title("🔍 Roadmap Analysis & Storyboard Flow")
-    analysis = st.session_state.get("analysis", {})
+    st.title("🛡️ Anti-Plagiarism Verification & Storyboard")
+    
+    mapping = st.session_state.get("entity_mapping", {})
     storyboard = st.session_state.get("storyboard", [])
 
-    if not analysis:
-        st.info("Belum ada data roadmap. Kembali ke Beranda untuk memproses.")
+    if not storyboard:
+        st.info("Silakan proses referensi di Beranda terlebih dahulu.")
         return
 
-    st.success(f"⏱️ Total Target: **{scene_count()} Scene** (~{scene_count() * 8} Detik Video Full Continuity)")
+    st.success(f"⏱️ Kalkulasi AI Selesai: **Target {scene_count()} Scene** (~{scene_count() * 8} Detik).")
 
-    st.subheader("📋 Storyboard Terstruktur (Kausalitas Fisik Dijamin)")
-    for item in storyboard:
-        st.write(f"• **Scene {item.get('scene', '-')}:** {item.get('fokus_aksi', '-')}")
+    st.subheader("🔄 Tabel Translasi Flow Jacking (Cek Kebocoran)")
+    st.markdown("*Pastikan tabel di bawah ini benar. AI telah menghapus entitas asli dan menggantinya dengan pilihan Anda.*")
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Elemen", "Karakter Aktor")
+    col2.metric("Terdeteksi di Video Asli", mapping.get("runner_asli", "-"))
+    col3.metric("Diubah Menjadi (Aman)", mapping.get("runner_remix", "-"))
+    
+    col4, col5, col6 = st.columns(3)
+    col4.metric("Elemen", "Latar / Arena")
+    col5.metric("Terdeteksi di Video Asli", mapping.get("arena_asli", "-"))
+    col6.metric("Diubah Menjadi (Aman)", mapping.get("arena_remix", "-"))
 
     st.markdown("---")
-    if st.button("LANJUT KE GENERATOR PROMPT ADEGAN 🎥", type="primary", use_container_width=True):
+    st.subheader("📋 3-Act Micro Storyboard & Camera Angles")
+    for item in storyboard:
+        st.info(f"**Scene {item.get('scene', '-')}**: {item.get('fokus_aksi_dan_kamera', '-')}")
+
+    st.markdown("---")
+    if st.button("LANJUT KE GENERATOR PROMPT SCENE 1 🎥", type="primary", use_container_width=True):
         go("scenes")
 
 
 def render_scenes():
-    st.title("🎥 AI Video Prompt Generator (Vision Continuity Enabled)")
+    st.title("🎥 Sequential Scene Prompt Generator")
     n = scene_count()
     current = st.session_state.current_scene
 
-    st.subheader(f"Adegan {current} dari {n} " + ("💥 (SCENE KLIMAKS)" if current == n else "⚡ (PHYSICAL ACTION)"))
+    st.subheader(f"Adegan {current} dari {n} " + ("💥 (Final Extended Climax)" if current == n else "⚡ (Action & Setup)"))
 
-    if current not in st.session_state.scene_prompts:
-        if st.button(f"✨ Generate Prompt Scene {current}", type="primary"):
-            generate_scene_prompt(current)
+    # Gatekeeper Pengecekan Frame Sebelumnya
+    if current > 1 and current - 1 not in st.session_state.scene_frames:
+        st.error(f"🛑 STOP! Anda belum mengunggah Gambar Last Frame dari Scene {current-1}. Alur ditahan untuk mencegah AI berhalusinasi (menjaga continuity posisi karakter).")
+        if st.button("← Kembali ke Scene Sebelumnya", type="primary"):
+            st.session_state.current_scene -= 1
             st.rerun()
+        return
 
+    # Trigger Awal Generate
+    if current not in st.session_state.scene_prompts:
+        with st.spinner("Mempersiapkan Prompt Terstruktur (Physics & Continuity checked)..."):
+            status = generate_scene_prompt(current)
+            if status == "SUCCESS":
+                st.rerun()
+            elif status == "ERROR_NO_FRAME":
+                st.error("Frame scene sebelumnya tidak ditemukan.")
+                return
+
+    # Tampilan Jika Prompt Sudah Ada
     if current in st.session_state.scene_prompts:
-        st.text_area(f"Prompt AI Video Scene {current} (Copy ke Veo / Kling / Luma):", value=st.session_state.scene_prompts[current], height=180)
+        st.text_area(f"Salin Prompt Scene {current} (Terformat Standar Industri):", value=st.session_state.scene_prompts[current], height=220)
+
+        with st.expander("🔄 Kurang pas? Re-roll Prompt Scene Ini"):
+            tweak_val = st.text_input("Ketik revisi (Misal: 'Buat kameranya muter dari atas', 'Bikin jatuh lebih heboh')", key=f"tweak_{current}")
+            if st.button("Apply Tweak & Regenerate", key=f"btn_tweak_{current}"):
+                generate_scene_prompt(current, custom_tweak=tweak_val)
+                st.rerun()
 
         st.markdown("---")
-        st.subheader("🖼️ Multimodal Last Frame Bridge (Upload Frame Terakhir)")
-        st.caption("Upload screenshot frame paling akhir dari video hasil Scene ini. AI akan **MEMBACA GAMBAR TERSEBUT** untuk mengunci posisi Runner di Scene berikutnya!")
-
-        uploaded_frame = st.file_uploader(f"Upload Last Frame Scene {current}", type=["png", "jpg", "jpeg"], key=f"frame_file_{current}")
-        if uploaded_frame:
-            st.session_state.scene_frames[current] = uploaded_frame
-            st.image(uploaded_frame, caption=f"Frame Akhir Scene {current} Terkunci untuk Scene {current+1}", width=320)
-
+        
+        if current < n:
+            st.subheader(f"🖼️ Gatekeeper: Kunci Kontinuitas (Frame Terakhir Scene {current})")
+            st.caption("Agar posisi karakter di Scene berikutnya akurat dan tidak melompat, UPLOAD screenshot frame paling akhir dari video hasil render Scene ini.")
+            
+            uploaded_frame = st.file_uploader(f"Upload Last Frame Scene {current}", type=["png", "jpg", "jpeg"], key=f"frame_upload_{current}")
+            if uploaded_frame:
+                st.session_state.scene_frames[current] = uploaded_frame
+                st.image(uploaded_frame, caption=f"Posisi Terkunci! Siap untuk Scene {current+1}", width=300)
+            elif current in st.session_state.scene_frames:
+                st.success("Frame Continuity sudah diamankan di memori.")
+        
         st.markdown("---")
         col_nav1, col_nav2 = st.columns(2)
         with col_nav1:
@@ -514,61 +530,13 @@ def render_scenes():
                 st.session_state.current_scene -= 1
                 st.rerun()
         with col_nav2:
-            if current < n and st.button("Adegan Berikutnya →", type="primary"):
-                st.session_state.current_scene += 1
-                st.rerun()
-
-        if current == n:
-            st.markdown("---")
-            st.subheader("🎯 Finalisasi Metadata & SEO Generator")
-            if st.button("🚀 Generate Judul CTR Tinggi, Deskripsi CTA & 18 Tags SEO", type="primary", use_container_width=True):
-                client = get_client()
-                if client:
-                    prompt = f"""
-Bertindaklah sebagai Pakar Algoritma YouTube & TikTok.
-Berdasarkan data remix UGC berikut: {json.dumps(st.session_state.analysis, ensure_ascii=False)}
-
-Buatkan format SEO lengkap dalam bentuk JSON terstruktur dengan ketentuan:
-1. "judul": [3 Pilihan Judul singkat, memancing curiosity gap, & CTR tinggi],
-2. "deskripsi": "Deskripsi cerita singkat mengandung kata kunci natural + WAJIB ADA CALL TO ACTION (CTA) ajakan Komen seberapa seru videonya, Like, Subscribe, dan Lonceng Notifikasi",
-3. "tags": [Tepat 18 Tags SEO unik berbahasa Inggris tanpa duplikat]
-"""
-                    with st.spinner("Meracik Judul, CTA, dan 18 Tags SEO Unik..."):
-                        try:
-                            raw_seo = ask(client, prompt, json_mode=True)
-                            st.session_state.seo = extract_json(raw_seo)
-                            st.success("✨ Metadata & SEO Berhasil Digenerate!")
-                        except Exception as exc:
-                            st.error(f"Gagal generate SEO: {exc}")
-
-            seo_data = st.session_state.get("seo", {})
-            if seo_data:
-                st.markdown("#### 📝 Pilihan Judul Viral (CTR Tinggi):")
-                titles = seo_data.get("judul", [])
-                if isinstance(titles, list):
-                    for idx, t in enumerate(titles, 1):
-                        st.code(f"{idx}. {t}")
-                else:
-                    st.code(str(titles))
-
-                st.markdown("#### 📄 Deskripsi & CTA:")
-                st.text(seo_data.get("deskripsi", ""))
-
-                st.markdown("#### 🏷️ 18 Tags Global Unik:")
-                tags_list = seo_data.get("tags", [])
-                if isinstance(tags_list, list):
-                    st.code(", ".join(tags_list))
-                else:
-                    st.code(str(tags_list))
-
-
-def render_seo():
-    st.title("🚀 Metadata & SEO Center")
-    seo_data = st.session_state.get("seo", {})
-    if seo_data:
-        st.json(seo_data)
-    else:
-        st.info("Metadata SEO akan otomatis diracik saat Anda menyelesaikan prompt scene terakhir di menu Scene Prompts.")
+            if current < n:
+                is_disabled = (current not in st.session_state.scene_frames)
+                if st.button("Adegan Berikutnya →", type="primary", disabled=is_disabled):
+                    st.session_state.current_scene += 1
+                    st.rerun()
+            elif current == n:
+                st.success("🏁 Seluruh Blueprint Scene Selesai Dieksekusi!")
 
 
 # SIDEBAR ROUTING CONTROLS
@@ -576,14 +544,13 @@ with st.sidebar:
     st.title("⚙️ Studio Controls")
     st.text_input("Gemini API Key", key="api_key", type="password")
     st.markdown("---")
-    if st.button("🏠 Beranda / Main Setup", use_container_width=True):
+    st.markdown("**Navigasi Alur (Terkunci):**")
+    if st.button("1. 🏠 Beranda & Upload", use_container_width=True):
         go("home")
-    if st.button("📋 Storyboard Roadmap", use_container_width=True):
+    if st.button("2. 📋 Verifikasi Anti-Plagiat", use_container_width=True):
         go("analysis")
-    if st.button("🎥 Prompt Generator per Scene", use_container_width=True):
+    if st.button("3. 🎥 Generator Prompt", use_container_width=True):
         go("scenes")
-    if st.button("🚀 Metadata & SEO Center", use_container_width=True):
-        go("seo")
 
 
 # PAGE ROUTER
@@ -594,5 +561,3 @@ elif page == "analysis":
     render_analysis()
 elif page == "scenes":
     render_scenes()
-elif page == "seo":
-    render_seo()
