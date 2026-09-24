@@ -11,7 +11,7 @@ from google.genai import types
 # 1. KONFIGURASI HALAMAN & MODEL UTAMA
 # ==========================================
 st.set_page_config(
-    page_title="UGC Remix Studio v10.3 — Complete Entity, Physics & SEO Engine",
+    page_title="UGC Remix Studio v10.3 —",
     page_icon="🎬",
     layout="wide"
 )
