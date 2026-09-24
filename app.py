@@ -588,6 +588,7 @@ def render_scenes():
             st.rerun()
         return
 
+    # PERBAIKAN: Cek apakah prompt untuk scene ini sudah ada
     if current not in st.session_state.scene_prompts:
         with st.spinner("Mempersiapkan Prompt Terstruktur (Physics & Continuity checked)..."):
             status = generate_scene_prompt(current)
@@ -596,7 +597,14 @@ def render_scenes():
             elif status == "ERROR_NO_FRAME":
                 st.error("Frame scene sebelumnya tidak ditemukan.")
                 return
+            else:
+                # JIKA ERROR (Seperti 503 Overload), Tampilkan Tombol Coba Lagi Manual agar tidak macet
+                st.warning("Server Gemini sedang sibuk atau mengalami kendala jaringan.")
+                if st.button("🔄 Coba Generate Ulang Scene Ini", type="primary"):
+                    st.rerun()
+                return
 
+    # Tampilan Jika Prompt Sudah Berhasil Dibuat
     if current in st.session_state.scene_prompts:
         st.text_area(f"Salin Prompt Scene {current} (Terformat Standar Industri):", value=st.session_state.scene_prompts[current], height=220)
 
@@ -638,7 +646,6 @@ def render_scenes():
                 st.success("🏁 Seluruh Blueprint Scene Selesai Dieksekusi!")
                 if st.button("LANJUT KE GENERATOR SEO & METADATA 🏷️", type="primary", use_container_width=True):
                     go("seo")
-
 def render_seo():
     st.title("🏷️ SEO & Metadata Generator Viral")
     st.caption("Racikan judul clickbait, deskripsi, dan hashtag optimal untuk Shorts, Reels, & TikTok.")
