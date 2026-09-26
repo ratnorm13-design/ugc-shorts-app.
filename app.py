@@ -150,39 +150,6 @@ def get_client():
 def extract_json(text: str):
     text = (text or "").strip()
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
-    text = re.sub(r"\s*
-# ==========================================
-# 4. FUNGSI UTILITAS & API GEMINI
-# ==========================================
-def go(page: str):
-    st.session_state.page = page
-    st.rerun()
-
-def reset_remix_state():
-    st.session_state.analysis = {}
-    st.session_state.storyboard_text = ""
-    st.session_state.entity_mapping = {}
-    st.session_state.scene_prompts = {}
-    st.session_state.scene_frames = {}
-    st.session_state.current_scene = 1
-    st.session_state.detected_scenes = 0
-    st.session_state.seo = {}
-
-def get_client():
-    key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip()
-    key = key.strip("`\"' \n\r\t")
-    if not key:
-        st.error("Masukkan Gemini API Key terlebih dahulu di Sidebar.")
-        return None
-    try:
-        return genai.Client(api_key=key)
-    except Exception as exc:
-        st.error(f"Gagal koneksi Gemini API: {exc}")
-        return None
-
-def extract_json(text: str):
-    text = (text or "").strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.I)
     text = re.sub(r"\s*```$", "", text)
     try:
         return json.loads(text)
@@ -237,7 +204,6 @@ def generate_draft_storyboard():
     parts = []
     mode = st.session_state.input_mode
 
-    # Setup mode (Referensi Video vs Manual)
     if mode == "Referensi Video":
         ref_file = st.session_state.get("ref_file_input")
         if ref_file is not None:
@@ -276,7 +242,7 @@ ATURAN ALUR (NARRATIVE ARC):
 - Scene Pertengahan harus bervariasi kameranya (Third Person, Side-Scrolling, Low Angle) dan rintangan makin intens.
 - Scene Terakhir harus Climax.
 
-HASILKAN JSON FORMAT BERIKUT (Dilarang ada entitas dari video asli, pakai Data Master!):
+HASILKAN JSON FORMAT BERIKUT:
 {{
   "calculated_scene_count": [ANGKA INT],
   "entity_mapping": {{
@@ -313,17 +279,15 @@ def generate_scene_prompt(scene_number: int, custom_tweak: str = ""):
     chosen_target = analysis.get('entity_mapping', {}).get('target_remix', st.session_state.target_doll_choice)
     chosen_arena = analysis.get('entity_mapping', {}).get('arena_remix', st.session_state.map_choice)
 
-    # Dapatkan deskripsi spesifik scene ini dari storyboard yang sudah di-ACC
     storyboard_lines = st.session_state.storyboard_text.split('\n')
     scene_focus = f"Action for scene {scene_number}"
     for line in storyboard_lines:
-        if line.lower().startswith(f"scene {scene_number}:") or line.lower().startswith(f"scene {scene_number} "):
+        if f"scene {scene_number}" in line.lower():
             scene_focus = line
             break
 
     parts_list = []
     
-    # Logika T2V vs I2V
     if scene_number == 1:
         mode_type = "T2V (Text-to-Video)"
         continuity_rule = f"[ENVIRONMENT & SETUP]: Set in {chosen_arena} with {st.session_state.prop_stand_choice}. Highly detailed establishing shot."
@@ -331,7 +295,6 @@ def generate_scene_prompt(scene_number: int, custom_tweak: str = ""):
         mode_type = "I2V (Image-to-Video)"
         continuity_rule = "[SEAMLESS CONTINUATION]: DO NOT describe the environment from scratch. Use the exact background, lighting, and character appearance from the provided reference image. Focus ONLY on the continuing motion."
         
-        # Ambil gambar frame sebelumnya dari Session State
         prev_scene_num = scene_number - 1
         if prev_scene_num in st.session_state.scene_frames and st.session_state.scene_frames[prev_scene_num]:
             frame_data = st.session_state.scene_frames[prev_scene_num]
@@ -393,12 +356,6 @@ def generate_seo_metadata():
         except Exception as exc:
             st.error(f"Gagal membuat SEO: {exc}")
             return False
-
-
-# ==========================================
-# 6. RENDER ANTARMUKA HALAMAN (VIEWS)
-# ==========================================
-def render_home():
 # ==========================================
 # 6. RENDER ANTARMUKA HALAMAN (VIEWS)
 # ==========================================
@@ -449,7 +406,6 @@ def render_analysis():
     st.subheader("Grand Plan (Rencana Alur Video)")
     st.markdown("*Baca draft di bawah ini. Anda bisa mengubah teksnya secara manual jika angle kamera atau aksinya kurang pas sebelum masuk ke Studio.*")
     
-    # Text area ini bisa diedit oleh user
     edited_storyboard = st.text_area(
         "Edit Storyboard Anda di sini:",
         value=st.session_state.storyboard_text,
@@ -478,13 +434,11 @@ def render_scenes():
 
     st.subheader(f"Adegan {current} dari {n}")
 
-    # Info/Peringatan Mode
     if current == 1:
         st.info("🔥 **MODE: T2V (Text-to-Video)**\nCopy teks ini ke Flow AI **TANPA** memasukkan gambar apa pun. Biarkan AI membangun dunia pertamanya.")
     else:
         st.warning(f"🖼️ **MODE: I2V (Image-to-Video)**\nUpload screenshot Last Frame Scene {current-1} ke Flow AI, lalu copy paste teks ini sebagai prompt.")
 
-    # Gatekeeper: Cek apakah user udah upload gambar dari scene sebelumnya
     if current > 1 and current - 1 not in st.session_state.scene_frames:
         st.error(f"🛑 STOP! Upload Gambar Last Frame dari Scene {current-1} di bawah untuk membuka gembok Scene ini.")
         if st.button("← Kembali ke Scene Sebelumnya", type="primary"):
@@ -492,7 +446,6 @@ def render_scenes():
             st.rerun()
         return
 
-    # Generate Prompt dengan Error Handling 503
     if current not in st.session_state.scene_prompts:
         with st.spinner(f"Meracik Prompt AI (Physics Grounded) untuk Scene {current}..."):
             status = generate_scene_prompt(current)
@@ -507,7 +460,6 @@ def render_scenes():
                     st.rerun()
                 return
 
-    # Tampilkan Prompt jika berhasil
     if current in st.session_state.scene_prompts:
         st.text_area(f"Salin Prompt Scene {current}:", value=st.session_state.scene_prompts[current], height=200)
 
@@ -519,7 +471,6 @@ def render_scenes():
 
         st.markdown("---")
         
-        # Uploader (Gatekeeper) untuk persiapan scene selanjutnya
         if current < n:
             st.subheader(f"🖼️ Gatekeeper: Kunci Continuity (Upload Last Frame Scene {current})")
             st.caption("Setelah Anda render video di Flow AI, screenshot frame paling akhir, dan upload ke sini untuk membuka Scene selanjutnya.")
@@ -536,7 +487,6 @@ def render_scenes():
         
         st.markdown("---")
         
-        # Navigasi Bawah
         col_nav1, col_nav2 = st.columns(2)
         with col_nav1:
             if current > 1 and st.button("← Adegan Sebelumnya"):
@@ -552,12 +502,12 @@ def render_scenes():
                 st.success("🏁 Seluruh Blueprint Scene Selesai Dieksekusi! Video Anda siap digabung.")
                 st.markdown("---")
                 
-                # BAGIAN POST-PRODUCTION & SEO
                 st.subheader("🚀 Post-Production: Paket SEO Metadata")
                 st.caption("Generate Judul, Deskripsi, dan Hashtag viral untuk video ini sebelum di-upload ke YouTube/TikTok.")
                 
                 if st.button("Generate SEO Viral 🪄", type="primary"):
-                    generate_seo_metadata()
+                    if generate_seo_metadata():
+                        st.rerun()
                     
                 if st.session_state.seo:
                     seo = st.session_state.seo
