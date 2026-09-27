@@ -22,6 +22,7 @@ AVAILABLE_MODELS = {
     "Gemini 3.7 Flash (Stabil & Cepat)": "gemini-3.7-flash",
     "Gemini 3.6 Flash (Versi Klasik/Alternatif)": "gemini-3.6-flash"
 }
+
 ASPECT_RATIOS = [
     "9:16 — TikTok / Reels / Shorts",
     "16:9 — YouTube Long Form",
@@ -46,6 +47,7 @@ def init_state():
     defaults = {
         "page": "home",
         "api_key": "",
+        "selected_model_label": list(AVAILABLE_MODELS.keys())[0],
         "aspect_ratio": ASPECT_RATIOS[0],
         "art_style": ART_STYLES[0],
         "analysis_data": {},
@@ -66,16 +68,19 @@ def navigate_to(page_name: str):
     st.session_state.page = page_name
     st.rerun()
 
-def get_gemini_client():
+def get_gemini_client_and_model():
     raw_key = (os.getenv("GEMINI_API_KEY") or st.session_state.get("api_key", "")).strip("`\"' \n\r\t")
     if not raw_key:
         st.error("Silakan masukkan Gemini API Key pada Sidebar terlebih dahulu.")
-        return None
+        return None, None
     try:
-        return genai.Client(api_key=raw_key)
+        client = genai.Client(api_key=raw_key)
+        model_label = st.session_state.get("selected_model_label", list(AVAILABLE_MODELS.keys())[0])
+        model_endpoint = AVAILABLE_MODELS.get(model_label, "gemini-3.8-flash")
+        return client, model_endpoint
     except Exception as err:
         st.error(f"Koneksi ke Gemini API gagal: {err}")
-        return None
+        return None, None
 
 def parse_json_safely(text_response: str):
     clean_text = re.sub(r"^```(?:json)?\s*", "", text_response.strip(), flags=re.I)
@@ -93,8 +98,8 @@ def parse_json_safely(text_response: str):
 # 3. CORE LOGIC (ANALISIS 1:1 & PROP TRACKING)
 # ==========================================
 def run_viral_adaptation():
-    client = get_gemini_client()
-    if not client:
+    client, model_name = get_gemini_client_and_model()
+    if not client or not model_name:
         return
 
     file_upload = st.session_state.get("viral_video_file")
@@ -135,10 +140,11 @@ BERIKAN OUTPUT DALAM FORMAT JSON BERIKUT:
   ]
 }
 """
-    with st.spinner("AI sedang membedah video 1:1, ekspresi, & status properti..."):
+    with st.spinner(f"AI sedang membedah video menggunakan model {model_name}..."):
         try:
+            # Menggunakan variabel model_name yang dinamis sesuai pilihan sidebar
             res = client.models.generate_content(
-                model=MODEL_NAME,
+                model=model_name,
                 contents=[types.Content(role="user", parts=media_payload + [types.Part.from_text(text=sys_instruction)])],
                 config=types.GenerateContentConfig(temperature=0.3, response_mime_type="application/json")
             )
@@ -192,8 +198,8 @@ def generate_scene_prompt(scene_num: int):
     return True
 
 def build_viral_seo():
-    client = get_gemini_client()
-    if not client:
+    client, model_name = get_gemini_client_and_model()
+    if not client or not model_name:
         return False
 
     data = st.session_state.analysis_data
@@ -209,10 +215,10 @@ OUTPUT JSON WAJIB:
   "tags": "tag1, tag2, tag3, tag4, tag5"
 }}
 """
-    with st.spinner("Meracik Algoritma SEO..."):
+    with st.spinner(f"Meracik Algoritma SEO menggunakan {model_name}..."):
         try:
             res = client.models.generate_content(
-                model=MODEL_NAME,
+                model=model_name,
                 contents=sys_seo,
                 config=types.GenerateContentConfig(temperature=0.3, response_mime_type="application/json")
             )
@@ -243,9 +249,10 @@ def view_home():
 
     with col2:
         st.subheader("2. Setting Parameter Output")
+        st.selectbox("Pilih Varian Model Gemini", list(AVAILABLE_MODELS.keys()), key="selected_model_label")
         st.selectbox("Rasio Aspect Ratio Video", ASPECT_RATIOS, key="aspect_ratio")
         st.selectbox("Gaya Visualisasi (Art Style)", ART_STYLES, key="art_style")
-        st.success("✅ **Model Gemini 3.6 Aktif:** Siap memproses detail adegan tingkat tinggi.")
+        st.success(f"✅ **Model Aktif:** `{AVAILABLE_MODELS[st.session_state.selected_model_label]}` siap digunakan.")
 
     st.markdown("---")
     st.button(
@@ -292,7 +299,7 @@ def view_scenes():
         return navigate_to("home")
 
     st.title(f"🎥 Studio Produksi — Scene {curr} dari {total}")
-    st.caption(f"Rasio: **{st.session_state.aspect_ratio.split('—')[0]}** | Gaya: **{st.session_state.art_style.split('(')[0]}**")
+    st.caption(f"Model: **{st.session_state.selected_model_label.split(' ')[0]}** | Rasio: **{st.session_state.aspect_ratio.split('—')[0]}** | Gaya: **{st.session_state.art_style.split('(')[0]}**")
     st.markdown("---")
 
     if curr > 1 and (curr - 1) not in st.session_state.scene_frames:
@@ -311,7 +318,6 @@ def view_scenes():
         else:
             st.warning(f"🖼️ **SCENE {curr} (Image-to-Video):** Gunakan frame terakhir Scene {curr-1} sebagai gambar referensi awal.")
 
-        # TAMPILAN PROMPT MENGGUNAKAN TEKS BIASA + TOMBOL COPY OTOMATIS OLEH STREAMLIT
         st.markdown("**📝 Prompt Generator AI:**")
         st.text_area(
             label=f"Prompt Scene {curr}",
