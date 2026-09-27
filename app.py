@@ -16,9 +16,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Menggunakan model Gemini 3.6 sesuai permintaan untuk API key berawalan 'AQ'
-MODEL_NAME = "gemini-3.6"
-
+# Daftar pilihan model Gemini versi terbaru yang otomatis bisa dipilih
+AVAILABLE_MODELS = {
+    "Gemini 3.8 Flash (Terbaru & Paling Cerdas)": "gemini-3.8-flash",
+    "Gemini 3.7 Flash (Stabil & Cepat)": "gemini-3.7-flash",
+    "Gemini 3.6 Flash (Versi Klasik/Alternatif)": "gemini-3.6-flash"
+}
 ASPECT_RATIOS = [
     "9:16 — TikTok / Reels / Shorts",
     "16:9 — YouTube Long Form",
