@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # Model Gemini Flash terbaru untuk analisis multimodal cepat
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.8-flash"
 
 # DNA Karakter Si Kumis dikunci total agar konsisten
 SI_KUMIS_DNA = (
