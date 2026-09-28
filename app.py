@@ -1,6 +1,5 @@
 import json
 import re
-import time
 import os
 import streamlit as st
 from google import genai
@@ -16,7 +15,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Daftar pilihan model Gemini versi terbaru yang otomatis bisa dipilih
 AVAILABLE_MODELS = {
     "Gemini 3.8 Flash (Terbaru & Paling Cerdas)": "gemini-3.8-flash",
     "Gemini 3.7 Flash (Stabil & Cepat)": "gemini-3.7-flash",
@@ -41,7 +39,7 @@ ART_STYLES = [
 ]
 
 # ==========================================
-# 2. STATE MANAGEMENT (MENCEGAH KEYERROR)
+# 2. STATE MANAGEMENT
 # ==========================================
 def init_state():
     defaults = {
@@ -50,6 +48,7 @@ def init_state():
         "selected_model_label": list(AVAILABLE_MODELS.keys())[0],
         "aspect_ratio": ASPECT_RATIOS[0],
         "art_style": ART_STYLES[0],
+        "custom_subjects": "", # State baru untuk karakter kustom
         "analysis_data": {},
         "scene_frames": {},
         "scene_prompts": {},
@@ -95,7 +94,7 @@ def parse_json_safely(text_response: str):
         raise ValueError("Gagal membaca struktur data JSON dari respons AI.")
 
 # ==========================================
-# 3. CORE LOGIC (ANALISIS 1:1 & PROP TRACKING)
+# 3. CORE LOGIC DENGAN PENGUNCIAN SUBJEK ABSOLUT
 # ==========================================
 def run_viral_adaptation():
     client, model_name = get_gemini_client_and_model()
@@ -115,34 +114,36 @@ def run_viral_adaptation():
         st.error(f"Gagal memuat berkas video: {err}")
         return
 
-    sys_instruction = """
-TUGAS UTAMA: Analisis video referensi ini secara presisi 1:1. Alur, gerakan kamera, dan ekspresi emosi (marah, kesal, ketawa, kaget) harus disamakan plek ketiplek dengan aslinya tanpa modifikasi alur cerita.
+    custom_instructions = st.session_state.get("custom_subjects", "").strip()
+    custom_rule = f"Ubah karakter pendukung sesuai instruksi berikut: '{custom_instructions}'." if custom_instructions else "Pertahankan karakter pendukung asli dari video (atau modifikasi natural) namun pastikan mereka tidak tiba-tiba hilang."
 
-ATURAN KETAT:
-1. SUBJEK UTAMA: Ubah subjek manusia/hewan di video asli menjadi kucing 'Si Kumis' (kucing putih, tanda fur kumis hitam di bawah hidung, bercak hitam di kepala).
-2. EKSPRESI & EMOSI: Catat detail ekspresi mikro subjek (misal: mata melotot kaget, nyengir kesal, tertawa, atau marah) agar akurat per scene.
-3. PROP & OBJECT TRACKING (Sangat Penting): Lacak barang yang dipegang/dipakai (misal kacamata hitam, HP, dll). Jika di scene tertentu barang itu lepas, jatuh, atau hilang, catat statusnya dengan tegas agar di scene berikutnya barang tersebut TIDAK BOLEH tiba-tiba muncul kembali (no magic respawn).
-4. BACKGROUND & ANTI-COPYRIGHT: Modifikasi latar belakang tipis-tipis secara natural (misal: ganti jenis pohon, struktur bangunan, atau tekstur jalan) agar visualnya berbeda dari video asli tetapi tetap sinkron dengan suasananya.
-5. AUDIO CUES: Sertakan pemicu suara native (misal: *glass shattering*, *thud sound*, *cat angry meow*) di setiap scene.
+    sys_instruction = f"""
+TUGAS UTAMA: Analisis video referensi secara presisi 1:1. 
+
+ATURAN KETAT (CRITICAL OBJECT PERMANENCE):
+1. SUBJEK UTAMA: Ubah subjek sentral menjadi kucing 'Si Kumis' (kucing putih, fur kumis hitam di bawah hidung, bercak hitam di kepala).
+2. SUBJEK PENDUKUNG & KONTINUITAS ABSOLUT: {custom_rule} Lakukan SENSUS subjek (misal: jika ada bebek, anjing, atau hewan lain). Semua subjek yang muncul di Scene 1 WAJIB dilacak dan ditulis kembali di Scene berikutnya. Objek tidak boleh tiba-tiba menghilang atau muncul tanpa alasan fisik yang logis (seperti benda yang bergerak ke luar frame).
+3. PROP TRACKING: Lacak barang yang dipegang/dipakai. Catat perubahan state (jatuh, dilepas, dipakai). 
+4. BACKGROUND: Modifikasi latar belakang tipis-tipis secara natural, hindari copyright.
+5. AUDIO & EMOSI: Ekstrak ekspresi (marah, kaget) dan sfx (suara benturan, kaca, dsb).
 
 BERIKAN OUTPUT DALAM FORMAT JSON BERIKUT:
-{
+{{
   "original_duration_est": 10,
   "total_scenes": 2,
-  "adaptation_strategy": "Penjelasan singkat penyesuaian latar belakang dan pelacakan properti.",
+  "adaptation_strategy": "Penjelasan pelacakan properti dan penjagaan subjek pendukung agar tidak gaib.",
   "scenes": [
-    {
+    {{
       "scene_num": 1,
-      "original_breakdown": "Deskripsi adegan, ekspresi emosi, dan status properti di scene ini (Bahasa Indonesia).",
-      "modified_action_en": "English description of Si Kumis 1:1 action, precise expression, exact prop status (e.g. wearing sunglasses and holding phone, or glasses dropped), with native audio cues.",
-      "environment_en": "English description of modified anti-copyright background."
-    }
+      "original_breakdown": "Deskripsi asli.",
+      "modified_action_en": "English description of Si Kumis action. MUST EXPLICITLY LIST ALL secondary subjects present (e.g. 'A bulldog in passenger seat, a duck on the roof'). Include prop status and exact expressions.",
+      "environment_en": "English background."
+    }}
   ]
-}
+}}
 """
-    with st.spinner(f"AI sedang membedah video menggunakan model {model_name}..."):
+    with st.spinner(f"AI sedang melakukan sensus objek dan membedah video menggunakan {model_name}..."):
         try:
-            # Menggunakan variabel model_name yang dinamis sesuai pilihan sidebar
             res = client.models.generate_content(
                 model=model_name,
                 contents=[types.Content(role="user", parts=media_payload + [types.Part.from_text(text=sys_instruction)])],
@@ -161,7 +162,7 @@ BERIKAN OUTPUT DALAM FORMAT JSON BERIKUT:
             })
             navigate_to("analysis")
         except Exception as err:
-            st.error(f"Terjadi kesalahan saat pemrosesan video oleh AI: {err}")
+            st.error(f"Terjadi kesalahan saat pemrosesan AI: {err}")
 
 def generate_scene_prompt(scene_num: int):
     data = st.session_state.analysis_data
@@ -177,26 +178,27 @@ def generate_scene_prompt(scene_num: int):
     style_clean = st.session_state.art_style.split("(")[0].strip()
 
     if scene_num == 1:
-        continuity_instruction = "MODE: Text-to-Video (T2V). Establish initial setup, exact expressions, and prop states."
+        continuity_instruction = "MODE: Text-to-Video (T2V). Establish initial setup, ensure ALL specified secondary subjects and props are visible."
     else:
         if (scene_num - 1) not in st.session_state.scene_frames:
             return "LOCKED"
         continuity_instruction = (
-            "MODE: Image-to-Video (I2V). STRICT CONTINUITY: Match starting frame precisely. "
-            "Maintain exact prop states (do not respawn dropped items). Keep identical physical layout and lighting trajectory."
+            "MODE: Image-to-Video (I2V). STRICT CONTINUITY LOCK: Match starting frame precisely. "
+            "DO NOT DROP ANY SECONDARY CHARACTERS. If a duck/dog/item was in the previous frame, it MUST remain in the exact same position unless explicitly interacting."
         )
 
     prompt = f"""[ASPECT RATIO]: {ratio_clean}
 [ART STYLE STRICT]: {style_clean}
 [CHARACTER DNA]: Photorealistic white cat, distinct black mustache-like fur mark under pink nose, black fur patch on head.
 [ENVIRONMENT]: {env_en}
-[1:1 ACTION, EXACT EXPRESSION & PROP STATUS]: {action_en}
+[1:1 ACTION, SECONDARY SUBJECT CENSUS & PROP STATUS]: {action_en}
 [CONTINUITY LOCK]: {continuity_instruction}
 [CAMERA & MOTION]: 1:1 match with reference video motion physics, UGC style."""
 
     st.session_state.scene_prompts[scene_num] = prompt.strip()
     return True
 
+# ... (Fungsi build_viral_seo() tetap sama seperti sebelumnya) ...
 def build_viral_seo():
     client, model_name = get_gemini_client_and_model()
     if not client or not model_name:
@@ -210,12 +212,12 @@ Buatkan Paket SEO Komplit untuk video komedi 'Si Kumis' berdasarkan alur berikut
 OUTPUT JSON WAJIB:
 {{
   "title": "Judul Shorts/TikTok clickbait",
-  "caption": "Caption interaktif TikTok + Hashtags (#SiKumis #KucingAbsurd)",
-  "description": "Deskripsi SEO YouTube Shorts",
-  "tags": "tag1, tag2, tag3, tag4, tag5"
+  "caption": "Caption interaktif TikTok + Hashtags (#SiKumis)",
+  "description": "Deskripsi SEO",
+  "tags": "tag1, tag2, tag3"
 }}
 """
-    with st.spinner(f"Meracik Algoritma SEO menggunakan {model_name}..."):
+    with st.spinner("Meracik Algoritma SEO..."):
         try:
             res = client.models.generate_content(
                 model=model_name,
@@ -233,7 +235,7 @@ OUTPUT JSON WAJIB:
 # ==========================================
 def view_home():
     st.title("🕶️ Si Kumis IP Studio")
-    st.caption("Ubah Video Viral Jadi Konten 'Si Kumis' — Alur 1:1, Ekspresi Akurat, & Prop Tracking Anti-Gaib")
+    st.caption("Alur 1:1, Ekspresi Akurat, & Object Permanence Lock")
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -245,14 +247,21 @@ def view_home():
             type=["mp4", "mov", "webm"],
             key="viral_video_file"
         )
-        st.info("💡 AI akan menduplikasi alur dan ekspresi asli persis 1:1, mencatat status properti agar barang tidak tiba-tiba muncul kembali, serta merubah background secara natural.")
+        st.info("💡 AI akan mencatat sensus subjek (termasuk hewan pendukung) agar tidak tiba-tiba hilang seperti kasus bebek.")
 
     with col2:
         st.subheader("2. Setting Parameter Output")
         st.selectbox("Pilih Varian Model Gemini", list(AVAILABLE_MODELS.keys()), key="selected_model_label")
         st.selectbox("Rasio Aspect Ratio Video", ASPECT_RATIOS, key="aspect_ratio")
         st.selectbox("Gaya Visualisasi (Art Style)", ART_STYLES, key="art_style")
-        st.success(f"✅ **Model Aktif:** `{AVAILABLE_MODELS[st.session_state.selected_model_label]}` siap digunakan.")
+        
+        # FITUR BARU: Kolom Instruksi Tambahan
+        st.text_area(
+            "Kustomisasi Karakter Pendukung (Opsional)",
+            placeholder="Contoh: Ganti subjek 2 menjadi kucing British Shorthair abu-abu. Pastikan ada bebek di atas mobil.",
+            key="custom_subjects",
+            help="Instruksikan AI untuk mengganti atau mengunci karakter sekunder."
+        )
 
     st.markdown("---")
     st.button(
@@ -265,23 +274,21 @@ def view_home():
 def view_analysis():
     data = st.session_state.analysis_data
     st.title("📋 Storyboard & Peta Bedah Skenario")
-    st.caption("Perbandingan video referensi asli vs Adaptasi Kontrol Properti Si Kumis")
-
+    
     st.markdown("---")
     c1, c2 = st.columns(2)
     c1.metric("Durasi Video Asli", f"{data.get('original_duration_est', 0)} Detik")
     c2.metric("Total Scene Produksi", f"{st.session_state.total_scenes} Scene")
 
-    st.info(f"💡 **Strategi Penyesuaian Latar & Properti:**\n{data.get('adaptation_strategy', '')}")
+    st.info(f"💡 **Strategi Penyesuaian & Sensus Objek:**\n{data.get('adaptation_strategy', '')}")
     st.markdown("---")
 
-    st.subheader("🎬 Rincian Storyboard Per Scene")
     for scene in data.get("scenes", []):
         s_num = scene['scene_num']
         with st.container():
             st.markdown(f"#### 📍 Scene {s_num}")
-            st.info(f"**🔍 Video Asli & Ekspresi:**\n{scene.get('original_breakdown', '')}")
-            st.warning(f"**🕶️ Adaptasi Si Kumis (Prop & Audio Cues):**\n{scene.get('modified_action_en', '')}")
+            st.info(f"**🔍 Video Asli:**\n{scene.get('original_breakdown', '')}")
+            st.warning(f"**🕶️ Adaptasi Si Kumis:**\n{scene.get('modified_action_en', '')}")
             st.markdown("---")
 
     col_btn1, col_btn2 = st.columns([1, 3])
@@ -299,11 +306,10 @@ def view_scenes():
         return navigate_to("home")
 
     st.title(f"🎥 Studio Produksi — Scene {curr} dari {total}")
-    st.caption(f"Model: **{st.session_state.selected_model_label.split(' ')[0]}** | Rasio: **{st.session_state.aspect_ratio.split('—')[0]}** | Gaya: **{st.session_state.art_style.split('(')[0]}**")
     st.markdown("---")
 
     if curr > 1 and (curr - 1) not in st.session_state.scene_frames:
-        st.error(f"🛑 **GEMBOK KONTINUITAS AKTIF:** Upload screenshot Frame Terakhir dari Scene {curr-1} terlebih dahulu.")
+        st.error(f"🛑 **GEMBOK KONTINUITAS AKTIF:** Upload screenshot Frame Terakhir dari Scene {curr-1}.")
         if st.button(f"← Kembali ke Scene {curr-1}"):
             st.session_state.current_scene -= 1
             st.rerun()
@@ -314,25 +320,21 @@ def view_scenes():
 
     if curr in st.session_state.scene_prompts:
         if curr == 1:
-            st.success("🔥 **SCENE 1 (Text-to-Video):** Salin prompt di bawah ini ke Flow AI.")
+            st.success("🔥 **SCENE 1 (Text-to-Video):** Salin prompt ke Flow AI.")
         else:
-            st.warning(f"🖼️ **SCENE {curr} (Image-to-Video):** Gunakan frame terakhir Scene {curr-1} sebagai gambar referensi awal.")
+            st.warning(f"🖼️ **SCENE {curr} (Image-to-Video):** Gunakan frame terakhir Scene {curr-1}.")
 
-        st.markdown("**📝 Prompt Generator AI:**")
         st.text_area(
             label=f"Prompt Scene {curr}",
             value=st.session_state.scene_prompts[curr],
             height=150,
-            key=f"txt_prompt_{curr}",
-            help="Gunakan tombol salin di sudut kotak teks ini untuk menyalin prompt ke clipboard."
+            key=f"txt_prompt_{curr}"
         )
 
     st.markdown("---")
 
     if curr < total:
         st.subheader(f"📸 Upload Frame Terakhir Scene {curr}")
-        st.caption("Upload screenshot detik terakhir dari video hasil render Scene ini untuk mengunci kontinyuitas dan status properti.")
-
         f_up = st.file_uploader(
             f"Pilih Gambar Last Frame Scene {curr} (PNG/JPG)",
             type=["png", "jpg", "jpeg"],
@@ -340,14 +342,11 @@ def view_scenes():
         )
 
         if f_up:
-            st.session_state.scene_frames[curr] = {
-                "bytes": f_up.getvalue(),
-                "name": f_up.name
-            }
-            st.success(f"✔️ Frame Terakhir Scene {curr} Berhasil Disimpan!")
-            st.image(f_up, width=280, caption=f"Last Frame Scene {curr}")
+            st.session_state.scene_frames[curr] = {"bytes": f_up.getvalue(), "name": f_up.name}
+            st.success(f"✔️ Frame Tersimpan!")
+            st.image(f_up, width=280)
         elif curr in st.session_state.scene_frames:
-            st.success(f"✔️ Frame Terakhir Scene {curr} Sudah Tersimpan.")
+            st.success(f"✔️ Frame Tersimpan.")
 
     st.markdown("---")
     col_nav1, col_nav2 = st.columns(2)
@@ -361,63 +360,42 @@ def view_scenes():
     with col_nav2:
         if curr < total:
             is_locked = curr not in st.session_state.scene_frames
-            if st.button(
-                f"Lanjut ke Scene {curr+1} →",
-                type="primary",
-                disabled=is_locked,
-                use_container_width=True
-            ):
+            if st.button("Lanjut ke Scene Berikutnya →", type="primary", disabled=is_locked, use_container_width=True):
                 st.session_state.current_scene += 1
                 st.rerun()
-            if is_locked:
-                st.caption("🔒 *Upload frame terakhir di atas untuk membuka tombol Lanjut.*")
 
     if curr == total:
         st.markdown("---")
-        st.subheader("🏁 Konfirmasi Akhir Produksi Video")
-        
         if not st.session_state.get("is_completed", False):
-            if st.button("✅ Ya, Seluruh Scene Video Selesai Dibuat", type="primary", use_container_width=True):
+            if st.button("✅ Ya, Produksi Selesai", type="primary", use_container_width=True):
                 st.session_state.is_completed = True
                 st.rerun()
         else:
-            st.success("🎉 Produksi Visual Selesai! Siapkan Paket SEO.")
-            if st.button("🚀 GENERATE PAKET SEO VIRAL LENGKAP", type="primary", use_container_width=True):
+            st.success("🎉 Produksi Selesai!")
+            if st.button("🚀 GENERATE PAKET SEO VIRAL", type="primary", use_container_width=True):
                 if build_viral_seo():
                     st.rerun()
 
             if st.session_state.seo_package:
                 seo = st.session_state.seo_package
-                st.markdown("### 📊 Paket SEO Siap Pakai")
-                st.text_input("📌 Judul Video Shorts / TikTok:", value=seo.get("title", ""))
-                st.text_area("📱 Caption Interaktif TikTok & Reels:", value=seo.get("caption", ""), height=100)
-                st.text_area("📝 Deskripsi Lengkap YouTube Shorts:", value=seo.get("description", ""), height=80)
-                st.text_area("🏷️ Tags SEO:", value=seo.get("tags", ""), height=80)
+                st.text_input("📌 Judul:", value=seo.get("title", ""))
+                st.text_area("📱 Caption:", value=seo.get("caption", ""), height=80)
+                st.text_area("📝 Deskripsi:", value=seo.get("description", ""), height=80)
+                st.text_area("🏷️ Tags:", value=seo.get("tags", ""), height=60)
 
-# ==========================================
-# 5. SIDEBAR NAVIGATION & ROUTING
-# ==========================================
 with st.sidebar:
     st.title("🕶️ Si Kumis Studio")
     st.text_input("Gemini API Key", key="api_key", type="password")
     st.markdown("---")
-
     if st.button("🏠 Mulai Proyek Baru", use_container_width=True):
         st.session_state.clear()
         init_state()
         st.rerun()
-
     if st.session_state.total_scenes > 0:
         st.markdown("---")
-        st.markdown("**Navigasi Cepat Proyek:**")
-        if st.button("📋 Peta Storyboard", use_container_width=True):
-            navigate_to("analysis")
-        if st.button("🎬 Studio Produksi", use_container_width=True):
-            navigate_to("scenes")
+        if st.button("📋 Peta Storyboard", use_container_width=True): navigate_to("analysis")
+        if st.button("🎬 Studio Produksi", use_container_width=True): navigate_to("scenes")
 
-if st.session_state.page == "home":
-    view_home()
-elif st.session_state.page == "analysis":
-    view_analysis()
-elif st.session_state.page == "scenes":
-    view_scenes()
+if st.session_state.page == "home": view_home()
+elif st.session_state.page == "analysis": view_analysis()
+elif st.session_state.page == "scenes": view_scenes()
